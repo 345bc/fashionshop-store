@@ -1,0 +1,97 @@
+// GENERATED FROM TEMPLATE: templates/feature_dialog_detail.dart.template
+import 'package:flutter/material.dart';
+import '../../../../theme/app_theme.dart';
+
+class __Entity__DetailDialog extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const __Entity__DetailDialog({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: 600,
+        padding: const EdgeInsets.all(0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Chi tiết __Entity__',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.text,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                    splashRadius: 24,
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: AppTheme.borderLight),
+            
+            // Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoRow('ID', data['id']?.toString() ?? 'N/A'),
+                    _buildInfoRow('Tên', data['name']?.toString() ?? 'N/A'),
+                    _buildInfoRow('Trạng thái', data['status']?.toString() ?? 'N/A'),
+                    // Add more fields here
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.text,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
