@@ -1,0 +1,26 @@
+# Copy thành application-local.properties và không commit file thật.
+# Local chuẩn: mvn spring-boot:run -Dspring-boot.run.profiles=local,jwt-auth
+spring.application.name=your-project-slug
+spring.datasource.url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=database_name;encrypt=true;trustServerCertificate=true}
+spring.datasource.username=sa
+spring.datasource.password=
+
+app.project.name=Your Project Name
+app.swagger.auto-open=true
+app.cors.allowed-origin=http://localhost:5173
+app.storage.root=./data/uploads
+app.storage.max-bytes=10485760
+app.storage.allowed-content-types=application/pdf,image/png,image/jpeg,text/plain
+
+# JWT local: tối thiểu 32 ký tự, chỉ giữ giá trị dev ở máy local.
+app.auth.demo-password=Demo@123
+app.auth.jwt.secret=CHANGE_THIS_TO_A_LONG_LOCAL_SECRET_AT_LEAST_32_CHARS
+app.auth.jwt.access-token-minutes=30
+app.auth.jwt.cookie-secure=false
+
+# M01 có thể dùng mock-auth để làm CRUD trước: local,mock-auth.
+# Microsoft 365 là bonus: thêm profile oidc cùng application-oidc.properties.
+
+# Bổ sung khi dự án triển khai email:
+# spring.mail.username=CHANGE_ME
+# spring.mail.password=CHANGE_ME
