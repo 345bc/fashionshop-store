@@ -1,5 +1,6 @@
 // GENERATED FROM TEMPLATE: templates/feature_tabs.dart.template
 import 'package:flutter/material.dart';
+
 import '../../../../theme/app_theme.dart';
 
 class UsersTabs extends StatefulWidget {
@@ -57,7 +58,10 @@ class _UsersTabsState extends State<UsersTabs> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: isActive ? AppTheme.primary : AppTheme.surface,
                       borderRadius: BorderRadius.circular(12),
@@ -70,7 +74,7 @@ class _UsersTabsState extends State<UsersTabs> {
                         color: isActive ? Colors.white : AppTheme.textSecondary,
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -80,4 +84,3 @@ class _UsersTabsState extends State<UsersTabs> {
     );
   }
 }
-

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 
@@ -17,6 +18,16 @@ class AuthProvider with ChangeNotifier {
 
   bool get isAuthenticated => _user != null;
 
+  bool _hasAdminPermission(UserModel user) {
+    return user.roles.any(
+      (role) =>
+          role == 'ADMIN' ||
+          role == 'ROLE_ADMIN' ||
+          role == 'EMPLOYEE' ||
+          role == 'ROLE_EMPLOYEE',
+    );
+  }
+
   // Gọi hàm này từ màn hình Login
   Future<bool> login(String email, String password) async {
     _isLoading = true;
@@ -25,6 +36,16 @@ class AuthProvider with ChangeNotifier {
 
     try {
       _user = await _authRepository.login(email, password);
+
+      if (_user != null && !_hasAdminPermission(_user!)) {
+        _errorMessage = 'Bạn không có quyền truy cập vào hệ thống Quản trị.';
+        await _authRepository.logout();
+        _user = null;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -44,12 +65,16 @@ class AuthProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
-      
+
       if (token != null && token.isNotEmpty) {
         _user = await _authRepository.getProfile();
+
+        if (_user != null && !_hasAdminPermission(_user!)) {
+          await _authRepository.logout();
+          _user = null;
+        }
       }
     } catch (e) {
-      // Token hết hạn hoặc không hợp lệ
       await _authRepository.logout();
       _user = null;
     }
@@ -65,7 +90,7 @@ class AuthProvider with ChangeNotifier {
 
     await _authRepository.logout();
     _user = null;
-    
+
     _isLoading = false;
     notifyListeners();
   }

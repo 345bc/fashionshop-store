@@ -28,7 +28,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 @EnableMethodSecurity
 public class SecurityConfig {
     private static final String[] PUBLIC_GET = {
-            "/api/health", "/api/project-info", "/api/auth/csrf",
+            "/api/health", "/api/project-info", "/api/v1/auth/csrf",
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
     };
 
@@ -89,7 +89,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register","/api/v1/user").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(apiSecurityErrorHandler)
@@ -121,10 +121,14 @@ public class SecurityConfig {
     ) throws Exception {
         CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrf.setCookiePath("/");
+        org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler requestHandler = new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler();
+        // set the name of the attribute the CsrfToken will be populated on
+        requestHandler.setCsrfRequestAttributeName(null);
         return http
                 .csrf(config -> config
-                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/auth/mock-login")
+                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/auth/mock-login")
                         .csrfTokenRepository(csrf)
+                        .csrfTokenRequestHandler(requestHandler)
                         .withObjectPostProcessor(new ObjectPostProcessor<CsrfFilter>() {
                             @Override
                             public <O extends CsrfFilter> O postProcess(O filter) {

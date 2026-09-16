@@ -1,6 +1,8 @@
 // GENERATED FROM TEMPLATE: templates/feature_header.dart.template
 import 'package:flutter/material.dart';
+
 import '../../../../theme/app_theme.dart';
+import '../dialogs/user_edit_dialog.dart';
 
 class UsersHeader extends StatelessWidget {
   const UsersHeader({super.key});
@@ -16,16 +18,14 @@ class UsersHeader extends StatelessWidget {
           children: [
             Text(
               'Tài khoản hệ thống',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(context).textTheme.headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
-              'Quản lý tài khoản admin và phân quyền truy cập',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
+              'Quản lý tài khoản và phân quyền truy cập',
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: AppTheme.textSecondary),
             ),
           ],
         ),
@@ -38,14 +38,18 @@ class UsersHeader extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => const UserEditDialog(),
+                );
+              },
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Tạo tài khoản'),
             ),
           ],
-        )
+        ),
       ],
     );
   }
 }
-

@@ -1,11 +1,43 @@
-// GENERATED FROM TEMPLATE: templates/feature_dialog_confirm.dart.template
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../theme/app_theme.dart';
+import '../providers/users_provider.dart';
 
-class UserDeleteDialog extends StatelessWidget {
+class UserDeleteDialog extends StatefulWidget {
   final Map<String, dynamic> user;
 
   const UserDeleteDialog({super.key, required this.user});
+
+  @override
+  State<UserDeleteDialog> createState() => _UserDeleteDialogState();
+}
+
+class _UserDeleteDialogState extends State<UserDeleteDialog> {
+  bool _isLoading = false;
+
+  Future<void> _deleteUser() async {
+    setState(() => _isLoading = true);
+    try {
+      final provider = context.read<UsersProvider>();
+      await provider.deleteItem(widget.user['id']);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Xóa tài khoản thành công')),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMsg = e.toString().replaceAll('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $errorMsg'), backgroundColor: AppTheme.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,18 +52,18 @@ class UserDeleteDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.danger.withAlpha(25),
+                color: AppTheme.error.withAlpha(25),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.warning_amber_rounded,
-                color: AppTheme.danger,
+                Icons.delete_outline,
+                color: AppTheme.error,
                 size: 32,
               ),
             ),
             const SizedBox(height: 24),
             const Text(
-              'Xóa vĩnh viễn tài khoản',
+              'Xóa tài khoản',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -45,9 +77,9 @@ class UserDeleteDialog extends StatelessWidget {
               text: TextSpan(
                 style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.5),
                 children: [
-                  const TextSpan(text: 'Tài khoản '),
-                  TextSpan(text: user['name'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.text)),
-                  const TextSpan(text: ' và toàn bộ dữ liệu liên quan sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác!'),
+                  const TextSpan(text: 'Bạn có chắc chắn muốn xóa tài khoản '),
+                  TextSpan(text: widget.user['name'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.text)),
+                  const TextSpan(text: '?\nHành động này không thể hoàn tác.'),
                 ],
               ),
             ),
@@ -56,7 +88,7 @@ class UserDeleteDialog extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
+                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(false),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.textSecondary,
                       side: const BorderSide(color: AppTheme.borderLight),
@@ -69,15 +101,17 @@ class UserDeleteDialog extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(true),
+                    onPressed: _isLoading ? null : _deleteUser,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.danger,
+                      backgroundColor: AppTheme.error,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       elevation: 0,
                     ),
-                    child: const Text('Xóa vĩnh viễn'),
+                    child: _isLoading 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Xóa tài khoản'),
                   ),
                 ),
               ],
@@ -88,4 +122,3 @@ class UserDeleteDialog extends StatelessWidget {
     );
   }
 }
-

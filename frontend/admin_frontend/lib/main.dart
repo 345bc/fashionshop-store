@@ -17,14 +17,14 @@ import 'screens/feedback_screen.dart';
 import 'screens/staff_screen.dart';
 import 'screens/reports_screen.dart';
 import 'features/users/presentation/screens/users_screen.dart';
+import 'features/users/presentation/providers/users_provider.dart';
 import 'screens/settings_screen.dart';
 import 'screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Đọc cấu hình từ file .env
   await dotenv.load(fileName: ".env");
-  
+
   runApp(const ZellaAdminApp());
 }
 
@@ -35,10 +35,10 @@ class ZellaAdminApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Khởi tạo AuthProvider và kiểm tra trạng thái đăng nhập ngay khi mở app
         ChangeNotifierProvider(
           create: (_) => AuthProvider()..checkAuthStatus(),
         ),
+        ChangeNotifierProvider(create: (_) => UsersProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
@@ -48,10 +48,12 @@ class ZellaAdminApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             // Nếu đang kiểm tra token, hiện loading. Nếu đã đăng nhập, vào MainScreen. Chưa thì vào Login.
             home: authProvider.isLoading
-                ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+                ? const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  )
                 : authProvider.isAuthenticated
-                    ? const MainScreen()
-                    : const LoginScreen(),
+                ? const MainScreen()
+                : const LoginScreen(),
           );
         },
       ),

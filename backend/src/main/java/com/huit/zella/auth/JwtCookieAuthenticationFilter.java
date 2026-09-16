@@ -21,7 +21,7 @@ import java.util.Set;
 
 public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
     private static final Set<String> SKIPPED_API_PATHS = Set.of(
-            "/api/health", "/api/project-info", "/api/auth/csrf", "/api/v1/auth/login"
+            "/api/health", "/api/project-info", "/api/v1/auth/csrf", "/api/v1/auth/login"
     );
 
     private final JwtAccessTokenService tokenService;

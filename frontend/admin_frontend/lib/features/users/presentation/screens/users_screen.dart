@@ -1,12 +1,30 @@
 // GENERATED FROM TEMPLATE: templates/feature_screen.dart.template
 import 'package:flutter/material.dart';
+
 import '../widgets/users_header.dart';
 import '../widgets/users_toolbar.dart';
 import '../widgets/users_tabs.dart';
 import '../widgets/users_table.dart';
 
-class UsersScreen extends StatelessWidget {
+import 'package:provider/provider.dart';
+
+import '../providers/users_provider.dart';
+
+class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
+
+  @override
+  State<UsersScreen> createState() => _UsersScreenState();
+}
+
+class _UsersScreenState extends State<UsersScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<UsersProvider>().loadItems();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +43,9 @@ class UsersScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFF0F0F0)), // AppTheme.borderLight
+                border: Border.all(
+                  color: const Color(0xFFF0F0F0),
+                ), // AppTheme.borderLight
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.02),
@@ -36,7 +56,7 @@ class UsersScreen extends StatelessWidget {
               ),
               child: const Column(
                 children: [
-                  UsersTabs(),
+                  // UsersTabs(),
                   UsersTable(),
                 ],
               ),
@@ -47,4 +67,3 @@ class UsersScreen extends StatelessWidget {
     );
   }
 }
-

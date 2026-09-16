@@ -1,6 +1,8 @@
-// GENERATED FROM TEMPLATE: templates/feature_table.dart.template
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../theme/app_theme.dart';
+import '../providers/users_provider.dart';
+import '../../data/models/user_response_model.dart';
 import 'user_status_badge.dart';
 import 'user_action_menu.dart';
 import 'user_role_badge.dart';
@@ -10,83 +12,101 @@ import '../dialogs/user_permissions_dialog.dart';
 import '../dialogs/user_reset_password_dialog.dart';
 import '../dialogs/user_lock_dialog.dart';
 import '../dialogs/user_delete_dialog.dart';
+import 'package:intl/intl.dart';
 
 class UsersTable extends StatelessWidget {
   const UsersTable({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Dummy data cho UI
-    final List<Map<String, dynamic>> users = [
-      {
-        'name': 'Nguyễn Văn A',
-        'email': 'nva@example.com',
-        'role': 'Super Admin',
-        'status': 'Hoạt động',
-        '2fa': true,
-        'last_login': '2 giờ trước'
-      },
-      {
-        'name': 'Trần Thị B',
-        'email': 'ttb@example.com',
-        'role': 'Admin',
-        'status': 'Hoạt động',
-        '2fa': false,
-        'last_login': '1 ngày trước'
-      },
-      {
-        'name': 'Lê Văn C',
-        'email': 'lvc@example.com',
-        'role': 'Manager',
-        'status': 'Bị khóa',
-        '2fa': true,
-        'last_login': '3 ngày trước'
-      },
-    ];
+    return Consumer<UsersProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading && provider.items.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(48.0),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(12),
-          bottomRight: Radius.circular(12),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header Row
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppTheme.borderLight)),
+        if (provider.error != null && provider.items.isEmpty) {
+          final errorMsg = provider.error!.replaceAll('Exception: ', '');
+          return Padding(
+            padding: const EdgeInsets.all(48.0),
+            child: Center(
+              child: Text(
+                'Lỗi: $errorMsg',
+                style: const TextStyle(color: AppTheme.error),
+              ),
             ),
-            child: Row(
-              children: [
-                Expanded(flex: 3, child: Text('Tài khoản', style: _headerStyle())),
-                Expanded(flex: 2, child: Text('Vai trò', style: _headerStyle())),
-                Expanded(flex: 2, child: Text('Trạng thái', style: _headerStyle())),
-                Expanded(flex: 3, child: Text('Đăng nhập gần nhất', style: _headerStyle())),
-                const SizedBox(width: 48), // Action space
-              ],
+          );
+        }
+
+        final users = provider.items;
+
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(12),
+              bottomRight: Radius.circular(12),
             ),
           ),
-          // Data Rows
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: users.length,
-            separatorBuilder: (context, index) => const Divider(height: 1, color: AppTheme.borderLight),
-            itemBuilder: (context, index) {
-              final user = users[index];
-              return _buildDataRow(context, user);
-            },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header Row
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AppTheme.borderLight)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Text('Tài khoản', style: _headerStyle()),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text('Vai trò', style: _headerStyle()),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text('Trạng thái', style: _headerStyle()),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text('Ngày tạo', style: _headerStyle()),
+                    ),
+                    const SizedBox(width: 48), // Action space
+                  ],
+                ),
+              ),
+              // Data Rows
+              if (users.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(48.0),
+                  child: Center(child: Text('Không có dữ liệu', style: TextStyle(color: AppTheme.textSecondary))),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: users.length,
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1, color: AppTheme.borderLight),
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    return _buildDataRow(context, user);
+                  },
+                ),
+              // Pagination Footer
+              const Divider(height: 1, color: AppTheme.borderLight),
+              _buildPagination(context, provider),
+            ],
           ),
-          // Pagination Footer
-          const Divider(height: 1, color: AppTheme.borderLight),
-          _buildPagination(),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -98,11 +118,27 @@ class UsersTable extends StatelessWidget {
     );
   }
 
-  Widget _buildDataRow(BuildContext context, Map<String, dynamic> user) {
+  Widget _buildDataRow(BuildContext context, UserResponseModel user) {
+    // Map data to the existing UI format
+    final roleDisplay = user.roles.isNotEmpty ? user.roles.first : 'USER';
+    final statusDisplay = user.isActive ? 'Hoạt động' : 'Bị khóa';
+    
+    String dateDisplay = '';
+    if (user.createdAt != null) {
+      try {
+        final date = DateTime.parse(user.createdAt!).toLocal();
+        dateDisplay = DateFormat('dd/MM/yyyy HH:mm').format(date);
+      } catch (e) {
+        dateDisplay = user.createdAt!;
+      }
+    }
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: () {
+          // Xử lý khi nhấn vào dòng (vd: xem chi tiết)
+        },
         hoverColor: AppTheme.surface,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -116,17 +152,35 @@ class UsersTable extends StatelessWidget {
                     CircleAvatar(
                       backgroundColor: AppTheme.primary.withOpacity(0.1),
                       child: Text(
-                        user['name'].substring(0, 1),
-                        style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
+                        user.username.isNotEmpty ? user.username.substring(0, 1).toUpperCase() : 'U',
+                        style: const TextStyle(
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                        Text(user['email'], style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user.username,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            user.email,
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 13,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -136,7 +190,7 @@ class UsersTable extends StatelessWidget {
                 flex: 2,
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: UserRoleBadge(role: user['role']),
+                  child: UserRoleBadge(role: roleDisplay),
                 ),
               ),
               // Status
@@ -144,56 +198,108 @@ class UsersTable extends StatelessWidget {
                 flex: 2,
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: UserStatusBadge(status: user['status']),
+                  child: UserStatusBadge(status: statusDisplay),
                 ),
               ),
-              // Last Login
+              // Created At
               Expanded(
                 flex: 3,
                 child: Text(
-                  user['last_login'],
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  dateDisplay,
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
               ),
               // Actions
               SizedBox(
                 width: 48,
                 child: UserActionMenu(
-                  isLocked: user['status'] == 'Bị khóa',
+                  isLocked: !user.isActive,
                   onView: () {
+                    // Create a dummy map since old code used map
+                    final userMap = {
+                      'id': user.id,
+                      'name': user.username,
+                      'email': user.email,
+                      'role': roleDisplay,
+                      'status': statusDisplay,
+                      '2fa': false,
+                      'last_login': dateDisplay,
+                      'roles': user.roles,
+                      'isActive': user.isActive,
+                    };
                     showDialog(
                       context: context,
-                      builder: (_) => UserDetailsDialog(user: user),
+                      builder: (_) => UserDetailsDialog(user: userMap),
                     );
                   },
                   onEdit: () {
+                    final userMap = {
+                      'id': user.id,
+                      'name': user.username,
+                      'email': user.email,
+                      'role': roleDisplay,
+                      'status': statusDisplay,
+                      'roles': user.roles,
+                      'isActive': user.isActive,
+                    };
                     showDialog(
                       context: context,
-                      builder: (_) => UserEditDialog(user: user),
+                      builder: (_) => UserEditDialog(user: userMap),
                     );
                   },
                   onPermission: () {
+                    final userMap = {
+                      'id': user.id,
+                      'name': user.username,
+                      'email': user.email,
+                      'role': roleDisplay,
+                      'status': statusDisplay,
+                      'roles': user.roles,
+                      'isActive': user.isActive,
+                    };
                     showDialog(
                       context: context,
-                      builder: (_) => UserPermissionsDialog(user: user),
+                      builder: (_) => UserPermissionsDialog(user: userMap),
                     );
                   },
                   onResetPassword: () {
+                    final userMap = {
+                      'id': user.id,
+                      'name': user.username,
+                      'email': user.email,
+                    };
                     showDialog(
                       context: context,
-                      builder: (_) => UserResetPasswordDialog(user: user),
+                      builder: (_) => UserResetPasswordDialog(user: userMap),
                     );
                   },
                   onLock: () {
+                    final userMap = {
+                      'id': user.id,
+                      'name': user.username,
+                      'email': user.email,
+                      'roles': user.roles,
+                      'isActive': user.isActive,
+                    };
                     showDialog(
                       context: context,
-                      builder: (_) => UserLockDialog(user: user),
+                      builder: (_) => UserLockDialog(user: userMap),
                     );
                   },
                   onDelete: () {
+                    final userMap = {
+                      'id': user.id,
+                      'name': user.username,
+                      'email': user.email,
+                      'roles': user.roles,
+                      'isActive': user.isActive,
+                    };
                     showDialog(
                       context: context,
-                      builder: (_) => UserDeleteDialog(user: user),
+                      builder: (_) => UserDeleteDialog(user: userMap),
                     );
                   },
                 ),
@@ -205,41 +311,79 @@ class UsersTable extends StatelessWidget {
     );
   }
 
-  Widget _buildPagination() {
+  Widget _buildPagination(BuildContext context, UsersProvider provider) {
+    int totalPages = (provider.totalElements / provider.pageSize).ceil();
+    if (totalPages == 0) totalPages = 1;
+    
+    final currentPage = provider.currentPage;
+
+    int start = currentPage * provider.pageSize + 1;
+    int end = (currentPage + 1) * provider.pageSize;
+    if (end > provider.totalElements) end = provider.totalElements;
+    if (provider.totalElements == 0) start = 0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Hiển thị 1-10 trong số 124 tài khoản',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          Text(
+            'Hiển thị $start-$end trong số ${provider.totalElements} tài khoản',
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
           ),
           Row(
             children: [
-              _buildPageButton(Icons.chevron_left, onPressed: null), // Disabled
+              _buildPageButton(
+                Icons.chevron_left, 
+                onPressed: currentPage > 0 
+                    ? () => provider.loadItems(page: currentPage - 1)
+                    : null,
+              ), 
               const SizedBox(width: 8),
-              _buildPageNumber('1', isActive: true),
+              
+              // Đơn giản hóa pagination: hiển thị tối đa 5 trang
+              ...List.generate(totalPages, (index) {
+                // Chỉ hiển thị 5 trang gần nhất
+                if (totalPages > 5) {
+                  if (index != 0 && index != totalPages - 1 && (index < currentPage - 1 || index > currentPage + 1)) {
+                    // Hiển thị ... thay vì số
+                    if (index == 1 || index == totalPages - 2) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4.0),
+                        child: Text('...', style: TextStyle(color: AppTheme.textSecondary)),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }
+                }
+                
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: _buildPageNumber(
+                    '${index + 1}', 
+                    isActive: currentPage == index,
+                    onTap: () => provider.loadItems(page: index),
+                  ),
+                );
+              }),
+
               const SizedBox(width: 4),
-              _buildPageNumber('2'),
-              const SizedBox(width: 4),
-              _buildPageNumber('3'),
-              const SizedBox(width: 4),
-              const Text('...', style: TextStyle(color: AppTheme.textSecondary)),
-              const SizedBox(width: 4),
-              _buildPageNumber('13'),
-              const SizedBox(width: 8),
-              _buildPageButton(Icons.chevron_right, onPressed: () {}),
+              _buildPageButton(
+                Icons.chevron_right, 
+                onPressed: currentPage < totalPages - 1 
+                    ? () => provider.loadItems(page: currentPage + 1)
+                    : null,
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildPageNumber(String text, {bool isActive = false}) {
+  Widget _buildPageNumber(String text, {bool isActive = false, required VoidCallback onTap}) {
     return InkWell(
-      onTap: () {},
+      onTap: isActive ? null : onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         width: 32,
@@ -283,4 +427,3 @@ class UsersTable extends StatelessWidget {
     );
   }
 }
-

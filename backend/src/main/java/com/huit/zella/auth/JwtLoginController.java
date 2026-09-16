@@ -38,6 +38,12 @@ public class JwtLoginController {
         return ApiResponse.success(user, "Đăng nhập thành công");
     }
 
+    @PostMapping("/register")
+    ApiResponse<CurrentUser> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
+        CurrentUser user = appUserService.register(request.email(), request.username(), request.password(), passwordEncoder);
+        return ApiResponse.success(user, "Đăng ký thành công");
+    }
+
     record LoginRequest(
             @NotBlank(message = "Email là bắt buộc") @Email(message = "Email không hợp lệ") String email,
             @NotBlank(message = "Mật khẩu là bắt buộc") String password
@@ -46,14 +52,10 @@ public class JwtLoginController {
 
     record RegisterRequest(
             @NotBlank(message = "Email là bắt buộc") @Email(message = "Email không hợp lệ") String email,
-            @NotBlank(message = "Mật khẩu là bắt buộc") String password
+            @NotBlank(message = "Mật khẩu là bắt buộc") String password,
+            @NotBlank(message = "Tên là bắt buộc") String username
     ) {
 
-//        @PostMapping("/register")
-//        ApiResponse<CurrentUser> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
-//            CurrentUser user = appUserService.authenticate(request.email(), request.password(), passwordEncoder);
-//            tokenService.writeLoginCookie(response, user);
-//            return ApiResponse.success(user, "Đăng nhập thành công");
-//        }
+
     }
 }

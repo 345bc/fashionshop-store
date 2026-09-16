@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../models/user_model.dart';
@@ -11,14 +12,16 @@ class AuthRepository {
     try {
       final response = await _apiClient.post(
         ApiEndpoints.login,
-        data: {
-          'email': email,
-          'password': password,
-        },
+        data: {'email': email, 'password': password},
       );
 
-      // Backend ApiResponse<CurrentUser> format: { "data": { "id": 1, ... }, "message": "..." }
-      final userJson = response.data['data'];
+      // Hỗ trợ cả 2 định dạng trả về từ backend: 
+      // 1. Trực tiếp là User object
+      // 2. Nằm trong Map { "user": {...}, "access_token": "..." }
+      dynamic userJson = response.data['data'];
+      if (userJson is Map<String, dynamic> && userJson.containsKey('user')) {
+        userJson = userJson['user'];
+      }
 
       // Lấy token từ header Set-Cookie trả về
       String? token;
@@ -26,7 +29,9 @@ class AuthRepository {
       if (setCookies != null) {
         for (final cookie in setCookies) {
           if (cookie.startsWith('ACCESS_TOKEN=')) {
-            token = cookie.split(';').first.split('=').last;
+            // Dùng substring để tránh bị cắt mất dấu '=' trong JWT (base64 padding)
+            final cookiePart = cookie.split(';').first;
+            token = cookiePart.substring('ACCESS_TOKEN='.length);
             break;
           }
         }
@@ -38,10 +43,9 @@ class AuthRepository {
       }
 
       return UserModel.fromJson(userJson);
-      
     } on DioException catch (e) {
-      final errorMessage = e.response?.data?['message'] ?? 'Lỗi kết nối đến máy chủ';
-      throw Exception(errorMessage);
+      _handleError(e);
+      rethrow;
     } catch (e) {
       throw Exception('Đã xảy ra lỗi không xác định: $e');
     }
@@ -51,6 +55,9 @@ class AuthRepository {
     try {
       final response = await _apiClient.get(ApiEndpoints.getProfile);
       return UserModel.fromJson(response.data['data']);
+    } on DioException catch (e) {
+      _handleError(e);
+      rethrow;
     } catch (e) {
       throw Exception('Không thể lấy thông tin người dùng');
     }
@@ -63,5 +70,33 @@ class AuthRepository {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
+  }
+
+  void _handleError(DioException e) {
+    if (e.response != null && e.response!.data != null) {
+      final data = e.response!.data;
+      if (data is Map<String, dynamic>) {
+        if (data.containsKey('message') &&
+            data['message'] != null &&
+            data['message'].toString().isNotEmpty) {
+          throw Exception(data['message']);
+        }
+        if (data.containsKey('error') &&
+            data['error'] != null &&
+            data['error'].toString().isNotEmpty) {
+          throw Exception(data['error']);
+        }
+      } else if (data is String && data.isNotEmpty) {
+        throw Exception(data);
+      }
+    }
+
+    if (e.response?.statusCode == 401) {
+      throw Exception('Tài khoản hoặc mật khẩu không chính xác');
+    } else if (e.response?.statusCode == 403) {
+      throw Exception('Tài khoản đã bị khóa hoặc không có quyền');
+    }
+
+    throw Exception(e.message ?? 'Lỗi kết nối đến máy chủ');
   }
 }

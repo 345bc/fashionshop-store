@@ -1,0 +1,68 @@
+// GENERATED FROM TEMPLATE: templates/feature_repository.dart.template
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_endpoints.dart';
+
+class FeatureRepository {
+  final ApiClient _apiClient = ApiClient();
+
+  Future<Map<String, dynamic>> getAll({int page = 0, int size = 15, String? query}) async {
+    final Map<String, dynamic> queryParams = {
+      'page': page,
+      'size': size,
+    };
+    if (query != null && query.isNotEmpty) {
+      queryParams['q'] = query;
+    }
+
+    final response = await _apiClient.get(
+      ApiEndpoints.users, // Thay bằng endpoint thực tế
+      queryParameters: queryParams,
+    );
+
+    if (response.data['status'] == 200) {
+      return response.data['data'];
+    }
+    throw Exception(response.data['message'] ?? 'Fetch failed');
+  }
+
+  Future<Map<String, dynamic>> getById(int id) async {
+    final response = await _apiClient.get(
+      '${ApiEndpoints.users}/$id', // Thay bằng endpoint thực tế
+    );
+    if (response.data['status'] == 200) {
+      return response.data['data'];
+    }
+    throw Exception(response.data['message'] ?? 'Fetch failed');
+  }
+
+  Future<Map<String, dynamic>> create(Map<String, dynamic> data) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.users, // Thay bằng endpoint thực tế
+      data: data,
+    );
+    if (response.data['status'] == 201 || response.data['status'] == 200) {
+      return response.data['data'];
+    }
+    throw Exception(response.data['message'] ?? 'Create failed');
+  }
+
+  Future<Map<String, dynamic>> update(int id, Map<String, dynamic> data) async {
+    final response = await _apiClient.put(
+      '${ApiEndpoints.users}/$id', // Thay bằng endpoint thực tế
+      data: data,
+    );
+    if (response.data['status'] == 200) {
+      return response.data['data'];
+    }
+    throw Exception(response.data['message'] ?? 'Update failed');
+  }
+
+  Future<void> delete(int id) async {
+    final response = await _apiClient.delete(
+      '${ApiEndpoints.users}/$id', // Thay bằng endpoint thực tế
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Delete failed');
+    }
+  }
+}

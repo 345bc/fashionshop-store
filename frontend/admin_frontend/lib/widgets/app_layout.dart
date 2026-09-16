@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../theme/app_theme.dart';
 import '../features/auth/presentation/provider/auth_provider.dart';
 import '../screens/login_screen.dart';
@@ -75,7 +76,9 @@ class AppLayout extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   alignment: Alignment.centerLeft,
                   decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: AppTheme.borderLight)),
+                    border: Border(
+                      bottom: BorderSide(color: AppTheme.borderLight),
+                    ),
                   ),
                   child: const Text(
                     'ZELLA.',
@@ -97,7 +100,11 @@ class AppLayout extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.only(left: 24, top: 16, bottom: 8),
+                            padding: const EdgeInsets.only(
+                              left: 24,
+                              top: 16,
+                              bottom: 8,
+                            ),
                             child: Text(
                               group.title,
                               style: const TextStyle(
@@ -111,14 +118,22 @@ class AppLayout extends StatelessWidget {
                           ...group.items.map((item) {
                             final isActive = currentRoute == item.route;
                             return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 2,
+                              ),
                               child: InkWell(
                                 onTap: () => onNavigate(item.route),
                                 borderRadius: BorderRadius.circular(8),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: isActive ? AppTheme.surface : Colors.transparent,
+                                    color: isActive
+                                        ? AppTheme.surface
+                                        : Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
@@ -126,15 +141,21 @@ class AppLayout extends StatelessWidget {
                                       Icon(
                                         item.icon,
                                         size: 20,
-                                        color: isActive ? AppTheme.primary : AppTheme.textSecondary,
+                                        color: isActive
+                                            ? AppTheme.primary
+                                            : AppTheme.textSecondary,
                                       ),
                                       const SizedBox(width: 16),
                                       Text(
                                         item.title,
                                         style: TextStyle(
                                           fontSize: 14,
-                                          fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                                          color: isActive ? AppTheme.primary : AppTheme.textSecondary,
+                                          fontWeight: isActive
+                                              ? FontWeight.w600
+                                              : FontWeight.w500,
+                                          color: isActive
+                                              ? AppTheme.primary
+                                              : AppTheme.textSecondary,
                                         ),
                                       ),
                                     ],
@@ -178,14 +199,21 @@ class AppLayout extends StatelessWidget {
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.search, size: 18, color: AppTheme.textSecondary),
+                            Icon(
+                              Icons.search,
+                              size: 18,
+                              color: AppTheme.textSecondary,
+                            ),
                             SizedBox(width: 12),
                             Expanded(
                               child: TextField(
                                 decoration: InputDecoration(
                                   hintText: 'Search...',
                                   border: InputBorder.none,
-                                  hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                                  hintStyle: TextStyle(
+                                    color: AppTheme.textMuted,
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ),
                             ),
@@ -196,7 +224,11 @@ class AppLayout extends StatelessWidget {
                       Row(
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.notifications_none, size: 20, color: AppTheme.textSecondary),
+                            icon: const Icon(
+                              Icons.notifications_none,
+                              size: 20,
+                              color: AppTheme.textSecondary,
+                            ),
                             onPressed: () {},
                           ),
                           const SizedBox(width: 16),
@@ -233,9 +265,16 @@ class AppLayout extends StatelessWidget {
                                 value: 'logout',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.logout, size: 20, color: AppTheme.danger),
+                                    Icon(
+                                      Icons.logout,
+                                      size: 20,
+                                      color: AppTheme.danger,
+                                    ),
                                     SizedBox(width: 12),
-                                    Text('Đăng xuất', style: TextStyle(color: AppTheme.danger)),
+                                    Text(
+                                      'Đăng xuất',
+                                      style: TextStyle(color: AppTheme.danger),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -250,7 +289,10 @@ class AppLayout extends StatelessWidget {
                               child: const Center(
                                 child: Text(
                                   'A',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),

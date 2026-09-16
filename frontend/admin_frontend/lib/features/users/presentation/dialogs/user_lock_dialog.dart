@@ -1,14 +1,75 @@
-// GENERATED FROM TEMPLATE: templates/feature_dialog_confirm.dart.template
 import 'package:flutter/material.dart';
-import '../../../../theme/app_theme.dart';
+import 'package:provider/provider.dart';
 
-class UserLockDialog extends StatelessWidget {
+import '../../../../theme/app_theme.dart';
+import '../providers/users_provider.dart';
+
+class UserLockDialog extends StatefulWidget {
   final Map<String, dynamic> user;
 
   const UserLockDialog({super.key, required this.user});
 
   @override
+  State<UserLockDialog> createState() => _UserLockDialogState();
+}
+
+class _UserLockDialogState extends State<UserLockDialog> {
+  bool _isLoading = false;
+
+  Future<void> _toggleLock() async {
+    setState(() => _isLoading = true);
+    try {
+      final provider = context.read<UsersProvider>();
+
+      final data = {
+        'username': widget.user['name'],
+        'email': widget.user['email'],
+        'roles': widget.user['roles'] ?? ['USER'],
+        'isActive': !(widget.user['isActive'] as bool),
+      };
+
+      await provider.updateItem(widget.user['id'], data);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              data['isActive'] == true
+                  ? 'Đã mở khóa tài khoản'
+                  : 'Đã khóa tài khoản',
+            ),
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMsg = e.toString().replaceAll('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: $errorMsg'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final bool isCurrentlyActive = widget.user['isActive'] ?? true;
+    final String actionText = isCurrentlyActive
+        ? 'Khóa tài khoản'
+        : 'Mở khóa tài khoản';
+    final Color actionColor = isCurrentlyActive
+        ? AppTheme.warning
+        : AppTheme.success;
+    final IconData actionIcon = isCurrentlyActive
+        ? Icons.lock_outline
+        : Icons.lock_open_outlined;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
@@ -20,19 +81,15 @@ class UserLockDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.warning.withAlpha(25),
+                color: actionColor.withAlpha(25),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.lock_outline,
-                color: AppTheme.warning,
-                size: 32,
-              ),
+              child: Icon(actionIcon, color: actionColor, size: 32),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Khóa tài khoản',
-              style: TextStyle(
+            Text(
+              actionText,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.text,
@@ -43,11 +100,25 @@ class UserLockDialog extends StatelessWidget {
             RichText(
               textAlign: TextAlign.center,
               text: TextSpan(
-                style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.5),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.textSecondary,
+                  height: 1.5,
+                ),
                 children: [
                   const TextSpan(text: 'Tài khoản '),
-                  TextSpan(text: user['name'], style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.text)),
-                  const TextSpan(text: ' sẽ bị đăng xuất ngay lập tức và không thể truy cập hệ thống. Bạn có muốn tiếp tục?'),
+                  TextSpan(
+                    text: widget.user['name'],
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.text,
+                    ),
+                  ),
+                  TextSpan(
+                    text: isCurrentlyActive
+                        ? ' sẽ bị đăng xuất ngay lập tức và không thể truy cập hệ thống. Bạn có muốn tiếp tục?'
+                        : ' sẽ được phép truy cập lại vào hệ thống. Bạn có muốn tiếp tục?',
+                  ),
                 ],
               ),
             ),
@@ -56,12 +127,16 @@ class UserLockDialog extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
+                    onPressed: _isLoading
+                        ? null
+                        : () => Navigator.of(context).pop(false),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.textSecondary,
                       side: const BorderSide(color: AppTheme.borderLight),
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: const Text('Hủy'),
                   ),
@@ -69,15 +144,26 @@ class UserLockDialog extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(true),
+                    onPressed: _isLoading ? null : _toggleLock,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.warning,
+                      backgroundColor: actionColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
-                    child: const Text('Khóa tài khoản'),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(actionText),
                   ),
                 ),
               ],
@@ -88,4 +174,3 @@ class UserLockDialog extends StatelessWidget {
     );
   }
 }
-

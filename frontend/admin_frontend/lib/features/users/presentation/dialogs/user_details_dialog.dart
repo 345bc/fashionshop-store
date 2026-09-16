@@ -1,5 +1,6 @@
 // GENERATED FROM TEMPLATE: templates/feature_dialog_detail.dart.template
 import 'package:flutter/material.dart';
+
 import '../../../../theme/app_theme.dart';
 
 class UserDetailsDialog extends StatelessWidget {
@@ -34,14 +35,17 @@ class UserDetailsDialog extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                    icon: const Icon(
+                      Icons.close,
+                      color: AppTheme.textSecondary,
+                    ),
                     splashRadius: 24,
                   ),
                 ],
               ),
             ),
             const Divider(height: 1, color: AppTheme.borderLight),
-            
+
             // Content
             Flexible(
               child: SingleChildScrollView(
@@ -49,12 +53,16 @@ class UserDetailsDialog extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow('Họ và tên', user['name']?.toString() ?? 'N/A'),
+                    _buildInfoRow(
+                      'Username',
+                      user['name']?.toString() ?? 'N/A',
+                    ),
                     _buildInfoRow('Email', user['email']?.toString() ?? 'N/A'),
                     _buildInfoRow('Vai trò', user['role']?.toString() ?? 'N/A'),
-                    _buildInfoRow('Trạng thái', user['status']?.toString() ?? 'N/A'),
-                    _buildInfoRow('Xác thực 2FA', user['2fa'] == true ? 'Đang bật' : 'Chưa bật'),
-                    _buildInfoRow('Đăng nhập lần cuối', user['last_login']?.toString() ?? 'N/A'),
+                    _buildInfoRow(
+                      'Trạng thái',
+                      user['status']?.toString() ?? 'N/A',
+                    ),
                   ],
                 ),
               ),
@@ -96,4 +104,3 @@ class UserDetailsDialog extends StatelessWidget {
     );
   }
 }
-
