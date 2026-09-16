@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+class AppAnimations {
+  static const Duration fast = Duration(milliseconds: 150);
+  static const Duration normal = Duration(milliseconds: 300);
+  static const Duration slow = Duration(milliseconds: 500);
+  static const Duration toastDuration = Duration(seconds: 3);
+}
+
 class AppTheme {
   // Colors from CSS variables
   static const Color primary = Color(0xFF171717);
@@ -17,6 +24,7 @@ class AppTheme {
   static const Color success = Color(0xFF16A34A);
   static const Color warning = Color(0xFFD97706);
   static const Color danger = Color(0xFFDC2626);
+  static const Color error = Color(0xFFDC2626);
   static const Color info = Color(0xFF2563EB);
 
   static ThemeData get lightTheme {
@@ -32,11 +40,11 @@ class AppTheme {
         error: danger,
       ),
       textTheme: GoogleFonts.interTextTheme().copyWith(
-        displayLarge: GoogleFonts.outfit(color: text, fontWeight: FontWeight.bold),
-        displayMedium: GoogleFonts.outfit(color: text, fontWeight: FontWeight.w600),
-        displaySmall: GoogleFonts.outfit(color: text, fontWeight: FontWeight.w600),
-        headlineMedium: GoogleFonts.outfit(color: text, fontWeight: FontWeight.w600),
-        titleLarge: GoogleFonts.outfit(color: text, fontWeight: FontWeight.w600),
+        displayLarge: GoogleFonts.inter(color: text, fontWeight: FontWeight.bold),
+        displayMedium: GoogleFonts.inter(color: text, fontWeight: FontWeight.w600),
+        displaySmall: GoogleFonts.inter(color: text, fontWeight: FontWeight.w600),
+        headlineMedium: GoogleFonts.inter(color: text, fontWeight: FontWeight.w600),
+        titleLarge: GoogleFonts.inter(color: text, fontWeight: FontWeight.w600),
         bodyLarge: const TextStyle(color: text),
         bodyMedium: const TextStyle(color: text),
         bodySmall: const TextStyle(color: textSecondary),

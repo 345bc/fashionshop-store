@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 
 import 'theme/app_theme.dart';
+import 'features/auth/presentation/provider/auth_provider.dart';
 import 'widgets/app_layout.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/products_screen.dart';
@@ -9,15 +12,19 @@ import 'screens/promotions_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/customers_screen.dart';
 import 'screens/purchases_screen.dart';
-import 'screens/suppliers_screen.dart';
+import 'features/suppliers/presentation/screens/suppliers_screen.dart';
 import 'screens/feedback_screen.dart';
 import 'screens/staff_screen.dart';
 import 'screens/reports_screen.dart';
-import 'screens/users_screen.dart';
+import 'features/users/presentation/screens/users_screen.dart';
+import 'features/users/presentation/providers/users_provider.dart';
 import 'screens/settings_screen.dart';
 import 'screens/login_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
+
   runApp(const ZellaAdminApp());
 }
 
@@ -26,11 +33,30 @@ class ZellaAdminApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Zella Admin',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const LoginScreen(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider()..checkAuthStatus(),
+        ),
+        ChangeNotifierProvider(create: (_) => UsersProvider()),
+      ],
+      child: Consumer<AuthProvider>(
+        builder: (context, authProvider, _) {
+          return MaterialApp(
+            title: 'Zella Admin',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            // Nếu đang kiểm tra token, hiện loading. Nếu đã đăng nhập, vào MainScreen. Chưa thì vào Login.
+            home: authProvider.isLoading
+                ? const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  )
+                : authProvider.isAuthenticated
+                ? const MainScreen()
+                : const LoginScreen(),
+          );
+        },
+      ),
     );
   }
 }

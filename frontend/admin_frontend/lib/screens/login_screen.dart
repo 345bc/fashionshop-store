@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+import '../features/auth/presentation/provider/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -15,22 +17,35 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _isLoading = false;
 
   void _login() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+      FocusScope.of(context).unfocus(); // Ẩn bàn phím
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
-      // Simulate network request
-      await Future.delayed(const Duration(seconds: 1));
-      
-      if (!mounted) return;
-      
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainScreen()),
+      final success = await authProvider.login(
+        _emailController.text,
+        _passwordController.text,
       );
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage ?? 'Đăng nhập thất bại'),
+            backgroundColor: AppTheme.danger,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+      }
     }
   }
 
@@ -43,6 +58,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLoading = context.watch<AuthProvider>().isLoading;
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
       body: Center(
@@ -70,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Logo/Title
                   Text(
-                    'Zella',
+                    'Admin',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
                       fontSize: 32,
@@ -80,16 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Chào mừng trở lại! Vui lòng đăng nhập.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  
+
                   // Email Field
                   const Text(
                     'Email',
@@ -104,7 +112,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       hintText: 'Nhập email của bạn',
                       hintStyle: const TextStyle(color: AppTheme.textMuted),
-                      prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textSecondary, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.email_outlined,
+                        color: AppTheme.textSecondary,
+                        size: 20,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: const BorderSide(color: AppTheme.border),
@@ -117,7 +129,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(8),
                         borderSide: const BorderSide(color: AppTheme.primary),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -130,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Password Field
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -142,22 +157,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: AppTheme.text,
                         ),
                       ),
-                      TextButton(
-                        onPressed: () {},
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 0),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text(
-                          'Quên mật khẩu?',
-                          style: TextStyle(
-                            color: AppTheme.info,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
+                      // TextButton(
+                      //   onPressed: () {},
+                      //   style: TextButton.styleFrom(
+                      //     padding: EdgeInsets.zero,
+                      //     minimumSize: const Size(0, 0),
+                      //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      //   ),
+                      //   child: const Text(
+                      //     'Quên mật khẩu?',
+                      //     style: TextStyle(
+                      //       color: AppTheme.info,
+                      //       fontWeight: FontWeight.w500,
+                      //       fontSize: 13,
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -167,10 +182,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       hintText: 'Nhập mật khẩu',
                       hintStyle: const TextStyle(color: AppTheme.textMuted),
-                      prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline,
+                        color: AppTheme.textSecondary,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           color: AppTheme.textSecondary,
                           size: 20,
                         ),
@@ -192,7 +213,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(8),
                         borderSide: const BorderSide(color: AppTheme.primary),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -205,10 +229,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Login Button
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
+                    onPressed: isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: AppTheme.primary,
@@ -218,13 +242,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       elevation: 0,
                     ),
-                    child: _isLoading
+                    child: isLoading
                         ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(

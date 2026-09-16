@@ -1,0 +1,24 @@
+// GENERATED FROM TEMPLATE: templates/feature_model.dart.template
+class FeatureModel {
+  final int id;
+  final String name;
+
+  FeatureModel({
+    required this.id,
+    required this.name,
+  });
+
+  factory FeatureModel.fromJson(Map<String, dynamic> json) {
+    return FeatureModel(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+    };
+  }
+}
