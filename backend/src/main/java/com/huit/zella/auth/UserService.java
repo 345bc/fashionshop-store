@@ -58,7 +58,7 @@ public class UserService {
     public CurrentUser register(String email,  String userName, String rawPassword, PasswordEncoder passwordEncoder) {
         if (user_repository.findByEmailIgnoreCase(normalizeEmail(email)).isPresent()
                 || user_repository.findByUserNameIgnoreCase(normalizeUserName(userName)).isPresent()) {
-            throw invalidInformation();
+            throw informationAlreadyExists();
         }
 
         Role userRole = role_repository.findByRoleCode(RoleEnum.USER.name())
@@ -86,7 +86,7 @@ public class UserService {
     public UserResponse createUser (CreateUserRequest req){
         if (user_repository.findByEmailIgnoreCase(normalizeEmail(req.email())).isPresent()
                 || user_repository.findByUserNameIgnoreCase(normalizeUserName(req.username())).isPresent()) {
-            throw invalidInformation();
+            throw informationAlreadyExists();
         }
 
         Set<Role> roles = new HashSet<>();
@@ -210,10 +210,12 @@ public class UserService {
         return new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
                 "Email hoặc mật khẩu không đúng");
     }
-
-    BusinessException invalidInformation() {
-        return new BusinessException(HttpStatus.CONFLICT, "INFORMATION_ALREADY_EXISTS",
-                "Email hoặc Username đã tồn tại");
+    BusinessException informationAlreadyExists() {
+        return new BusinessException(
+                HttpStatus.CONFLICT,
+                "INFORMATION_ALREADY_EXISTS",
+                "Email hoặc Username đã tồn tại"
+        );
     }
 
     private User requireFeature(Long id) {
