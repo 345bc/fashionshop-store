@@ -47,13 +47,14 @@ class ZellaAdminApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             // Nếu đang kiểm tra token, hiện loading. Nếu đã đăng nhập, vào MainScreen. Chưa thì vào Login.
-            home: authProvider.isLoading
-                ? const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  )
-                : authProvider.isAuthenticated
-                ? const MainScreen()
-                : const LoginScreen(),
+            // home: authProvider.isLoading
+            //     ? const Scaffold(
+            //         body: Center(child: CircularProgressIndicator()),
+            //       )
+            //     : authProvider.isAuthenticated
+            //     ? const MainScreen()
+            //     : const LoginScreen(),
+            home: const MainScreen(),
           );
         },
       ),
