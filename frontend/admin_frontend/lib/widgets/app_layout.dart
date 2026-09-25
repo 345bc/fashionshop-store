@@ -25,21 +25,24 @@ final List<NavGroup> navGroups = [
     NavItem('Dashboard', Icons.dashboard_outlined, '/'),
     NavItem('Báo cáo', Icons.bar_chart_outlined, '/reports'),
   ]),
-  NavGroup('BÁN HÀNG', [
+  NavGroup('QUẢN LÝ BÁN HÀNG', [
     NavItem('Đơn hàng', Icons.shopping_cart_outlined, '/orders'),
-    NavItem('Khách hàng', Icons.people_outline, '/customers'),
     NavItem('Khuyến mãi', Icons.local_offer_outlined, '/promotions'),
-    NavItem('Phản hồi', Icons.chat_bubble_outline, '/feedback'),
   ]),
   NavGroup('SẢN PHẨM & KHO', [
+    NavItem('Danh mục', Icons.category_outlined, '/categories'),
     NavItem('Sản phẩm', Icons.inventory_2_outlined, '/products'),
     NavItem('Tồn kho', Icons.storage_outlined, '/inventory'),
     NavItem('Nhập hàng', Icons.local_shipping_outlined, '/purchases'),
     NavItem('Nhà cung cấp', Icons.business_center_outlined, '/suppliers'),
   ]),
+  NavGroup('KHÁCH HÀNG & HỖ TRỢ', [
+    NavItem('Khách hàng', Icons.people_outline, '/customers'),
+    NavItem('Phản hồi', Icons.chat_bubble_outline, '/feedback'),
+  ]),
   NavGroup('HỆ THỐNG', [
-    NavItem('Nhân sự', Icons.badge_outlined, '/staff'),
     NavItem('Tài khoản', Icons.security_outlined, '/users'),
+    NavItem('Nhân sự', Icons.badge_outlined, '/staff'),
     NavItem('Cài đặt', Icons.settings_outlined, '/settings'),
   ]),
 ];
@@ -47,7 +50,7 @@ final List<NavGroup> navGroups = [
 class AppLayout extends StatelessWidget {
   final Widget child;
   final String currentRoute;
-  final Function(String) onNavigate;
+  final void Function(String, [Map<String, dynamic>?]) onNavigate;
 
   const AppLayout({
     super.key,
@@ -65,8 +68,8 @@ class AppLayout extends StatelessWidget {
           Container(
             width: 260,
             decoration: const BoxDecoration(
-              color: AppTheme.background,
-              border: Border(right: BorderSide(color: AppTheme.border)),
+              color: AppTheme.primary,
+              border: Border(right: BorderSide(color: AppTheme.primary)),
             ),
             child: Column(
               children: [
@@ -75,9 +78,9 @@ class AppLayout extends StatelessWidget {
                   height: 70,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   alignment: Alignment.centerLeft,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     border: Border(
-                      bottom: BorderSide(color: AppTheme.borderLight),
+                      bottom: BorderSide(color: Colors.white.withAlpha(25)),
                     ),
                   ),
                   child: const Text(
@@ -86,6 +89,7 @@ class AppLayout extends StatelessWidget {
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -1,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -101,17 +105,17 @@ class AppLayout extends StatelessWidget {
                         children: [
                           Padding(
                             padding: const EdgeInsets.only(
-                              left: 24,
-                              top: 16,
-                              bottom: 8,
+                              left: 28,
+                              top: 24,
+                              bottom: 12,
                             ),
                             child: Text(
                               group.title,
-                              style: const TextStyle(
-                                fontSize: 12,
+                              style: TextStyle(
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.textMuted,
-                                letterSpacing: 1.2,
+                                color: Colors.white.withAlpha(100),
+                                letterSpacing: 1.5,
                               ),
                             ),
                           ),
@@ -119,22 +123,23 @@ class AppLayout extends StatelessWidget {
                             final isActive = currentRoute == item.route;
                             return Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
+                                horizontal: 16,
                                 vertical: 2,
                               ),
                               child: InkWell(
                                 onTap: () => onNavigate(item.route),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
+                                borderRadius: BorderRadius.circular(10),
+                                child: AnimatedContainer(
+                                  duration: AppAnimations.fast,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                     vertical: 12,
                                   ),
                                   decoration: BoxDecoration(
                                     color: isActive
-                                        ? AppTheme.surface
+                                        ? Colors.white.withAlpha(20)
                                         : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Row(
                                     children: [
@@ -142,10 +147,10 @@ class AppLayout extends StatelessWidget {
                                         item.icon,
                                         size: 20,
                                         color: isActive
-                                            ? AppTheme.primary
-                                            : AppTheme.textSecondary,
+                                            ? Colors.white
+                                            : Colors.white.withAlpha(150),
                                       ),
-                                      const SizedBox(width: 16),
+                                      const SizedBox(width: 14),
                                       Text(
                                         item.title,
                                         style: TextStyle(
@@ -154,8 +159,8 @@ class AppLayout extends StatelessWidget {
                                               ? FontWeight.w600
                                               : FontWeight.w500,
                                           color: isActive
-                                              ? AppTheme.primary
-                                              : AppTheme.textSecondary,
+                                              ? Colors.white
+                                              : Colors.white.withAlpha(170),
                                         ),
                                       ),
                                     ],
@@ -305,7 +310,8 @@ class AppLayout extends StatelessWidget {
                 // Page Content
                 Expanded(
                   child: Container(
-                    color: AppTheme.surface,
+                    color: AppTheme
+                        .background, // Sửa màu nền của Page Content thành trắng
                     width: double.infinity,
                     child: child,
                   ),

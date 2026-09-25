@@ -14,13 +14,6 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
-    //    id            BIGINT IDENTITY(1,1) PRIMARY KEY,
-//    username      VARCHAR(50)  NOT NULL UNIQUE,
-//    password_hash VARCHAR(255) NOT NULL,
-//    email         VARCHAR(100) NOT NULL UNIQUE,
-//    is_active     BIT          NOT NULL DEFAULT 1,
-//    created_at    DATETIME2    NOT NULL DEFAULT GETDATE(),
-//    updated_at    DATETIME2    NOT NULL DEFAULT GETDATE()
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

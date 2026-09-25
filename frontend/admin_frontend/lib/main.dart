@@ -5,21 +5,29 @@ import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'features/auth/presentation/provider/auth_provider.dart';
 import 'widgets/app_layout.dart';
-import 'screens/dashboard_screen.dart';
-import 'screens/products_screen.dart';
-import 'screens/inventory_screen.dart';
-import 'screens/promotions_screen.dart';
-import 'screens/orders_screen.dart';
-import 'screens/customers_screen.dart';
-import 'screens/purchases_screen.dart';
+import 'features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'features/products/presentation/screens/products_screen.dart';
+import 'features/inventory/presentation/screens/inventory_screen.dart';
+import 'features/promotions/presentation/screens/promotions_screen.dart';
+import 'features/orders/presentation/screens/orders_screen.dart';
+import 'features/customers/presentation/screens/customers_screen.dart';
+import 'features/purchases/presentation/screens/purchases_screen.dart';
 import 'features/suppliers/presentation/screens/suppliers_screen.dart';
-import 'screens/feedback_screen.dart';
-import 'screens/staff_screen.dart';
-import 'screens/reports_screen.dart';
+import 'features/feedback/presentation/screens/feedback_screen.dart';
+import 'features/staff/presentation/screens/staff_screen.dart';
+import 'features/reports/presentation/screens/reports_screen.dart';
 import 'features/users/presentation/screens/users_screen.dart';
 import 'features/users/presentation/providers/users_provider.dart';
-import 'screens/settings_screen.dart';
+import 'features/products/presentation/providers/products_provider.dart';
+import 'features/categories/presentation/providers/categories_provider.dart';
+import 'features/suppliers/presentation/providers/suppliers_provider.dart';
+import 'features/sizeguides/presentation/providers/size_guides_provider.dart';
+import 'features/settings/presentation/screens/settings_screen.dart';
 import 'screens/login_screen.dart';
+import 'features/products/presentation/screens/product_detail_screen.dart';
+import 'features/products/presentation/screens/product_variants_screen.dart';
+import 'features/categories/presentation/screens/categories_screen.dart';
+import 'screens/unauthorized_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +47,10 @@ class ZellaAdminApp extends StatelessWidget {
           create: (_) => AuthProvider()..checkAuthStatus(),
         ),
         ChangeNotifierProvider(create: (_) => UsersProvider()),
+        ChangeNotifierProvider(create: (_) => ProductsProvider()),
+        ChangeNotifierProvider(create: (_) => CategoriesProvider()),
+        ChangeNotifierProvider(create: (_) => SuppliersProvider()),
+        ChangeNotifierProvider(create: (_) => SizeGuidesProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
@@ -46,15 +58,13 @@ class ZellaAdminApp extends StatelessWidget {
             title: 'Zella Admin',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
-            // Nếu đang kiểm tra token, hiện loading. Nếu đã đăng nhập, vào MainScreen. Chưa thì vào Login.
-            // home: authProvider.isLoading
-            //     ? const Scaffold(
-            //         body: Center(child: CircularProgressIndicator()),
-            //       )
-            //     : authProvider.isAuthenticated
-            //     ? const MainScreen()
-            //     : const LoginScreen(),
-            home: const MainScreen(),
+            home: authProvider.isLoading
+                ? const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  )
+                : authProvider.isAuthenticated
+                ? const MainScreen()
+                : const LoginScreen(),
           );
         },
       ),
@@ -75,12 +85,14 @@ class MainScreen extends StatefulWidget {
 
 class MainScreenState extends State<MainScreen> {
   String _currentRoute = '/';
+  Map<String, dynamic>? _currentArgs;
   Widget? _currentDrawer;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  void navigate(String route) {
+  void navigate(String route, [Map<String, dynamic>? args]) {
     setState(() {
       _currentRoute = route;
+      _currentArgs = args;
     });
   }
 
@@ -99,8 +111,14 @@ class MainScreenState extends State<MainScreen> {
     switch (_currentRoute) {
       case '/':
         return const DashboardScreen();
+      case '/categories':
+        return const CategoriesScreen();
       case '/products':
         return const ProductsScreen();
+      case '/product-detail':
+        return ProductDetailScreen(product: _currentArgs);
+      case '/product-variants':
+        return ProductVariantsScreen(product: _currentArgs);
       case '/inventory':
         return const InventoryScreen();
       case '/promotions':
@@ -123,6 +141,8 @@ class MainScreenState extends State<MainScreen> {
         return const UsersScreen();
       case '/settings':
         return const SettingsScreen();
+      case '/unauthorized':
+        return const UnauthorizedScreen();
       default:
         return Center(
           child: Text(

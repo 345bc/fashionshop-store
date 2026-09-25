@@ -32,50 +32,50 @@ public class SecurityConfig {
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
     };
 
-    @Bean
-    @Profile("oidc & !mock-auth & !jwt-auth")
-    SecurityFilterChain oidcSecurityFilterChain(
-            HttpSecurity http,
-            OidcUserService oidcUserService,
-            UserService userService,
-            ApiSecurityErrorHandler apiSecurityErrorHandler,
-            @Value("${app.auth.frontend-success-url:http://localhost:5173/auth/callback}") String successUrl,
-            @Value("${app.auth.frontend-failure-url:http://localhost:5173/auth/callback?error=oidc}") String failureUrl
-    ) throws Exception {
-        configureCookieSecurity(http, apiSecurityErrorHandler)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
-                        .anyRequest().authenticated())
-                .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint(apiSecurityErrorHandler)
-                        .accessDeniedHandler(apiSecurityErrorHandler))
-                .oauth2Login(oauth -> oauth
-                        .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUserService))
-                        .defaultSuccessUrl(successUrl, true)
-                        .failureUrl(failureUrl))
-                .addFilterBefore(new SessionPrincipalRefreshFilter(userService), AuthorizationFilter.class);
-        return http.build();
-    }
-
-    @Bean
-    @Profile("mock-auth & !oidc & !jwt-auth")
-    SecurityFilterChain mockSecurityFilterChain(
-            HttpSecurity http,
-            UserService userService,
-            ApiSecurityErrorHandler apiSecurityErrorHandler
-    ) throws Exception {
-        configureCookieSecurity(http, apiSecurityErrorHandler)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/mock-login").permitAll()
-                        .anyRequest().authenticated())
-                .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint(apiSecurityErrorHandler)
-                        .accessDeniedHandler(apiSecurityErrorHandler))
-                .addFilterBefore(new SessionPrincipalRefreshFilter(userService), AuthorizationFilter.class);
-        return http.build();
-    }
+//    @Bean
+//    @Profile("oidc & !mock-auth & !jwt-auth")
+//    SecurityFilterChain oidcSecurityFilterChain(
+//            HttpSecurity http,
+//            OidcUserService oidcUserService,
+//            UserService userService,
+//            ApiSecurityErrorHandler apiSecurityErrorHandler,
+//            @Value("${app.auth.frontend-success-url:http://localhost:5173/auth/callback}") String successUrl,
+//            @Value("${app.auth.frontend-failure-url:http://localhost:5173/auth/callback?error=oidc}") String failureUrl
+//    ) throws Exception {
+//        configureCookieSecurity(http, apiSecurityErrorHandler)
+//                .authorizeHttpRequests(auth -> auth
+//                        .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
+//                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
+//                        .anyRequest().authenticated())
+//                .exceptionHandling(errors -> errors
+//                        .authenticationEntryPoint(apiSecurityErrorHandler)
+//                        .accessDeniedHandler(apiSecurityErrorHandler))
+//                .oauth2Login(oauth -> oauth
+//                        .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUserService))
+//                        .defaultSuccessUrl(successUrl, true)
+//                        .failureUrl(failureUrl))
+//                .addFilterBefore(new SessionPrincipalRefreshFilter(userService), AuthorizationFilter.class);
+//        return http.build();
+//    }
+//
+//    @Bean
+//    @Profile("mock-auth & !oidc & !jwt-auth")
+//    SecurityFilterChain mockSecurityFilterChain(
+//            HttpSecurity http,
+//            UserService userService,
+//            ApiSecurityErrorHandler apiSecurityErrorHandler
+//    ) throws Exception {
+//        configureCookieSecurity(http, apiSecurityErrorHandler)
+//                .authorizeHttpRequests(auth -> auth
+//                        .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
+//                        .requestMatchers(HttpMethod.POST, "/api/auth/mock-login").permitAll()
+//                        .anyRequest().authenticated())
+//                .exceptionHandling(errors -> errors
+//                        .authenticationEntryPoint(apiSecurityErrorHandler)
+//                        .accessDeniedHandler(apiSecurityErrorHandler))
+//                .addFilterBefore(new SessionPrincipalRefreshFilter(userService), AuthorizationFilter.class);
+//        return http.build();
+//    }
 
     @Bean
     @Profile("jwt-auth & !oidc & !mock-auth")
@@ -89,7 +89,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register","/api/v1/user").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(apiSecurityErrorHandler)

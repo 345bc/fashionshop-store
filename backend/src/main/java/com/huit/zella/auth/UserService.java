@@ -51,7 +51,12 @@ public class UserService {
         if (user.getPasswordHash() == null || !passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
             throw invalidCredentials();
         }
-        return toCurrentUser(user);
+        CurrentUser currentUser = toCurrentUser(user);
+        if (currentUser.roles().isEmpty()) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "ROLE_NOT_ASSIGNED",
+                    "Tài khoản chưa được gán vai trò");
+        }
+        return currentUser;
     }
 
     @Transactional

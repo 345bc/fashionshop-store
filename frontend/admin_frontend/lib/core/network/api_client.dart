@@ -61,7 +61,8 @@ class ApiClient {
 
                 // Spring Security yêu cầu CẢ header X-XSRF-TOKEN VÀ cookie XSRF-TOKEN phải khớp nhau.
                 // Do Desktop app không tự quản lý Cookie, ta phải nhét thêm XSRF-TOKEN vào header Cookie.
-                final currentCookie = options.headers['Cookie'] as String? ?? '';
+                final currentCookie =
+                    options.headers['Cookie'] as String? ?? '';
                 options.headers['Cookie'] = currentCookie.isEmpty
                     ? 'XSRF-TOKEN=$_csrfToken'
                     : '$currentCookie; XSRF-TOKEN=$_csrfToken';
@@ -122,6 +123,7 @@ class ApiClient {
         }
       }
     } catch (e) {
+      // ignore: avoid_print
       print('Lỗi khởi tạo CSRF Token: $e');
       rethrow;
     }
