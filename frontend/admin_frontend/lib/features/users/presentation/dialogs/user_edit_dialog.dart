@@ -71,14 +71,18 @@ class _UserEditDialogState extends State<UserEditDialog> {
       if (isEditing) {
         data['isActive'] = _isActive;
         await provider.updateItem(widget.user!['id'], data);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cập nhật tài khoản thành công')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cập nhật tài khoản thành công')),
+          );
+        }
       } else {
         await provider.createItem(data);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tạo tài khoản thành công')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tạo tài khoản thành công')),
+          );
+        }
       }
       
       if (mounted) Navigator.of(context).pop(true);
@@ -138,7 +142,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
               const Text('Vai trò', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedRole,
+                initialValue: _selectedRole,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
@@ -157,7 +161,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
                     Switch(
                       value: _isActive, 
                       onChanged: (v) => setState(() => _isActive = v),
-                      activeColor: AppTheme.primary,
+                      activeThumbColor: AppTheme.primary,
                     ),
                     const SizedBox(width: 8),
                     Text(_isActive ? 'Hoạt động' : 'Đã khoá', style: const TextStyle(fontWeight: FontWeight.w600)),

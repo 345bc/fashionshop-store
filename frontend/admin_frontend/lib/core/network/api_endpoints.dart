@@ -11,4 +11,16 @@ class ApiEndpoints {
 
   // Users Feature
   static const String users = '/user';
+
+  // Products Feature
+  static const String products = '/product';
+
+  // Categories Feature
+  static const String categories = '/category';
+  
+  // Suppliers Feature
+  static const String suppliers = '/supplier';
+  
+  // Size Guides Feature
+  static const String sizeGuides = '/sizeguide';
 }

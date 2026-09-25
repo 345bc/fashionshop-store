@@ -84,3 +84,35 @@ Khi lập trình trang mới, tuân thủ nghiêm ngặt 3 trạng thái sau:
 
 > [!TIP]
 > **Cách áp dụng:** Khi thiết kế tính năng mới (ví dụ `ProductsScreen`), hãy copy nguyên khung của `users_screen.dart` và chỉnh sửa các field lại cho phù hợp. Điều này đảm bảo toàn bộ dự án sẽ có sự đồng nhất 100% từ đầu tới cuối.
+
+---
+
+## 5. Quy chuẩn Popups (Modals & Dialogs)
+Tất cả các popup (hộp thoại) trong dự án phải được xây dựng dựa trên các base component trong thư mục `lib/widgets/dialogs` nhằm duy trì sự nhất quán.
+
+### A. ZellaDialog (Base Component)
+- **Hình dáng (Shape):** Bo góc `12px`.
+- **Padding:** Mặc định `24px` cho toàn bộ nội dung.
+- Không sử dụng `AlertDialog` hay `SimpleDialog` mặc định của Flutter nếu không bọc lại giao diện.
+
+### B. ZellaConfirmDialog (Popup Cảnh báo/Xoá)
+Dùng cho các hành động mang tính phá huỷ (xoá, khoá) hoặc cần xác nhận chắc chắn.
+- **Kích thước:** Chiều rộng cố định `400px`.
+- **Bố cục nội dung căn giữa (Center Aligned):** 
+  - Icon cảnh báo hình tròn lớn ở trên cùng (màu `error` hoặc `warning`, opacity nền 0.1).
+  - Tiêu đề (`18px`, in đậm, màu `text`).
+  - Nội dung mô tả ngắn (`14px`, màu `textSecondary`).
+- **Nút bấm (Actions):** 2 nút chiếm toàn bộ chiều ngang (`Expanded`).
+  - Trái: Nút Huỷ (`OutlinedButton`, viền mờ).
+  - Phải: Nút Xác nhận (`ElevatedButton`, nền màu đỏ `error` nếu là xoá, nền màu `primary` nếu là xác nhận thường). Kèm theo trạng thái `isLoading`.
+
+### C. ZellaFormDialog (Popup Biểu mẫu)
+Dùng cho Thêm Mới, Cập Nhật, hoặc các form nhập liệu nhỏ.
+- **Kích thước:** Chiều rộng cố định `480px`.
+- **Bố cục nội dung căn trái (Left Aligned):**
+  - Tiêu đề ở góc trái trên cùng (`20px`, in đậm, màu `text`).
+  - Nội dung là biểu mẫu gồm các `TextField` (Bo góc `8px`, viền `borderLight`). Khoảng cách giữa các ô là `16px`.
+- **Nút bấm (Actions):** 2 nút nằm ở góc phải dưới (`MainAxisAlignment.end`).
+  - Nút Huỷ: `OutlinedButton`.
+  - Nút Lưu: `ElevatedButton`, nền màu `primary`. Cả hai nút có padding `horizontal: 24`, `vertical: 16`. Kèm trạng thái `isLoading`.
+

@@ -1,0 +1,237 @@
+/* Custom Page Styles */
+
+/* Products Page */
+.catalog-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 36px;
+  align-items: start;
+}
+.filters-sidebar {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  position: sticky;
+  top: 100px;
+}
+.filter-group {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+.filter-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.filter-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--ink-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.catalog-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 48px;
+}
+.page-btn {
+  min-width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--ink-primary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  background: transparent;
+}
+.page-btn:hover,
+.page-btn.active {
+  background: var(--ink-primary);
+  color: var(--ink-inverted);
+  border-color: var(--ink-primary);
+}
+@media (max-width: 900px) {
+  .catalog-layout {
+    grid-template-columns: 1fr;
+  }
+  .filters-sidebar {
+    position: static;
+  }
+}
+
+/* Checkout Page */
+.step-indicator {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 14px;
+}
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.step-item.active {
+  color: var(--ink-primary);
+  font-weight: 700;
+}
+.step-number {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--bg-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+.step-item.active .step-number {
+  background: var(--ink-primary);
+  color: var(--ink-inverted);
+}
+.method-card {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.method-card:hover {
+  border-color: var(--border-dark);
+  background: var(--bg-surface);
+}
+
+/* Orders & Support Chat & Auth etc (Common layouts) */
+.auth-layout {
+  max-width: 420px;
+  margin: 64px auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  padding: 32px;
+  border-radius: var(--radius-md);
+}
+.chat-window {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+}
+.chat-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 600;
+}
+.chat-body {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background: var(--bg-surface);
+}
+.chat-message {
+  max-width: 80%;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+}
+.chat-message.bot {
+  background: var(--bg-subtle);
+  border-bottom-left-radius: 4px;
+  align-self: flex-start;
+}
+.chat-message.user {
+  background: var(--ink-primary);
+  color: var(--ink-inverted);
+  border-bottom-right-radius: 4px;
+  margin-left: auto;
+}
+.chat-input-area {
+  padding: 16px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  gap: 12px;
+}
+
+/* Multi Item Swiper Fix */
+.multi-item-swiper .swiper-slide {
+  width: auto !important;
+}
+.multi-item-swiper .swiper-button-next,
+.multi-item-swiper .swiper-button-prev {
+  background: rgba(255, 255, 255, 0.9);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: var(--ink-primary);
+}
+.multi-item-swiper .swiper-button-next:after,
+.multi-item-swiper .swiper-button-prev:after {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Combo Card Specifics */
+.combo-card .combo-title {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  display: block;
+}
+.combo-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  min-height: 48px;
+}
+.combo-item-tag {
+  font-size: 0.75rem;
+  background: var(--bg-subtle);
+  color: var(--ink-muted);
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.combo-price-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+}
+.badge-discount {
+  background: #e53e3e;
+  color: white;
+  border: none;
+}

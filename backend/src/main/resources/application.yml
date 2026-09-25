@@ -7,7 +7,6 @@ spring:
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
     url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=fashionshop_store;encrypt=true;trustServerCertificate=true}
-#    url: ${DB_URL:jdbc:mysql://localhost:3306/van_ban_di?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC}
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:}
   jpa:

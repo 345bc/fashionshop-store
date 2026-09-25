@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     @GetMapping
     public ApiResponse<PageResponse<UserResponse>> list(
             @RequestParam(required = false) String q,
@@ -33,7 +33,7 @@ public class UserController {
     }
 
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     @PostMapping
     public ResponseEntity<ApiResponse<UserResponse>> create(
             @Valid @RequestBody CreateUserRequest request
@@ -42,7 +42,7 @@ public class UserController {
                 .body(ApiResponse.success(userService.createUser(request)));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     @GetMapping("/{id}")
     public ApiResponse<UserResponse> get(@PathVariable Long id) {
         return ApiResponse.success(userService.get(id));
@@ -50,7 +50,7 @@ public class UserController {
 
 
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     @PutMapping("/{id}")
     public ApiResponse<UserResponse> update(
             @PathVariable Long id,
@@ -59,7 +59,7 @@ public class UserController {
         return ApiResponse.success(userService.update(id, update));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
