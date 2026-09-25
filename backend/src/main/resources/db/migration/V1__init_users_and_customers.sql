@@ -45,9 +45,8 @@ CREATE TABLE staff_profiles
 CREATE TABLE customer_profiles
 (
     id         BIGINT IDENTITY(1,1) PRIMARY KEY,
-    user_id    BIGINT NULL UNIQUE, -- Có thể NULL nếu khách mua hàng vãng lai chưa tạo tài khoản
+    user_id    BIGINT NULL UNIQUE,
     full_name  NVARCHAR(100) NOT NULL,
-    email      VARCHAR(100) NOT NULL,
     phone      VARCHAR(20) NULL,
     address    NVARCHAR(255) NULL,
     created_at datetimeoffset(7)    NOT NULL DEFAULT GETDATE(),

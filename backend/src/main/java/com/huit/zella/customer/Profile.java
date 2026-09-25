@@ -1,4 +1,7 @@
 package com.huit.zella.customer;
 
-public record Profile() {
+import java.io.Serializable;
+import java.util.List;
+
+public record Profile(Long id, String email, String username, List<String> roles) implements Serializable {
 }

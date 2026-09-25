@@ -15,19 +15,19 @@ VALUES ('ADMIN', 'Quản trị viên', N'Có toàn quyền quản lý hệ thố
 INSERT INTO users
     (username, password_hash, email, is_active)
 VALUES ('admin',
-        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+        '$2a$12$.aVrJkuaUiuA0rVG5XSVSeE8Ibz2KJQVUjj3gRavnrl3yR2u2oSN6',
         'admin@example.com',
         1),
        ('employee01',
-        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+        '$2a$12$.aVrJkuaUiuA0rVG5XSVSeE8Ibz2KJQVUjj3gRavnrl3yR2u2oSN6',
         'employee01@example.com',
         1),
        ('customer01',
-        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+        '$2a$12$.aVrJkuaUiuA0rVG5XSVSeE8Ibz2KJQVUjj3gRavnrl3yR2u2oSN6',
         'customer01@example.com',
         1),
        ('customer02',
-        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+        '$2a$12$.aVrJkuaUiuA0rVG5XSVSeE8Ibz2KJQVUjj3gRavnrl3yR2u2oSN6',
         'customer02@example.com',
         0);
 

@@ -40,7 +40,7 @@ public class JwtLoginController {
 
     @PostMapping("/register")
     ApiResponse<CurrentUser> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
-        CurrentUser user = appUserService.register(request.email(), request.username(), request.password(), passwordEncoder);
+        CurrentUser user = appUserService.register(request.email(), request.username(), request.password(), request.fullName(), request.phone(), passwordEncoder);
         return ApiResponse.success(user, "Đăng ký thành công");
     }
 
@@ -53,9 +53,10 @@ public class JwtLoginController {
     record RegisterRequest(
             @NotBlank(message = "Email là bắt buộc") @Email(message = "Email không hợp lệ") String email,
             @NotBlank(message = "Mật khẩu là bắt buộc") String password,
-            @NotBlank(message = "Tên là bắt buộc") String username
+            @NotBlank(message = "Tên là bắt buộc") String username,
+            @NotBlank(message = "Họ và tên là bắt buộc") String fullName,
+            String phone
     ) {
-
 
     }
 }

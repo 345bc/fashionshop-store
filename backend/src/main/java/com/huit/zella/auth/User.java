@@ -1,7 +1,9 @@
 package com.huit.zella.auth;
 
+import com.huit.zella.customer.Customer;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.context.annotation.Profile;
 
 import java.time.Instant;
 import java.util.LinkedHashSet;
@@ -29,6 +31,23 @@ public class User {
 
     @Column(name = "is_active", nullable = false, length = 50)
     private boolean isActive = true;
+
+    @OneToOne(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private Customer customer;
+
+    // Helper method để set 2 chiều
+    public void setProfile(Customer customer
+    ) {
+        this.customer = customer;
+        if (customer != null) {
+            customer.setUser(this);
+        }
+    }
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
