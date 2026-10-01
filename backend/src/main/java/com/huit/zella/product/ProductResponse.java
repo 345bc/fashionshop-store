@@ -1,16 +1,7 @@
 package com.huit.zella.product;
 
-import com.huit.zella.auth.Role;
-import com.huit.zella.auth.User;
-import com.huit.zella.category.Category;
-import com.huit.zella.category.CategoryResponse;
-import com.huit.zella.sizeguide.SizeGuideResponse;
-import com.huit.zella.supplier.SupplierRespone;
-
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public record ProductResponse(
         Long id,
@@ -21,26 +12,16 @@ public record ProductResponse(
         String occasion,
         BigDecimal basePrice,
         boolean isActive,
-        CategoryResponse categoryId,
-        SupplierRespone supplierId,
-        SizeGuideResponse sizeGuideId,
+        Long categoryId,
+        String categoryName,
+        Long supplierId,
+        String supplierName,
+        Long sizeGuideId,
+        String sizeGuideName,
         Instant createdAt,
         Instant updatedAt
 ) {
-    public static ProductResponse createProductResponse(Product product) {
-        CategoryResponse categoryResponse = product.getCategory() == null
-                ? null
-                : CategoryResponse.create(product.getCategory());
-
-        SupplierRespone supplierRespone = product.getSupplier() == null
-                ? null
-                : SupplierRespone.from(product.getSupplier());
-
-        SizeGuideResponse sizeGuideResponse = product.getSizeGuide() == null
-                ? null
-                : SizeGuideResponse.create(product.getSizeGuide());
-
-
+    public static ProductResponse from(Product product) {
         return new ProductResponse(
                 product.getId(),
                 product.getName(),
@@ -50,9 +31,12 @@ public record ProductResponse(
                 product.getOccasion(),
                 product.getBasePrice(),
                 product.isActive(),
-                categoryResponse,
-                supplierRespone,
-                sizeGuideResponse,
+                product.getCategory() != null ? product.getCategory().getId() : null,
+                product.getCategory() != null ? product.getCategory().getName() : null,
+                product.getSupplier() != null ? product.getSupplier().getId() : null,
+                product.getSupplier() != null ? product.getSupplier().getName() : null,
+                product.getSizeGuide() != null ? product.getSizeGuide().getId() : null,
+                product.getSizeGuide() != null ? product.getSizeGuide().getName() : null,
                 product.getCreatedAt(),
                 product.getUpdatedAt()
         );

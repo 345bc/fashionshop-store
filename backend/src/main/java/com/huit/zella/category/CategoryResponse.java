@@ -1,17 +1,14 @@
 package com.huit.zella.category;
 
-import com.huit.zella.sizeguide.SizeGuideResponse;
-import jakarta.persistence.*;
-import org.hibernate.annotations.Nationalized;
-
 public record CategoryResponse(
         Long id,
         String name,
         String slug,
         Boolean isActive,
-        CategorySummaryResponse parent
+        Long parentId,
+        String parentName
 ) {
-    public static CategoryResponse create(Category category) {
+    public static CategoryResponse from(Category category) {
         if (category == null) {
             return null;
         }
@@ -21,7 +18,8 @@ public record CategoryResponse(
                 category.getName(),
                 category.getSlug(),
                 category.getIsActive(),
-                CategorySummaryResponse.create(category.getParent())
+                category.getParent() != null ? category.getParent().getId() : null,
+                category.getParent() != null ? category.getParent().getName() : null
         );
     }
 }

@@ -5,7 +5,7 @@ public record CategorySummaryResponse(
         String name,
         String slug
 ) {
-    public static CategorySummaryResponse create(Category category) {
+    public static CategorySummaryResponse from(Category category) {
         if (category == null) {
             return null;
         }

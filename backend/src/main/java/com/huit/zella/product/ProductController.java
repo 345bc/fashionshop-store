@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
     ProductService productService;
 
-    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping
     public ApiResponse<PageResponse<ProductResponse>> list(
             @RequestParam(required = false) String q,

@@ -1,14 +1,14 @@
 package com.huit.zella.supplier;
 
 import com.huit.zella.common.api.ApiResponse;
-import com.huit.zella.sizeguide.SizeGuideResponse;
-import com.huit.zella.sizeguide.SizeGuideService;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -20,7 +20,31 @@ public class SupplierController {
     SupplierService supplierService;
 
     @GetMapping
-    public ApiResponse<List<SupplierRespone>> getAllUnits() {
-        return ApiResponse.success(supplierService.get());
+    public ApiResponse<List<SupplierResponse>> list(@RequestParam(required = false) String q) {
+        return ApiResponse.success(supplierService.list(q));
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<SupplierResponse> get(@PathVariable Long id) {
+        return ApiResponse.success(supplierService.get(id));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PostMapping
+    public ResponseEntity<ApiResponse<SupplierResponse>> create(@Valid @RequestBody CreateSupplierRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(supplierService.create(request)));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PutMapping("/{id}")
+    public ApiResponse<SupplierResponse> update(@PathVariable Long id, @Valid @RequestBody CreateSupplierRequest request) {
+        return ApiResponse.success(supplierService.update(id, request));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        supplierService.delete(id);
+        return ApiResponse.success(null);
     }
 }

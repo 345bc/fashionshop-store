@@ -8,7 +8,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=fashionshop_store;encrypt=true;trustServerCertificate=true}
     username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
+    password: ${DB_PASSWORD:123}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -43,7 +43,7 @@ app:
     version: 0.1.0-starter
   auth:
     # Chỉ là secret dev; môi trường dùng chung phải đặt JWT_SECRET qua biến môi trường.
-    demo-password: ${DEMO_USER_PASSWORD:Demo@123}
+#    demo-password: ${DEMO_USER_PASSWORD:Demo@123}
     jwt:
       secret: ${JWT_SECRET}
       issuer: ${JWT_ISSUER:HUIT}
@@ -55,6 +55,14 @@ app:
   cors:
     allowed-origin: ${CORS_ORIGIN:http://localhost:3000}
   storage:
-    root: ${FILE_STORAGE_ROOT:${java.io.tmpdir}/fresher-storage}
+    root: ${FILE_STORAGE_ROOT:./uploads}
     max-bytes: ${FILE_MAX_BYTES:10485760}
     allowed-content-types: ${FILE_ALLOWED_TYPES:application/pdf,image/png,image/jpeg,text/plain}
+
+cloudflare:
+  r2:
+    access-key: ${R2_ACCESS_KEY:}
+    secret-key: ${R2_SECRET_KEY:}
+    bucket: ${R2_BUCKET:}
+    endpoint: ${R2_ENDPOINT:}
+    public-url: ${R2_PUBLIC_URL:}
