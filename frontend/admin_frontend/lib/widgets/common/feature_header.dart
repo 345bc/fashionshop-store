@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../theme/app_theme.dart';
 
 class FeatureHeader extends StatelessWidget {
@@ -8,6 +9,7 @@ class FeatureHeader extends StatelessWidget {
   final IconData actionIcon;
   final VoidCallback onActionPressed;
   final VoidCallback? onExportPressed;
+  final bool showAction;
 
   const FeatureHeader({
     super.key,
@@ -17,6 +19,7 @@ class FeatureHeader extends StatelessWidget {
     required this.actionIcon,
     required this.onActionPressed,
     this.onExportPressed,
+    this.showAction = true,
   });
 
   @override
@@ -51,11 +54,12 @@ class FeatureHeader extends StatelessWidget {
               ),
               const SizedBox(width: 12),
             ],
-            ElevatedButton.icon(
-              onPressed: onActionPressed,
-              icon: Icon(actionIcon, size: 18),
-              label: Text(actionLabel),
-            ),
+            if (showAction)
+              ElevatedButton.icon(
+                onPressed: onActionPressed,
+                icon: Icon(actionIcon, size: 18),
+                label: Text(actionLabel),
+              ),
           ],
         ),
       ],

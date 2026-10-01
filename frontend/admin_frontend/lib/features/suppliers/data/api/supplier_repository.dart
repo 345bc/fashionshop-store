@@ -7,25 +7,12 @@ import '../../../../core/network/api_endpoints.dart';
 class SupplierRepository {
   final ApiClient _apiClient = ApiClient();
 
-  Future<dynamic> getAll({
-    int page = 0,
-    int size = 15,
-    String? query,
-    String? role,
-  }) async {
+  Future<List<dynamic>> getAll() async {
     try {
-      final Map<String, dynamic> queryParams = {'page': page, 'size': size};
-      if (query != null && query.isNotEmpty) {
-        queryParams['q'] = query;
-      }
-
-      final response = await _apiClient.get(
-        ApiEndpoints.suppliers,
-        queryParameters: queryParams,
-      );
+      final response = await _apiClient.get(ApiEndpoints.suppliers);
 
       if (response.statusCode == 200) {
-        return response.data['data'];
+        return response.data['data'] as List<dynamic>;
       }
       throw Exception(response.data['message'] ?? 'Fetch failed');
     } catch (e) {
@@ -49,7 +36,10 @@ class SupplierRepository {
 
   Future<Map<String, dynamic>> create(Map<String, dynamic> data) async {
     try {
-      final response = await _apiClient.post(ApiEndpoints.suppliers, data: data);
+      final response = await _apiClient.post(
+        ApiEndpoints.suppliers,
+        data: data,
+      );
       if (response.statusCode == 201 || response.statusCode == 200) {
         return response.data['data'];
       }
@@ -76,17 +66,17 @@ class SupplierRepository {
     }
   }
 
-  // Future<void> delete(int id) async {
-  //   try {
-  //     final response = await _apiClient.delete('${ApiEndpoints.suppliers}/$id');
-  //     if (response.statusCode != 200 && response.statusCode != 204) {
-  //       throw Exception('Delete failed');
-  //     }
-  //   } catch (e) {
-  //     _handleError(e);
-  //     rethrow;
-  //   }
-  // }
+  Future<void> delete(int id) async {
+    try {
+      final response = await _apiClient.delete('${ApiEndpoints.suppliers}/$id');
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception(response.data['message'] ?? 'Delete failed');
+      }
+    } catch (e) {
+      _handleError(e);
+      rethrow;
+    }
+  }
 
   void _handleError(dynamic e) {
     if (e is DioException) {

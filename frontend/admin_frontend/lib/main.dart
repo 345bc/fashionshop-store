@@ -12,6 +12,7 @@ import 'features/inventory/presentation/screens/inventory_screen.dart';
 import 'features/promotions/presentation/screens/promotions_screen.dart';
 import 'features/orders/presentation/screens/orders_screen.dart';
 import 'features/customers/presentation/screens/customers_screen.dart';
+import 'features/customers/presentation/providers/customers_provider.dart';
 import 'features/purchases/presentation/screens/purchases_screen.dart';
 import 'features/suppliers/presentation/screens/suppliers_screen.dart';
 import 'features/feedback/presentation/screens/feedback_screen.dart';
@@ -59,6 +60,7 @@ class ZellaAdminApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProductVariantsProvider()),
         ChangeNotifierProvider(create: (_) => CategoriesProvider()),
         ChangeNotifierProvider(create: (_) => SuppliersProvider()),
+        ChangeNotifierProvider(create: (_) => CustomersProvider()),
         ChangeNotifierProvider(create: (_) => SizeGuidesProvider()),
       ],
       child: Consumer<AuthProvider>(
