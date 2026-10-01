@@ -93,6 +93,7 @@ public class UserService {
         customer.setPhone(phone);
 
         user.setProfile(customer);
+        customerRepository.save(customer);
         return toCurrentUser(user);
     }
 
@@ -124,7 +125,7 @@ public class UserService {
 
         user = user_repository.save(user);
 
-        return UserResponse.createUserResponse(user);
+        return UserResponse.from(user);
     }
 
     @Transactional(readOnly = true)
@@ -132,12 +133,12 @@ public class UserService {
         String safeQuery = (query == null || query.isBlank()) ? null : query.trim();
         String safeRole = (role == null || role.isBlank()) ? null : role.trim();
         Page<User> page = user_repository.searchUsers(safeQuery, safeRole, pageable);
-        return page.map(UserResponse::createUserResponse);
+        return page.map(UserResponse::from);
     }
 
     @Transactional(readOnly = true)
     public UserResponse get(Long id) {
-        return UserResponse.createUserResponse(requireFeature(id));
+        return UserResponse.from(requireFeature(id));
     }
 
     @Transactional
@@ -176,7 +177,7 @@ public class UserService {
 
         feature.setRoles(roles);
 
-        return UserResponse.createUserResponse(user_repository.save(feature));
+        return UserResponse.from(user_repository.save(feature));
     }
 
 

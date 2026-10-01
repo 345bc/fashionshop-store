@@ -1,8 +1,5 @@
 package com.huit.zella.customer;
 
-import com.huit.zella.auth.User;
-import jakarta.persistence.*;
-import org.hibernate.annotations.Nationalized;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -11,6 +8,8 @@ public record CustomerResponse(
         Long id,
         Long userId,
         String email,
+        String username,
+        Boolean isActive,
         String fullName,
         String phone,
         String address,
@@ -26,6 +25,8 @@ public record CustomerResponse(
                 customerEntity.getId(),
                 customerEntity.getUser() != null ? customerEntity.getUser().getId() : null,
                 customerEntity.getUser() != null ? customerEntity.getUser().getEmail() : null,
+                customerEntity.getUser() != null ? customerEntity.getUser().getUserName() : null,
+                customerEntity.getUser() != null ? customerEntity.getUser().isActive() : null,
                 customerEntity.getFullName(),
                 customerEntity.getPhone(),
                 customerEntity.getAddress(),
