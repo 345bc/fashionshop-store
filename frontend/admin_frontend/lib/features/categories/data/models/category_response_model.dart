@@ -1,13 +1,28 @@
 class CategoryResponseModel {
   final int id;
   final String name;
+  final String slug;
+  final bool isActive;
+  final int? parentId;
+  final String? parentName;
 
-  CategoryResponseModel({required this.id, required this.name});
+  const CategoryResponseModel({
+    required this.id,
+    required this.name,
+    required this.slug,
+    required this.isActive,
+    this.parentId,
+    this.parentName,
+  });
 
   factory CategoryResponseModel.fromJson(Map<String, dynamic> json) {
     return CategoryResponseModel(
-      id: json['id'] as int? ?? 0,
+      id: (json['id'] as num).toInt(),
       name: json['name'] as String? ?? '',
+      slug: json['slug'] as String? ?? '',
+      isActive: json['isActive'] as bool? ?? false,
+      parentId: (json['parentId'] as num?)?.toInt(),
+      parentName: json['parentName'] as String?,
     );
   }
 
@@ -15,6 +30,10 @@ class CategoryResponseModel {
     return {
       'id': id,
       'name': name,
+      'slug': slug,
+      'isActive': isActive,
+      'parentId': parentId,
+      'parentName': parentName,
     };
   }
 }

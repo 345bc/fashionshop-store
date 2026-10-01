@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/dialogs/zella_confirm_dialog.dart';
+import '../../data/models/category_response_model.dart';
+import '../providers/categories_provider.dart';
 
 class CategoryDeleteDialog extends StatefulWidget {
-  final Map<String, dynamic> category;
+  final CategoryResponseModel category;
 
   const CategoryDeleteDialog({super.key, required this.category});
 
@@ -18,9 +22,8 @@ class _CategoryDeleteDialogState extends State<CategoryDeleteDialog> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Replace with API Call
-      await Future.delayed(const Duration(seconds: 1)); // Mock API delay
-      
+      await context.read<CategoriesProvider>().deleteItem(widget.category.id);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Xóa danh mục thành công')),
@@ -43,24 +46,17 @@ class _CategoryDeleteDialogState extends State<CategoryDeleteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        width: 400,
-        padding: const EdgeInsets.all(24),
-        child: ZellaConfirmDialog(
-          title: 'Xóa danh mục',
-          content: Text(
-            'Bạn có chắc chắn muốn xóa danh mục "${widget.category['name']}" không? Hành động này không thể hoàn tác và có thể ảnh hưởng đến các sản phẩm thuộc danh mục này.',
-            style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-          ),
-          confirmText: 'Xóa',
-          iconColor: AppTheme.danger,
-          isLoading: _isLoading,
-          onCancel: () => Navigator.of(context).pop(),
-          onConfirm: _delete,
-        ),
+    return ZellaConfirmDialog(
+      title: 'Xóa danh mục',
+      content: Text(
+        'Bạn có chắc chắn muốn xóa danh mục "${widget.category.name}" không? Danh mục đang có sản phẩm hoặc danh mục con sẽ không thể xóa.',
+        style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
       ),
+      confirmText: 'Xóa',
+      iconColor: AppTheme.danger,
+      isLoading: _isLoading,
+      onCancel: () => Navigator.of(context).pop(),
+      onConfirm: _delete,
     );
   }
 }

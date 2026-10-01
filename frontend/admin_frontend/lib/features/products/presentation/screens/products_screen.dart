@@ -12,6 +12,7 @@ import '../providers/products_provider.dart';
 import '../../data/models/product_response_model.dart';
 import '../dialogs/product_edit_dialog.dart';
 import '../dialogs/product_create_dialog.dart';
+import '../dialogs/product_detail_dialog.dart';
 import '../../../../main.dart';
 
 class ProductsScreen extends StatefulWidget {
@@ -127,7 +128,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   Expanded(flex: 3, child: _headerText('SẢN PHẨM')),
                   Expanded(flex: 2, child: _headerText('DANH MỤC')),
                   Expanded(flex: 2, child: _headerText('GIÁ BÁN')),
-                  Expanded(flex: 2, child: _headerText('PHONG CÁCH')),
                   Expanded(flex: 2, child: _headerText('TRẠNG THÁI')),
                   const SizedBox(width: 48),
                 ],
@@ -182,13 +182,24 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
+  void _showProductDetail(BuildContext context, ProductResponseModel product) {
+    showDialog(
+      context: context,
+      builder: (_) => ProductDetailDialog(
+        productId: product.id,
+        onManageVariants: (details) =>
+            MainScreen.of(context).navigate('/product-variants', details),
+      ),
+    );
+  }
+
   Widget _buildDataRow(BuildContext context, ProductResponseModel product) {
     final statusDisplay = product.isActive ? 'Hoạt động' : 'Đã ẩn';
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: () => _showProductDetail(context, product),
         hoverColor: AppTheme.surface,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -251,7 +262,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               Expanded(
                 flex: 2,
                 child: Text(
-                  product.category?.name ?? '—',
+                  product.categoryName,
                   style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 14,
@@ -264,16 +275,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   _fmtVND(product.basePrice),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text(
-                  product.style.isNotEmpty ? product.style : '—',
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
                     fontSize: 14,
                   ),
                 ),
@@ -307,6 +308,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       label: 'Chỉnh sửa',
                       icon: Icons.edit_outlined,
                     ),
+                    const ActionMenuItem(
+                      value: 'variants',
+                      label: 'Quản lý biến thể',
+                      icon: Icons.inventory_2_outlined,
+                    ),
                     // ActionMenuItem.divider(),
                     // const ActionMenuItem(
                     //   value: 'delete',
@@ -317,14 +323,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ],
                   onSelected: (value) {
                     if (value == 'view') {
-                      MainScreen.of(context)
-                          .navigate('/product-detail', product.toJson());
+                      _showProductDetail(context, product);
                     } else if (value == 'edit') {
                       showDialog(
                         context: context,
                         builder: (_) =>
                             ProductEditDialog(product: product.toJson()),
                       );
+                    } else if (value == 'variants') {
+                      MainScreen.of(context)
+                          .navigate('/product-variants', product.toJson());
                     }
                   },
                 ),

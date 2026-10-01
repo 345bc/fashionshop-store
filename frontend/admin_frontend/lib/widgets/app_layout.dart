@@ -30,7 +30,7 @@ final List<NavGroup> navGroups = [
     NavItem('Khuyến mãi', Icons.local_offer_outlined, '/promotions'),
   ]),
   NavGroup('SẢN PHẨM & KHO', [
-    NavItem('Danh mục', Icons.category_outlined, '/categories'),
+    NavItem('Thuộc tính sản phẩm', Icons.tune_outlined, '/product-attributes'),
     NavItem('Sản phẩm', Icons.inventory_2_outlined, '/products'),
     NavItem('Tồn kho', Icons.storage_outlined, '/inventory'),
     NavItem('Nhập hàng', Icons.local_shipping_outlined, '/purchases'),

@@ -1,7 +1,3 @@
-import 'package:zella_admin_flutter/features/categories/data/models/category_response_model.dart';
-import 'package:zella_admin_flutter/features/categories/sizeguide/data/size_guide_response_model.dart';
-import 'package:zella_admin_flutter/features/suppliers/data/models/supplier_response_model.dart';
-
 class ProductResponseModel {
   final int id;
   final String name;
@@ -11,9 +7,12 @@ class ProductResponseModel {
   final String occasion;
   final double basePrice;
   final bool isActive;
-  final CategoryResponseModel? category;
-  final SupplierResponseModel? supplier;
-  final SizeGuideResponseModel? sizeGuide;
+  final int categoryId;
+  final String categoryName;
+  final int supplierId;
+  final String supplierName;
+  final int sizeGuideId;
+  final String sizeGuideName;
   final String? createdAt;
   final String? updatedAt;
 
@@ -26,9 +25,12 @@ class ProductResponseModel {
     required this.occasion,
     required this.basePrice,
     required this.isActive,
-    this.category,
-    this.supplier,
-    this.sizeGuide,
+    required this.categoryId,
+    required this.categoryName,
+    required this.sizeGuideId,
+    required this.sizeGuideName,
+    required this.supplierId,
+    required this.supplierName,
     this.createdAt,
     this.updatedAt,
   });
@@ -43,21 +45,13 @@ class ProductResponseModel {
       occasion: json['occasion'] as String? ?? '',
       basePrice: (json['basePrice'] as num?)?.toDouble() ?? 0.0,
       isActive: json['isActive'] as bool? ?? false,
-      category: json['categoryId'] is Map<String, dynamic>
-          ? CategoryResponseModel.fromJson(
-              json['categoryId'] as Map<String, dynamic>,
-            )
-          : null,
-      supplier: json['supplierId'] is Map<String, dynamic>
-          ? SupplierResponseModel.fromJson(
-              json['supplierId'] as Map<String, dynamic>,
-            )
-          : null,
-      sizeGuide: json['sizeGuideId'] is Map<String, dynamic>
-          ? SizeGuideResponseModel.fromJson(
-              json['sizeGuideId'] as Map<String, dynamic>,
-            )
-          : null,
+      categoryId: json['categoryId'] as int? ?? 0,
+      categoryName: json['categoryName'] as String? ?? '',
+      supplierId: json['supplierId'] as int? ?? 0,
+      supplierName: json['supplierName'] as String? ?? '',
+      sizeGuideId: json['sizeGuideId'] as int? ?? 0,
+      sizeGuideName: json['sizeGuideName'] as String? ?? '',
+
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
     );
@@ -73,9 +67,12 @@ class ProductResponseModel {
       'occasion': occasion,
       'basePrice': basePrice,
       'isActive': isActive,
-      'categoryId': category?.toJson(),
-      'supplierId': supplier?.toJson(),
-      'sizeGuideId': sizeGuide?.toJson(),
+      'categoryId': categoryId,
+      'categoryName': categoryName,
+      'supplierId': supplierId,
+      'supplierName': supplierName,
+      'sizeGuideId': sizeGuideId,
+      'sizeGuideName': sizeGuideName,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };

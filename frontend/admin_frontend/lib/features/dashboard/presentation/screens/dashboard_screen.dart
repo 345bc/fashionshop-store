@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../theme/app_theme.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -23,12 +24,19 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Tổng quan',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppTheme.text),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.text,
+                      ),
                     ),
                     SizedBox(height: 8),
                     Text(
                       'Theo dõi hoạt động kinh doanh, đơn hàng và doanh thu hôm nay.',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -41,8 +49,13 @@ class DashboardScreen extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.text,
                         side: const BorderSide(color: AppTheme.borderLight),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -53,8 +66,13 @@ class DashboardScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.text,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         elevation: 0,
                       ),
                     ),
@@ -63,7 +81,7 @@ class DashboardScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 32),
-            
+
             // KPI Grid
             Row(
               children: [
@@ -123,7 +141,13 @@ class DashboardScreen extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFF0F0F0)),
-                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(5),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,16 +155,50 @@ class DashboardScreen extends StatelessWidget {
                         const Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Đơn hàng gần đây', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            Text('Xem tất cả', style: TextStyle(color: AppTheme.primary, fontSize: 13, fontWeight: FontWeight.w500)),
+                            Text(
+                              'Đơn hàng gần đây',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Xem tất cả',
+                              style: TextStyle(
+                                color: AppTheme.primary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
-                        _buildRecentOrderRow('ORD-1042', 'Nguyễn Lan Phương', '14 Sep', '3.100.000 ₫', 'Đã giao', AppTheme.success),
+                        _buildRecentOrderRow(
+                          'ORD-1042',
+                          'Nguyễn Lan Phương',
+                          '14 Sep',
+                          '3.100.000 ₫',
+                          'Đã giao',
+                          AppTheme.success,
+                        ),
                         const Divider(color: AppTheme.borderLight, height: 24),
-                        _buildRecentOrderRow('ORD-1041', 'Trần Hải Đăng', '13 Sep', '2.500.000 ₫', 'Đang xử lý', AppTheme.warning),
+                        _buildRecentOrderRow(
+                          'ORD-1041',
+                          'Trần Hải Đăng',
+                          '13 Sep',
+                          '2.500.000 ₫',
+                          'Đang xử lý',
+                          AppTheme.warning,
+                        ),
                         const Divider(color: AppTheme.borderLight, height: 24),
-                        _buildRecentOrderRow('ORD-1040', 'Lê Gia Bảo', '12 Sep', '600.000 ₫', 'Đã hủy', AppTheme.danger),
+                        _buildRecentOrderRow(
+                          'ORD-1040',
+                          'Lê Gia Bảo',
+                          '12 Sep',
+                          '600.000 ₫',
+                          'Đã hủy',
+                          AppTheme.danger,
+                        ),
                       ],
                     ),
                   ),
@@ -154,33 +212,72 @@ class DashboardScreen extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFF0F0F0)),
-                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(5),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Sản phẩm bán chạy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Sản phẩm bán chạy',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 24),
-                        _buildBestsellerRow('MA-COAT-01', 'Cashmere Double-Breasted Coat', 'Áo khoác', 9),
+                        _buildBestsellerRow(
+                          'MA-COAT-01',
+                          'Cashmere Double-Breasted Coat',
+                          'Áo khoác',
+                          9,
+                        ),
                         const SizedBox(height: 16),
-                        _buildBestsellerRow('RTW-JKT-22', 'Wool-Blend Structured Jacket', 'RTW', 7),
+                        _buildBestsellerRow(
+                          'RTW-JKT-22',
+                          'Wool-Blend Structured Jacket',
+                          'RTW',
+                          7,
+                        ),
                         const SizedBox(height: 16),
-                        _buildBestsellerRow('LEA-BAG-09', 'Smooth Calfskin Shoulder Bag', 'Phụ kiện', 6),
+                        _buildBestsellerRow(
+                          'LEA-BAG-09',
+                          'Smooth Calfskin Shoulder Bag',
+                          'Phụ kiện',
+                          6,
+                        ),
                         const SizedBox(height: 16),
-                        _buildBestsellerRow('FTW-DRB-42', 'Sculpted Derby Shoes', 'Giày', 5),
+                        _buildBestsellerRow(
+                          'FTW-DRB-42',
+                          'Sculpted Derby Shoes',
+                          'Giày',
+                          5,
+                        ),
                       ],
                     ),
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRecentOrderRow(String id, String customer, String date, String total, String status, Color statusColor) {
+  Widget _buildRecentOrderRow(
+    String id,
+    String customer,
+    String date,
+    String total,
+    String status,
+    Color statusColor,
+  ) {
     return Row(
       children: [
         Expanded(
@@ -192,14 +289,26 @@ class DashboardScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(customer, style: const TextStyle(fontWeight: FontWeight.w500)),
-              Text(date, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              Text(
+                customer,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              Text(
+                date,
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
             ],
           ),
         ),
         Expanded(
           flex: 2,
-          child: Text(total, style: const TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(
+            total,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
         Expanded(
           flex: 2,
@@ -213,7 +322,11 @@ class DashboardScreen extends StatelessWidget {
               ),
               child: Text(
                 status,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: statusColor,
+                ),
               ),
             ),
           ),
@@ -222,7 +335,12 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBestsellerRow(String sku, String name, String category, int qty) {
+  Widget _buildBestsellerRow(
+    String sku,
+    String name,
+    String category,
+    int qty,
+  ) {
     return Row(
       children: [
         Container(
@@ -233,20 +351,41 @@ class DashboardScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: AppTheme.borderLight),
           ),
-          child: const Icon(Icons.image_outlined, color: AppTheme.textMuted, size: 20),
+          child: const Icon(
+            Icons.image_outlined,
+            color: AppTheme.textMuted,
+            size: 20,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-              Text(sku, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                sku,
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(width: 8),
-        Text('$qty đã bán', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(
+          '$qty đã bán',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        ),
       ],
     );
   }
@@ -281,12 +420,17 @@ class DashboardScreen extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: badgeColor == AppTheme.textSecondary ? AppTheme.surface : badgeColor.withAlpha(25),
+                  color: badgeColor == AppTheme.textSecondary
+                      ? AppTheme.surface
+                      : badgeColor.withAlpha(25),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -310,10 +454,7 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            footerText,
-            style: TextStyle(color: footerColor, fontSize: 13),
-          ),
+          Text(footerText, style: TextStyle(color: footerColor, fontSize: 13)),
         ],
       ),
     );

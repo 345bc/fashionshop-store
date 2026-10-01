@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'theme/app_theme.dart';
 import 'features/auth/presentation/provider/auth_provider.dart';
+import 'core/network/api_client.dart';
 import 'widgets/app_layout.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/products/presentation/screens/products_screen.dart';
@@ -19,15 +20,22 @@ import 'features/reports/presentation/screens/reports_screen.dart';
 import 'features/users/presentation/screens/users_screen.dart';
 import 'features/users/presentation/providers/users_provider.dart';
 import 'features/products/presentation/providers/products_provider.dart';
+import 'features/products/presentation/providers/product_variants_provider.dart';
 import 'features/categories/presentation/providers/categories_provider.dart';
 import 'features/suppliers/presentation/providers/suppliers_provider.dart';
 import 'features/sizeguides/presentation/providers/size_guides_provider.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 import 'screens/login_screen.dart';
-import 'features/products/presentation/screens/product_detail_screen.dart';
+// import 'features/products/presentation/screens/product_detail_screen.dart';
 import 'features/products/presentation/screens/product_variants_screen.dart';
 import 'features/categories/presentation/screens/categories_screen.dart';
+import 'features/product_attributes/data/attribute_kind.dart';
+import 'features/product_attributes/presentation/screens/product_attributes_screen.dart';
+import 'features/product_attributes/presentation/screens/attribute_management_screen.dart';
 import 'screens/unauthorized_screen.dart';
+
+final adminScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+final adminNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,17 +56,31 @@ class ZellaAdminApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => UsersProvider()),
         ChangeNotifierProvider(create: (_) => ProductsProvider()),
+        ChangeNotifierProvider(create: (_) => ProductVariantsProvider()),
         ChangeNotifierProvider(create: (_) => CategoriesProvider()),
         ChangeNotifierProvider(create: (_) => SuppliersProvider()),
         ChangeNotifierProvider(create: (_) => SizeGuidesProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
+          authProvider.onSessionExpired = () {
+            adminNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+            adminScaffoldMessengerKey.currentState?.showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+                ),
+              ),
+            );
+          };
+          ApiClient().onSessionExpired = authProvider.expireSession;
           return MaterialApp(
             title: 'Zella Admin',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
-            home: authProvider.isLoading
+            scaffoldMessengerKey: adminScaffoldMessengerKey,
+            navigatorKey: adminNavigatorKey,
+            home: authProvider.isInitializing
                 ? const Scaffold(
                     body: Center(child: CircularProgressIndicator()),
                   )
@@ -113,10 +135,18 @@ class MainScreenState extends State<MainScreen> {
         return const DashboardScreen();
       case '/categories':
         return const CategoriesScreen();
+      case '/product-attributes':
+        return const ProductAttributesScreen();
+      case '/colors':
+        return const AttributeManagementScreen(kind: AttributeKind.color);
+      case '/sizes':
+        return const AttributeManagementScreen(kind: AttributeKind.size);
+      case '/sizeguides':
+        return const AttributeManagementScreen(kind: AttributeKind.sizeGuide);
       case '/products':
         return const ProductsScreen();
-      case '/product-detail':
-        return ProductDetailScreen(product: _currentArgs);
+      // case '/product-detail':
+      //   return ProductDetailScreen(product: _currentArgs);
       case '/product-variants':
         return ProductVariantsScreen(product: _currentArgs);
       case '/inventory':

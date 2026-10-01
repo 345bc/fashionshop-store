@@ -32,6 +32,7 @@ class ApiClient {
 
   String? _csrfToken;
   String? _csrfHeaderName;
+  void Function()? onSessionExpired;
 
   ApiClient._internal() {
     dio = Dio(
@@ -91,6 +92,12 @@ class ApiClient {
           }
           if (e.response?.statusCode == 401) {
             clearCsrfToken();
+            final path = e.requestOptions.path;
+            if (path != ApiEndpoints.login &&
+                path != ApiEndpoints.logout &&
+                path != '/auth/csrf') {
+              onSessionExpired?.call();
+            }
           }
           return handler.next(e);
         },

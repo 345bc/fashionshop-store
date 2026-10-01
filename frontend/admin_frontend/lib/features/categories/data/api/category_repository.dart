@@ -7,14 +7,9 @@ import '../../../../core/network/api_endpoints.dart';
 class CategoryRepository {
   final ApiClient _apiClient = ApiClient();
 
-  Future<dynamic> getAll({
-    int page = 0,
-    int size = 15,
-    String? query,
-    String? role,
-  }) async {
+  Future<List<Map<String, dynamic>>> getAll({String? query}) async {
     try {
-      final Map<String, dynamic> queryParams = {'page': page, 'size': size};
+      final Map<String, dynamic> queryParams = {};
       if (query != null && query.isNotEmpty) {
         queryParams['q'] = query;
       }
@@ -25,9 +20,23 @@ class CategoryRepository {
       );
 
       if (response.statusCode == 200) {
-        return response.data['data'];
+        return (response.data['data'] as List<dynamic>)
+            .cast<Map<String, dynamic>>();
       }
       throw Exception(response.data['message'] ?? 'Fetch failed');
+    } catch (e) {
+      _handleError(e);
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getParents() async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiEndpoints.categories}/parents',
+      );
+      return (response.data['data'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
     } catch (e) {
       _handleError(e);
       rethrow;
@@ -49,7 +58,10 @@ class CategoryRepository {
 
   Future<Map<String, dynamic>> create(Map<String, dynamic> data) async {
     try {
-      final response = await _apiClient.post(ApiEndpoints.categories, data: data);
+      final response = await _apiClient.post(
+        ApiEndpoints.categories,
+        data: data,
+      );
       if (response.statusCode == 201 || response.statusCode == 200) {
         return response.data['data'];
       }
@@ -76,17 +88,14 @@ class CategoryRepository {
     }
   }
 
-  // Future<void> delete(int id) async {
-  //   try {
-  //     final response = await _apiClient.delete('${ApiEndpoints.categories}/$id');
-  //     if (response.statusCode != 200 && response.statusCode != 204) {
-  //       throw Exception('Delete failed');
-  //     }
-  //   } catch (e) {
-  //     _handleError(e);
-  //     rethrow;
-  //   }
-  // }
+  Future<void> delete(int id) async {
+    try {
+      await _apiClient.delete('${ApiEndpoints.categories}/$id');
+    } catch (e) {
+      _handleError(e);
+      rethrow;
+    }
+  }
 
   void _handleError(dynamic e) {
     if (e is DioException) {

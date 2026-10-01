@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../features/auth/presentation/provider/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -18,34 +19,34 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
-  void _login() async {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       FocusScope.of(context).unfocus(); // Ẩn bàn phím
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       final success = await authProvider.login(
         _emailController.text,
         _passwordController.text,
       );
 
-      if (!mounted) return;
-
-      if (success) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
+      final message = success
+          ? 'Đăng nhập thành công'
+          : authProvider.errorMessage ?? 'Đăng nhập thất bại';
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final messenger = adminScaffoldMessengerKey.currentState;
+        messenger?.clearSnackBars();
+        messenger?.showSnackBar(
           SnackBar(
-            content: Text(authProvider.errorMessage ?? 'Đăng nhập thất bại'),
-            backgroundColor: AppTheme.danger,
+            content: Text(message),
+            backgroundColor: success ? AppTheme.success : AppTheme.danger,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
-      }
+      });
     }
   }
 

@@ -12,6 +12,8 @@ class ZellaFormDialog extends StatelessWidget {
   final VoidCallback onConfirm;
   final bool isLoading;
   final Key? formKey;
+  final double width;
+  final double? height;
 
   const ZellaFormDialog({
     super.key,
@@ -23,6 +25,8 @@ class ZellaFormDialog extends StatelessWidget {
     required this.onConfirm,
     this.isLoading = false,
     this.formKey,
+    this.width = 480,
+    this.height,
   });
 
   @override
@@ -33,7 +37,8 @@ class ZellaFormDialog extends StatelessWidget {
     }
 
     return ZellaDialog(
-      width: 480,
+      width: width,
+      height: height,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -30,6 +30,7 @@ class _UsersScreenState extends State<UsersScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<UsersProvider>().loadItems();
     });
   }
@@ -329,35 +330,35 @@ class _UsersScreenState extends State<UsersScreen> {
                       label: 'Chỉnh sửa',
                       icon: Icons.edit_outlined,
                     ),
-                    const ActionMenuItem(
-                      value: 'permission',
-                      label: 'Phân quyền',
-                      icon: Icons.shield_outlined,
-                    ),
-                    const ActionMenuItem(
-                      value: 'reset_password',
-                      label: 'Cấp lại mật khẩu',
-                      icon: Icons.lock_reset_outlined,
-                    ),
-                    ActionMenuItem.divider(),
-                    ActionMenuItem(
-                      value: 'lock',
-                      label: user.isActive
-                          ? 'Khóa tài khoản'
-                          : 'Mở khóa tài khoản',
-                      icon: user.isActive
-                          ? Icons.lock_outline
-                          : Icons.lock_open_outlined,
-                      color: user.isActive
-                          ? AppTheme.warning
-                          : AppTheme.success,
-                    ),
-                    ActionMenuItem(
-                      value: 'delete',
-                      label: 'Xóa tài khoản',
-                      icon: Icons.delete_outline,
-                      color: AppTheme.danger,
-                    ),
+                    // const ActionMenuItem(
+                    //   value: 'permission',
+                    //   label: 'Phân quyền',
+                    //   icon: Icons.shield_outlined,
+                    // ),
+                    // const ActionMenuItem(
+                    //   value: 'reset_password',
+                    //   label: 'Cấp lại mật khẩu',
+                    //   icon: Icons.lock_reset_outlined,
+                    // ),
+                    // ActionMenuItem.divider(),
+                    // ActionMenuItem(
+                    //   value: 'lock',
+                    //   label: user.isActive
+                    //       ? 'Khóa tài khoản'
+                    //       : 'Mở khóa tài khoản',
+                    //   icon: user.isActive
+                    //       ? Icons.lock_outline
+                    //       : Icons.lock_open_outlined,
+                    //   color: user.isActive
+                    //       ? AppTheme.warning
+                    //       : AppTheme.success,
+                    // ),
+                    // ActionMenuItem(
+                    //   value: 'delete',
+                    //   label: 'Xóa tài khoản',
+                    //   icon: Icons.delete_outline,
+                    //   color: AppTheme.danger,
+                    // ),
                   ],
                   onSelected: (value) {
                     final userMap = {

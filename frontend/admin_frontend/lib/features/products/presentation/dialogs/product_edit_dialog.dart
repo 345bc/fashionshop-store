@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
+import '../../../../core/network/api_endpoints.dart';
 
 import 'package:provider/provider.dart';
 
@@ -33,6 +35,11 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
   int? _selectedSizeGuideId;
 
   bool _isLoading = false;
+  bool _imagesLoading = true;
+  String? _imagesError;
+  final List<_EditableImage> _images = [];
+  final List<int> _deletedImageIds = [];
+  _EditableImage? _primaryImage;
   late bool _isActive;
 
   @override
@@ -69,10 +76,137 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
         widget.product['isActive'] ?? widget.product['is_active'] ?? true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<CategoriesProvider>().loadItems();
       context.read<SuppliersProvider>().loadItems();
       context.read<SizeGuidesProvider>().loadItems();
+      _loadImages();
     });
+  }
+
+  Future<void> _loadImages() async {
+    setState(() {
+      _imagesLoading = true;
+      _imagesError = null;
+    });
+    try {
+      final images = await context.read<ProductsProvider>().loadImages(
+        widget.product['id'] as int,
+      );
+      if (!mounted) return;
+      setState(() {
+        _images
+          ..clear()
+          ..addAll(images.map(_EditableImage.fromJson));
+        _images.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+        _primaryImage = null;
+        for (final image in _images) {
+          if (image.isPrimary) {
+            _primaryImage = image;
+            break;
+          }
+        }
+        _primaryImage ??= _images.isEmpty ? null : _images.first;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _imagesError = error.toString());
+    } finally {
+      if (mounted) setState(() => _imagesLoading = false);
+    }
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        allowMultiple: true,
+        withData: true,
+      );
+      if (!mounted || result == null || result.files.isEmpty) return;
+      if (result.files.any(
+        (file) => file.bytes == null || file.size == 0 || file.size > 10485760,
+      )) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mỗi ảnh cần có dung lượng từ 1 byte đến 10 MB.'),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        var nextOrder =
+            _images.fold<int>(
+              -1,
+              (maxOrder, image) =>
+                  image.displayOrder > maxOrder ? image.displayOrder : maxOrder,
+            ) +
+            1;
+        for (final file in result.files) {
+          _images.add(_EditableImage.newFile(file, nextOrder++));
+        }
+        _primaryImage ??= _images.first;
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Không thể chọn ảnh: $error')));
+      }
+    }
+  }
+
+  void _removeImage(_EditableImage image) {
+    setState(() {
+      if (image.id != null) _deletedImageIds.add(image.id!);
+      _images.remove(image);
+      if (identical(_primaryImage, image)) {
+        _primaryImage = _images.isEmpty ? null : _images.first;
+      }
+    });
+  }
+
+  String _imageUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.hasScheme) return url;
+    final base = Uri.parse(ApiEndpoints.baseUrl);
+    return base.origin + (url.startsWith('/') ? url : '/$url');
+  }
+
+  Future<void> _saveImages(ProductsProvider provider) async {
+    final productId = widget.product['id'] as int;
+    for (final image in _images) {
+      if (image.file == null) continue;
+      final uploaded = await provider.uploadImage(
+        productId: productId,
+        fileName: image.file!.name,
+        bytes: image.file!.bytes!,
+        isPrimary: false,
+        displayOrder: image.displayOrder,
+      );
+      image.id = (uploaded['id'] as num).toInt();
+      image.imageUrl = uploaded['imageUrl'] as String;
+      image.file = null;
+    }
+
+    final primary = _primaryImage;
+    if (primary != null && !primary.isPrimary) {
+      await provider.updateImage(
+        id: primary.id!,
+        productId: productId,
+        imageUrl: primary.imageUrl!,
+        isPrimary: true,
+        displayOrder: primary.displayOrder,
+      );
+      for (final image in _images) {
+        image.isPrimary = identical(image, primary);
+      }
+    }
+
+    for (final id in List<int>.of(_deletedImageIds)) {
+      await provider.deleteImage(id);
+      _deletedImageIds.remove(id);
+    }
   }
 
   @override
@@ -86,6 +220,14 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
   }
 
   Future<void> _submit() async {
+    if (_imagesLoading || _imagesError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chưa tải được ảnh sản phẩm. Vui lòng thử lại.'),
+        ),
+      );
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
       ScaffoldMessenger.of(
@@ -95,7 +237,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
     }
 
     setState(() => _isLoading = true);
-
+    var productUpdated = false;
     try {
       final data = {
         'name': _nameController.text,
@@ -109,10 +251,10 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
         'isActive': _isActive,
       };
 
-      await context.read<ProductsProvider>().updateItem(
-        widget.product['id'] as int,
-        data,
-      );
+      final productsProvider = context.read<ProductsProvider>();
+      await productsProvider.updateItem(widget.product['id'] as int, data);
+      productUpdated = true;
+      await _saveImages(productsProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -124,7 +266,11 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi: \${e.toString()}'),
+            content: Text(
+              productUpdated
+                  ? 'Thông tin sản phẩm đã lưu, nhưng ảnh chưa lưu xong: $e'
+                  : 'Không thể cập nhật sản phẩm: $e',
+            ),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -136,8 +282,12 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.sizeOf(context);
     return ZellaFormDialog(
       title: 'Chỉnh sửa sản phẩm',
+      width: (screenSize.width * 2 / 3).clamp(480.0, 1200.0),
+      height: screenSize.height * 2 / 3,
+      confirmText: 'Lưu thay đổi',
       isLoading: _isLoading,
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _submit,
@@ -249,8 +399,10 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value?.isEmpty ?? true) return 'Vui lòng nhập giá';
-                        if (double.tryParse(value!) == null)
-                          return 'Giá không hợp lệ';
+                        final price = double.tryParse(value!);
+                        if (price == null || price <= 0) {
+                          return 'Giá phải lớn hơn 0';
+                        }
                         return null;
                       },
                     ),
@@ -261,7 +413,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                       builder: (context, provider, _) {
                         return DropdownButtonFormField<int>(
                           isExpanded: true,
-                          value: _selectedCategoryId,
+                          initialValue: _selectedCategoryId,
                           decoration: const InputDecoration(
                             labelText: 'Danh mục *',
                           ),
@@ -291,9 +443,9 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                       builder: (context, provider, _) {
                         return DropdownButtonFormField<int>(
                           isExpanded: true,
-                          value: _selectedSupplierId,
+                          initialValue: _selectedSupplierId,
                           decoration: const InputDecoration(
-                            labelText: 'Nhà cung cấp',
+                            labelText: 'Nhà cung cấp *',
                           ),
                           items: provider.items.map((sup) {
                             return DropdownMenuItem(
@@ -304,6 +456,8 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                           onChanged: (val) {
                             setState(() => _selectedSupplierId = val);
                           },
+                          validator: (value) =>
+                              value == null ? 'Vui lòng chọn' : null,
                         );
                       },
                     ),
@@ -314,9 +468,9 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                       builder: (context, provider, _) {
                         return DropdownButtonFormField<int>(
                           isExpanded: true,
-                          value: _selectedSizeGuideId,
+                          initialValue: _selectedSizeGuideId,
                           decoration: const InputDecoration(
-                            labelText: 'Size Guide',
+                            labelText: 'Size Guide *',
                           ),
                           items: provider.items.map((guide) {
                             return DropdownMenuItem(
@@ -327,12 +481,122 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                           onChanged: (val) {
                             setState(() => _selectedSizeGuideId = val);
                           },
+                          validator: (value) =>
+                              value == null ? 'Vui lòng chọn' : null,
                         );
                       },
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 32),
+              _buildSectionTitle('Ảnh sản phẩm'),
+              const SizedBox(height: 8),
+              const Text(
+                'Chọn ảnh chính, thêm ảnh mới hoặc xóa ảnh hiện có. '
+                'Thay đổi được áp dụng khi bấm Lưu thay đổi.',
+              ),
+              const SizedBox(height: 16),
+              if (_imagesLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (_imagesError != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Không tải được ảnh: $_imagesError'),
+                    TextButton(
+                      onPressed: _loadImages,
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                )
+              else ...[
+                if (_images.isEmpty) const Text('Chưa có ảnh sản phẩm.'),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (final image in _images)
+                      Container(
+                        width: 150,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppTheme.borderLight),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          children: [
+                            Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: image.file != null
+                                      ? Image.memory(
+                                          image.file!.bytes!,
+                                          width: 132,
+                                          height: 110,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, _, _) =>
+                                              const SizedBox(
+                                                width: 132,
+                                                height: 110,
+                                                child: Icon(
+                                                  Icons.broken_image_outlined,
+                                                ),
+                                              ),
+                                        )
+                                      : Image.network(
+                                          _imageUrl(image.imageUrl!),
+                                          width: 132,
+                                          height: 110,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, _, _) =>
+                                              const SizedBox(
+                                                width: 132,
+                                                height: 110,
+                                                child: Icon(
+                                                  Icons.broken_image_outlined,
+                                                ),
+                                              ),
+                                        ),
+                                ),
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: IconButton.filledTonal(
+                                    tooltip: 'Xóa ảnh',
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () => _removeImage(image),
+                                    icon: const Icon(Icons.close, size: 18),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            TextButton.icon(
+                              onPressed: _isLoading
+                                  ? null
+                                  : () => setState(() => _primaryImage = image),
+                              icon: Icon(
+                                identical(_primaryImage, image)
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_unchecked,
+                                size: 18,
+                              ),
+                              label: const Text('Ảnh chính'),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _pickImages,
+                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  label: const Text('Thêm ảnh'),
+                ),
+              ],
             ],
           ),
         ),
@@ -350,4 +614,30 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
       ),
     );
   }
+}
+
+class _EditableImage {
+  int? id;
+  String? imageUrl;
+  PlatformFile? file;
+  int displayOrder;
+  bool isPrimary;
+
+  _EditableImage({
+    this.id,
+    this.imageUrl,
+    this.file,
+    required this.displayOrder,
+    this.isPrimary = false,
+  });
+
+  factory _EditableImage.fromJson(Map<String, dynamic> json) => _EditableImage(
+    id: (json['id'] as num).toInt(),
+    imageUrl: json['imageUrl'] as String,
+    displayOrder: (json['displayOrder'] as num?)?.toInt() ?? 0,
+    isPrimary: json['isPrimary'] == true,
+  );
+
+  factory _EditableImage.newFile(PlatformFile file, int displayOrder) =>
+      _EditableImage(file: file, displayOrder: displayOrder);
 }
