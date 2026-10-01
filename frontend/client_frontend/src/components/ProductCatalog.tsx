@@ -19,18 +19,18 @@ type Product = {
 type FilterState = { types: string[]; sizes: string[]; price: string };
 
 const products: Product[] = [
-  { id: "1", name: "Áo sơ mi Relaxed Linen", price: 429000, image: "/assets/images/v7_1725.png", type: "Áo", sizes: ["S","M","L"], badge: "Mới", rating: 4.9, reviewsCount: 42 },
-  { id: "2", name: "Quần suông Soft Tailoring", price: 549000, image: "/assets/images/v7_1730.png", type: "Quần", sizes: ["S","M","L","XL"], rating: 4.8, reviewsCount: 61 },
-  { id: "3", name: "Váy midi Sage Flow", price: 679000, image: "/assets/images/v7_1916.png", type: "Váy & đầm", sizes: ["XS","S","M","L"], badge: "Best seller", rating: 4.9, reviewsCount: 128 },
-  { id: "4", name: "Set vest Modern Balance", price: 899000, image: "/assets/images/v7_1951.png", type: "Áo khoác", sizes: ["S","M","L"], rating: 4.8, reviewsCount: 30 },
-  { id: "5", name: "Đầm satin Sand Drape", price: 729000, image: "/assets/images/v7_1937.png", type: "Váy & đầm", sizes: ["S","M","L"], badge: "Limited", rating: 4.7, reviewsCount: 34 },
-  { id: "6", name: "Quần ống rộng Cocoa", price: 489000, image: "/assets/images/v7_1923.png", type: "Quần", sizes: ["S","M","L","XL"], rating: 4.8, reviewsCount: 57 },
-  { id: "7", name: "Áo dệt kim Ivory Air", price: 299000, image: "/assets/images/v7_2123.png", type: "Áo", sizes: ["XS","S","M","L"], rating: 4.6, reviewsCount: 23 },
+  { id: "1", name: "Áo sơ mi Relaxed Linen", price: 429000, image: "/assets/images/v7_1725.png", type: "Áo", sizes: ["S", "M", "L"], badge: "Mới", rating: 4.9, reviewsCount: 42 },
+  { id: "2", name: "Quần suông Soft Tailoring", price: 549000, image: "/assets/images/v7_1730.png", type: "Quần", sizes: ["S", "M", "L", "XL"], rating: 4.8, reviewsCount: 61 },
+  { id: "3", name: "Váy midi Sage Flow", price: 679000, image: "/assets/images/v7_1916.png", type: "Váy & đầm", sizes: ["XS", "S", "M", "L"], badge: "Best seller", rating: 4.9, reviewsCount: 128 },
+  { id: "4", name: "Set vest Modern Balance", price: 899000, image: "/assets/images/v7_1951.png", type: "Áo khoác", sizes: ["S", "M", "L"], rating: 4.8, reviewsCount: 30 },
+  { id: "5", name: "Đầm satin Sand Drape", price: 729000, image: "/assets/images/v7_1937.png", type: "Váy & đầm", sizes: ["S", "M", "L"], badge: "Limited", rating: 4.7, reviewsCount: 34 },
+  { id: "6", name: "Quần ống rộng Cocoa", price: 489000, image: "/assets/images/v7_1923.png", type: "Quần", sizes: ["S", "M", "L", "XL"], rating: 4.8, reviewsCount: 57 },
+  { id: "7", name: "Áo dệt kim Ivory Air", price: 299000, image: "/assets/images/v7_2123.png", type: "Áo", sizes: ["XS", "S", "M", "L"], rating: 4.6, reviewsCount: 23 },
   { id: "8", name: "Túi cói Studio Basket", price: 359000, image: "/assets/images/v7_1944.png", type: "Phụ kiện", sizes: ["M"], badge: "Mới", rating: 4.9, reviewsCount: 49 },
-  { id: "9", name: "Váy midi Olive Line", price: 619000, image: "/assets/images/v7_2020.png", type: "Váy & đầm", sizes: ["S","M","L"], rating: 4.8, reviewsCount: 75 },
-  { id: "10", name: "Áo dài tay Minimal Knit", price: 329000, image: "/assets/images/v7_1909.png", type: "Áo", sizes: ["S","M","L","XL"], rating: 4.7, reviewsCount: 18 },
-  { id: "11", name: "Chân váy Sage Pleat", price: 459000, image: "/assets/images/v7_2019.png", type: "Váy & đầm", sizes: ["XS","S","M","L"], rating: 4.9, reviewsCount: 66 },
-  { id: "12", name: "Blazer Taupe Structure", price: 799000, image: "/assets/images/v7_1713.png", type: "Áo khoác", sizes: ["S","M","L","XL"], rating: 4.8, reviewsCount: 39 },
+  { id: "9", name: "Váy midi Olive Line", price: 619000, image: "/assets/images/v7_2020.png", type: "Váy & đầm", sizes: ["S", "M", "L"], rating: 4.8, reviewsCount: 75 },
+  { id: "10", name: "Áo dài tay Minimal Knit", price: 329000, image: "/assets/images/v7_1909.png", type: "Áo", sizes: ["S", "M", "L", "XL"], rating: 4.7, reviewsCount: 18 },
+  { id: "11", name: "Chân váy Sage Pleat", price: 459000, image: "/assets/images/v7_2019.png", type: "Váy & đầm", sizes: ["XS", "S", "M", "L"], rating: 4.9, reviewsCount: 66 },
+  { id: "12", name: "Blazer Taupe Structure", price: 799000, image: "/assets/images/v7_1713.png", type: "Áo khoác", sizes: ["S", "M", "L", "XL"], rating: 4.8, reviewsCount: 39 },
 ];
 
 const formatPrice = (price: number) => `${price.toLocaleString("vi-VN")}₫`;
@@ -62,9 +62,9 @@ export default function ProductCatalog({ initialQuery = "", initialCategory = ""
         (filters.price === "over500" && product.price > 500000);
       return queryMatch && typeMatch && sizeMatch && priceMatch;
     });
-    if (sort === "low") list = [...list].sort((a,b) => a.price - b.price);
-    if (sort === "high") list = [...list].sort((a,b) => b.price - a.price);
-    if (sort === "rating") list = [...list].sort((a,b) => b.rating - a.rating);
+    if (sort === "low") list = [...list].sort((a, b) => a.price - b.price);
+    if (sort === "high") list = [...list].sort((a, b) => b.price - a.price);
+    if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
   }, [filters, sort, query]);
 
@@ -72,7 +72,6 @@ export default function ProductCatalog({ initialQuery = "", initialCategory = ""
     <>
       <section className="catalog-hero">
         <div>
-          <span className="eyebrow">ZELLA / SHOP</span>
           <h1>{query ? `Kết quả cho “${query}”` : "Tất cả sản phẩm"}</h1>
           <p>Những thiết kế dễ mặc, bảng màu trung tính và phom dáng hiện đại cho tủ đồ mỗi ngày.</p>
         </div>
