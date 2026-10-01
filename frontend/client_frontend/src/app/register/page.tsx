@@ -99,7 +99,7 @@ export default function RegisterPage() {
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0912345678"
+                    placeholder="0123456789"
                     className="h-11 px-4 rounded-xl border border-zinc-300 bg-white text-[14px] text-zinc-900 font-medium focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors placeholder:text-zinc-400"
                   />
                 </div>

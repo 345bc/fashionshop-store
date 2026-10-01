@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../api/apiClient";
+import { apiRequest } from "../api/apiClient";
 
 // export function listOutgoingDocuments({ q = "", page = 0, size = 20 } = {}) {
 //   const query = new URLSearchParams({ q, page, size });

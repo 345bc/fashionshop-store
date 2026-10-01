@@ -2,9 +2,32 @@
 
 import Link from "next/link";
 import { useAuth } from "../auth/AuthContext";
+import { useCallback, useEffect, useState } from "react";
+import { getIdByUserId } from "@/service/customerApi";
 
 export default function AccountNav({ active }: { active: "profile" | "orders" | "history" | "loyalty" }) {
   const auth = useAuth();
+
+  const [profileState, setProfileState] = useState<{ status: string; data: Record<string, unknown> | null; error: unknown }>({
+    status: "idle",
+    data: null,
+    error: null,
+  });
+
+  const load = useCallback(async () => {
+    if (!auth?.user?.id) return;
+    try {
+      setProfileState((current) => ({ ...current, status: "loading" }));
+      const response = await getIdByUserId(auth.user.id as string);
+      setProfileState({ status: "success", data: response.data, error: null });
+    } catch (error) {
+      setProfileState((current) => ({ ...current, status: "error", error }));
+    }
+  }, [auth?.user?.id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const navItems = [
     { id: "profile", label: "Hồ sơ cá nhân", href: "/profile", icon: "person" },
@@ -18,14 +41,14 @@ export default function AccountNav({ active }: { active: "profile" | "orders" | 
       {/* User Info Header */}
       <div className="p-6 border-b border-zinc-100 flex items-center gap-4 bg-zinc-50/80">
         <div className="w-12 h-12 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
-          {(auth?.user?.profile?.fullname || "N").charAt(0).toUpperCase()}
+          {((profileState?.data?.fullName) as string || "N").charAt(0).toUpperCase()}
         </div>
         <div className="flex flex-col min-w-0">
           <strong className="text-[15px] text-zinc-900 font-bold truncate">
-            {auth?.user?.profile?.fullname || "Nguyễn Văn A"}
+            {(profileState?.data?.fullName) as string || ""}
           </strong>
           <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mt-1">
-            {/* Thành viên Bạc */}
+            {(profileState?.data?.membershipTier) as string || ""}
           </span>
         </div>
       </div>

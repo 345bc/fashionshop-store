@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import AccountNav from "@/components/AccountNav";
 
 import { useAuth } from "@/auth/AuthContext";
-import { getIdByUserId } from "./api/customerApi";
+import { getIdByUserId } from "../../service/customerApi";
 
 export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
