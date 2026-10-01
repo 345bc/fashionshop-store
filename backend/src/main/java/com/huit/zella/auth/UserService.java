@@ -1,6 +1,9 @@
 package com.huit.zella.auth;
 
 import com.huit.zella.common.exception.BusinessException;
+import com.huit.zella.customer.Customer;
+import com.huit.zella.customer.CustomerRepository;
+import com.huit.zella.customer.Profile;
 import com.huit.zella.user.CreateUserRequest;
 import com.huit.zella.user.UpdateUserRequest;
 import com.huit.zella.user.UserResponse;
@@ -29,6 +32,7 @@ public class UserService {
     UserRepository user_repository;
     RoleRepository role_repository;
     PasswordEncoder passwordEncoder;
+    CustomerRepository customerRepository;
 
     @Transactional(readOnly = true)
     public CurrentUser requireByEmail(String email) {
@@ -51,21 +55,26 @@ public class UserService {
         if (user.getPasswordHash() == null || !passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
             throw invalidCredentials();
         }
-        return toCurrentUser(user);
+        CurrentUser currentUser = toCurrentUser(user);
+        if (currentUser.roles().isEmpty()) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "ROLE_NOT_ASSIGNED",
+                    "Tài khoản chưa được gán vai trò");
+        }
+        return currentUser;
     }
 
     @Transactional
-    public CurrentUser register(String email,  String userName, String rawPassword, PasswordEncoder passwordEncoder) {
+    public CurrentUser register(String email, String userName, String rawPassword, String fullName, String phone, PasswordEncoder passwordEncoder) {
         if (user_repository.findByEmailIgnoreCase(normalizeEmail(email)).isPresent()
                 || user_repository.findByUserNameIgnoreCase(normalizeUserName(userName)).isPresent()) {
-            throw invalidInformation();
+            throw informationAlreadyExists();
         }
 
-        Role userRole = role_repository.findByRoleCode(RoleEnum.USER.name())
+        Role userRole = role_repository.findByRoleCode(RoleEnum.CUSTOMER.name())
                 .orElseThrow(() -> new BusinessException(
                         HttpStatus.INTERNAL_SERVER_ERROR,
                         "ROLE_NOT_FOUND",
-                        "Lỗi: Không tìm thấy Role USER trong DB!"
+                        "Lỗi: Không tìm thấy Role trong DB!"
                 ));
         Set<Role> roles = new HashSet<>();
         roles.add(userRole);
@@ -79,14 +88,20 @@ public class UserService {
 
         user = user_repository.save(user);
 
+        Customer customer = new Customer();
+        customer.setFullName(fullName);
+        customer.setPhone(phone);
+
+        user.setProfile(customer);
+        customerRepository.save(customer);
         return toCurrentUser(user);
     }
 
     @Transactional
-    public UserResponse createUser (CreateUserRequest req){
+    public UserResponse createUser(CreateUserRequest req) {
         if (user_repository.findByEmailIgnoreCase(normalizeEmail(req.email())).isPresent()
                 || user_repository.findByUserNameIgnoreCase(normalizeUserName(req.username())).isPresent()) {
-            throw invalidInformation();
+            throw informationAlreadyExists();
         }
 
         Set<Role> roles = new HashSet<>();
@@ -110,7 +125,7 @@ public class UserService {
 
         user = user_repository.save(user);
 
-        return UserResponse.createUserResponse(user);
+        return UserResponse.from(user);
     }
 
     @Transactional(readOnly = true)
@@ -118,12 +133,12 @@ public class UserService {
         String safeQuery = (query == null || query.isBlank()) ? null : query.trim();
         String safeRole = (role == null || role.isBlank()) ? null : role.trim();
         Page<User> page = user_repository.searchUsers(safeQuery, safeRole, pageable);
-        return page.map(UserResponse::createUserResponse);
+        return page.map(UserResponse::from);
     }
 
     @Transactional(readOnly = true)
     public UserResponse get(Long id) {
-        return UserResponse.createUserResponse(requireFeature(id));
+        return UserResponse.from(requireFeature(id));
     }
 
     @Transactional
@@ -136,7 +151,7 @@ public class UserService {
             throw new BusinessException(HttpStatus.CONFLICT, "NAME_ALREADY_EXISTS", "UserName already exists");
         }
 
-        if (user_repository.existsByEmailIgnoreCaseAndIdNot(email,id)) {
+        if (user_repository.existsByEmailIgnoreCaseAndIdNot(email, id)) {
             throw new BusinessException(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", "Email already exists");
         }
 
@@ -155,14 +170,14 @@ public class UserService {
 
         feature.setEmail(email);
         feature.setActive(is_active);
-        
+
         if (update.password() != null && !update.password().trim().isEmpty()) {
             feature.setPasswordHash(passwordEncoder.encode(update.password()));
         }
-        
+
         feature.setRoles(roles);
 
-        return UserResponse.createUserResponse(user_repository.save(feature));
+        return UserResponse.from(user_repository.save(feature));
     }
 
 
@@ -186,7 +201,6 @@ public class UserService {
     }
 
 
-
     String normalizeEmail(String email) {
         if (email == null || email.isBlank()) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "EMAIL_REQUIRED", "Email là bắt buộc");
@@ -206,14 +220,19 @@ public class UserService {
         return new CurrentUser(user.getId(), user.getEmail(), user.getUserName(), roles);
     }
 
+    // removed broken toProfile method
+
     BusinessException invalidCredentials() {
         return new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
                 "Email hoặc mật khẩu không đúng");
     }
 
-    BusinessException invalidInformation() {
-        return new BusinessException(HttpStatus.CONFLICT, "INFORMATION_ALREADY_EXISTS",
-                "Email hoặc Username đã tồn tại");
+    BusinessException informationAlreadyExists() {
+        return new BusinessException(
+                HttpStatus.CONFLICT,
+                "INFORMATION_ALREADY_EXISTS",
+                "Email hoặc Username đã tồn tại"
+        );
     }
 
     private User requireFeature(Long id) {

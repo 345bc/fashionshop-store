@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 
 class DetailDrawer extends StatelessWidget {
@@ -19,9 +20,7 @@ class DetailDrawer extends StatelessWidget {
       width: 480, // Fixed width for detail panel
       backgroundColor: AppTheme.background,
       elevation: 16,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.zero,
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -56,7 +55,7 @@ class DetailDrawer extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Drawer Content
           Expanded(
             child: SingleChildScrollView(

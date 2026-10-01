@@ -12,13 +12,6 @@ import org.hibernate.annotations.Nationalized;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Role {
-    //    CREATE TABLE roles
-//            (
-//                    id          BIGINT IDENTITY(1,1) PRIMARY KEY,
-//    role_code   VARCHAR(50) NOT NULL UNIQUE,
-//    role_name   NVARCHAR(100) NOT NULL,
-//    description NVARCHAR(255) NULL
-//);
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -31,5 +24,4 @@ public class Role {
     private String roleName;
 
     private String description;
-
 }

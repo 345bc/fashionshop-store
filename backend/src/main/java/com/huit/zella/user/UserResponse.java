@@ -15,7 +15,7 @@ public record UserResponse(
         boolean isActive,
         Instant createdAt,
         Instant updatedAt) {
-    public static UserResponse createUserResponse(User user) {
+    public static UserResponse from(User user) {
         Set<String> roleNames = user.getRoles().stream()
                 .map(Role::getRoleCode)
                 .collect(Collectors.toSet());

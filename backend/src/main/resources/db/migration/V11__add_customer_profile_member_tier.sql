@@ -14,7 +14,7 @@ ALTER TABLE customer_profiles
     total_spending DECIMAL(18,2) NOT NULL CONSTRAINT df_customer_profiles_spending DEFAULT 0.00,
 
     -- Ngày thăng hạng gần nhất
-    tier_upgraded_at DATETIME NULL;
+    tier_upgraded_at datetimeoffset(7) NULL;
 
 -- Thêm index để tối ưu việc lọc và thống kê theo hạng thành viên
 CREATE INDEX idx_customer_profiles_tier ON customer_profiles (membership_tier);

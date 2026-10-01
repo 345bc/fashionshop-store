@@ -1,4 +1,5 @@
 // GENERATED FROM TEMPLATE: templates/feature_dialog_form.dart.template
+// ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import '../../../../theme/app_theme.dart';
 
@@ -110,6 +111,7 @@ class _UserPermissionsDialogState extends State<UserPermissionsDialog> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
             Radio<String>(
               value: role,
               groupValue: _selectedRole,

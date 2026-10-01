@@ -32,7 +32,7 @@ class ErrorStateWidget extends StatelessWidget {
             Icon(
               icon,
               size: 64,
-              color: AppTheme.danger.withOpacity(0.5),
+              color: AppTheme.danger.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(

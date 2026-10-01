@@ -24,6 +24,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> searchUsers(@org.springframework.data.repository.query.Param("query") String query, 
                            @org.springframework.data.repository.query.Param("role") String role, 
                            Pageable pageable);
+
     boolean existsByUserNameIgnoreCaseAndIdNot(String username, Long id);
 
     boolean existsByEmailIgnoreCase(String email);

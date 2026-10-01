@@ -2,7 +2,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../data/models/user_response_model.dart';
-import '../../data/repositories/users_repository.dart';
+import '../../data/api/users_repository.dart';
 
 class UsersProvider extends ChangeNotifier {
   final UsersRepository _repository = UsersRepository();
