@@ -28,6 +28,10 @@ class ApiEndpoints {
   // Suppliers Feature
   static const String suppliers = '/supplier';
   static const String customers = '/customers';
+  static const String inventory = '/inventory';
+  static const String orders = '/order';
+  static const String orderReturns = '/order-return';
+  static const String goodsReceipts = '/goods-receipt';
 
   // Size Guides Feature
   static const String sizeGuides = '/sizeguide';

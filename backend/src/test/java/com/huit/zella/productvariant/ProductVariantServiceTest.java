@@ -40,7 +40,7 @@ class ProductVariantServiceTest {
         when(variants.save(any(ProductVariant.class))).thenAnswer(call -> call.getArgument(0));
 
         ProductVariantResponse result = service.create(new CreateProductVariantRequest(
-                1L, 3, 2, BigDecimal.TEN, BigDecimal.ONE, 5, 0, true));
+                1L, 3, 2, BigDecimal.TEN, BigDecimal.ONE, 0, 0, true));
 
         assertEquals("ao-thun-DEN-XL", result.sku());
         verify(variants).existsBySkuIgnoreCase("ao-thun-DEN-XL");

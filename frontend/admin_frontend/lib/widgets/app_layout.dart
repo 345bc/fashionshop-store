@@ -22,12 +22,11 @@ class NavGroup {
 
 final List<NavGroup> navGroups = [
   NavGroup('TỔNG QUAN', [
-    NavItem('Dashboard', Icons.dashboard_outlined, '/'),
-    NavItem('Báo cáo', Icons.bar_chart_outlined, '/reports'),
+    NavItem('Dashboard & Báo cáo', Icons.dashboard_outlined, '/'),
   ]),
   NavGroup('QUẢN LÝ BÁN HÀNG', [
     NavItem('Đơn hàng', Icons.shopping_cart_outlined, '/orders'),
-    NavItem('Khuyến mãi', Icons.local_offer_outlined, '/promotions'),
+    NavItem('Voucher & Khuyến mãi', Icons.local_offer_outlined, '/promotions'),
   ]),
   NavGroup('SẢN PHẨM & KHO', [
     NavItem('Thuộc tính sản phẩm', Icons.tune_outlined, '/product-attributes'),
@@ -120,7 +119,13 @@ class AppLayout extends StatelessWidget {
                             ),
                           ),
                           ...group.items.map((item) {
-                            final isActive = currentRoute == item.route;
+                            final isActive =
+                                currentRoute == item.route ||
+                                (item.route == '/' &&
+                                    currentRoute == '/reports') ||
+                                (item.route == '/promotions' &&
+                                    (currentRoute == '/vouchers' ||
+                                        currentRoute == '/promotion-programs'));
                             return Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,

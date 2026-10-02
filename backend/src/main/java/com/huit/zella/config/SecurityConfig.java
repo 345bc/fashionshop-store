@@ -31,7 +31,7 @@ public class SecurityConfig {
             "/api/health", "/api/project-info", "/api/v1/auth/csrf",
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
             "/api/v1/product", "/api/v1/product-image/files/*",
-            "/api/v1/category"
+            "/api/v1/category", "/api/v1/checkout/orders/*"
     };
 
 //    @Bean
@@ -91,7 +91,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register",
+                                "/api/v1/checkout/orders").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(apiSecurityErrorHandler)

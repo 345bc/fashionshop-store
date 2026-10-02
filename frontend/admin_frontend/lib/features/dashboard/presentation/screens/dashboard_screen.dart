@@ -1,462 +1,212 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/common/feature_toolbar.dart';
+import '../../data/models/analytics_models.dart';
+import '../../data/repositories/analytics_repository.dart';
+import '../providers/dashboard_provider.dart';
+import '../widgets/analytics_filters.dart';
+import '../widgets/analytics_cards.dart';
+import '../widgets/analytics_panels.dart';
+import '../widgets/analytics_table.dart';
+import '../widgets/revenue_chart.dart';
 
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+class DashboardScreen extends StatefulWidget {
+  final AnalyticsSection? initialSection;
+  const DashboardScreen({super.key, this.initialSection});
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSection != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<DashboardProvider>().setSection(widget.initialSection!);
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<DashboardProvider>();
+    final chart =
+        p.section == AnalyticsSection.overview ||
+        p.section == AnalyticsSection.revenue;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
+        key: PageStorageKey('analytics-${p.section.name}'),
         padding: const EdgeInsets.all(32),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: 24,
+              runSpacing: 16,
               children: [
                 const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tổng quan',
+                      'Dashboard & Báo cáo',
                       style: TextStyle(
                         fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.text,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'Theo dõi hoạt động kinh doanh, đơn hàng và doanh thu hôm nay.',
-                      style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 14,
-                      ),
+                      'Theo dõi kinh doanh, vận hành và đi sâu vào từng báo cáo.',
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.file_download_outlined, size: 18),
-                      label: const Text('Xuất báo cáo'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.text,
-                        side: const BorderSide(color: AppTheme.borderLight),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Tạo đơn hàng'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.text,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // KPI Grid
-            Row(
-              children: [
-                Expanded(
-                  child: _buildKpiCard(
-                    title: 'Doanh thu tháng',
-                    badgeText: '+8.5%',
-                    badgeColor: AppTheme.success,
-                    value: '145.000.000 ₫',
-                    footerText: 'Cập nhật lúc 10:30',
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildKpiCard(
-                    title: 'Đơn hàng',
-                    badgeText: 'Tháng này',
-                    badgeColor: AppTheme.textSecondary,
-                    value: '38 đơn',
-                    footerText: '6 đơn đang chuẩn bị',
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildKpiCard(
-                    title: 'Tồn kho',
-                    badgeText: 'Hiện tại',
-                    badgeColor: AppTheme.textSecondary,
-                    value: '85 SP',
-                    footerText: '4 sản phẩm sắp hết',
-                    footerColor: AppTheme.warning,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildKpiCard(
-                    title: 'Khách hàng',
-                    badgeText: 'Khách VIP',
-                    badgeColor: AppTheme.textSecondary,
-                    value: '45 người',
-                    footerText: '12 lịch hẹn tư vấn',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Layout Bottom
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 7,
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFF0F0F0)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(5),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Đơn hàng gần đây',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Xem tất cả',
-                              style: TextStyle(
-                                color: AppTheme.primary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        _buildRecentOrderRow(
-                          'ORD-1042',
-                          'Nguyễn Lan Phương',
-                          '14 Sep',
-                          '3.100.000 ₫',
-                          'Đã giao',
-                          AppTheme.success,
-                        ),
-                        const Divider(color: AppTheme.borderLight, height: 24),
-                        _buildRecentOrderRow(
-                          'ORD-1041',
-                          'Trần Hải Đăng',
-                          '13 Sep',
-                          '2.500.000 ₫',
-                          'Đang xử lý',
-                          AppTheme.warning,
-                        ),
-                        const Divider(color: AppTheme.borderLight, height: 24),
-                        _buildRecentOrderRow(
-                          'ORD-1040',
-                          'Lê Gia Bảo',
-                          '12 Sep',
-                          '600.000 ₫',
-                          'Đã hủy',
-                          AppTheme.danger,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFF0F0F0)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(5),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Sản phẩm bán chạy',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: p.csv));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Đã sao chép CSV của toàn bộ dòng trong bộ lọc hiện tại',
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        _buildBestsellerRow(
-                          'MA-COAT-01',
-                          'Cashmere Double-Breasted Coat',
-                          'Áo khoác',
-                          9,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildBestsellerRow(
-                          'RTW-JKT-22',
-                          'Wool-Blend Structured Jacket',
-                          'RTW',
-                          7,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildBestsellerRow(
-                          'LEA-BAG-09',
-                          'Smooth Calfskin Shoulder Bag',
-                          'Phụ kiện',
-                          6,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildBestsellerRow(
-                          'FTW-DRB-42',
-                          'Sculpted Derby Shoes',
-                          'Giày',
-                          5,
-                        ),
-                      ],
-                    ),
-                  ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.copy_outlined, size: 18),
+                  label: const Text('Sao chép CSV'),
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            Tooltip(
+              message:
+                  'Dữ liệu mẫu • ${reportDate(p.data.today.subtract(const Duration(days: 89)))} – ${reportDate(p.data.today)}. '
+                  'Chưa kết nối backend; các số liệu không phải hoạt động thực tế.',
+              child: const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Dữ liệu mẫu',
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            AnalyticsFilters(provider: p),
+            const SizedBox(height: 20),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final section in AnalyticsSection.values)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(section.label),
+                        selected: p.section == section,
+                        onSelected: (_) => p.setSection(section),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (p.section == AnalyticsSection.overview) ...[
+              AnalyticsCards(provider: p),
+              const SizedBox(height: 24),
+            ],
+            if (chart) ...[
+              RevenueChart(provider: p),
+              const SizedBox(height: 24),
+            ],
+            if (p.section != AnalyticsSection.overview) ...[
+              ExpansionTile(
+                key: PageStorageKey('analytics-summary-${p.section.name}'),
+                title: const Text('Xem chỉ số tổng hợp & cách tính'),
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.symmetric(vertical: 16),
+                children: [
+                  AnalyticsCards(provider: p),
+                  const SizedBox(height: 16),
+                  AnalyticsPanels(provider: p),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Chi tiết ${p.section.label.toLowerCase()}',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FeatureToolbar(
+                searchHint:
+                    'Tìm trong bảng ${p.section.label.toLowerCase()}...',
+                initialSearchText: p.query,
+                onSearchChanged: p.setQuery,
+                filterWidget: _filter(p),
+              ),
+              const SizedBox(height: 16),
+              AnalyticsTable(provider: p),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRecentOrderRow(
-    String id,
-    String customer,
-    String date,
-    String total,
-    String status,
-    Color statusColor,
-  ) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: Text(id, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ),
-        Expanded(
-          flex: 3,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                customer,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-              Text(
-                date,
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+  Widget? _filter(DashboardProvider p) {
+    if (p.section == AnalyticsSection.products ||
+        p.section == AnalyticsSection.inventory) {
+      return DropdownButton<String>(
+        value: p.category,
+        hint: const Text('Tất cả danh mục'),
+        items: [
+          const DropdownMenuItem<String>(
+            value: null,
+            child: Text('Tất cả danh mục'),
           ),
-        ),
-        Expanded(
-          flex: 2,
-          child: Text(
-            total,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-        Expanded(
-          flex: 2,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: statusColor.withAlpha(25),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                status,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: statusColor,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBestsellerRow(
-    String sku,
-    String name,
-    String category,
-    int qty,
-  ) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppTheme.borderLight),
-          ),
-          child: const Icon(
-            Icons.image_outlined,
-            color: AppTheme.textMuted,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                sku,
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '$qty đã bán',
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildKpiCard({
-    required String title,
-    required String badgeText,
-    required Color badgeColor,
-    required String value,
-    required String footerText,
-    Color footerColor = AppTheme.textSecondary,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF0F0F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(5),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+          for (final category
+              in AnalyticsRepository.products.map((r) => r.category).toSet())
+            DropdownMenuItem(value: category, child: Text(category)),
         ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: badgeColor == AppTheme.textSecondary
-                      ? AppTheme.surface
-                      : badgeColor.withAlpha(25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  badgeText,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: badgeColor,
-                  ),
-                ),
-              ),
-            ],
+        onChanged: p.setCategory,
+      );
+    }
+    if (p.section == AnalyticsSection.orders ||
+        p.section == AnalyticsSection.overview) {
+      return DropdownButton<String>(
+        value: p.orderStatus,
+        hint: const Text('Tất cả trạng thái'),
+        items: [
+          const DropdownMenuItem<String>(
+            value: null,
+            child: Text('Tất cả trạng thái'),
           ),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
+          for (final status in [
+            'PENDING',
+            'CONFIRMED',
+            'SHIPPED',
+            'DELIVERED',
+            'CANCELLED',
+          ])
+            DropdownMenuItem(
+              value: status,
+              child: Text(orderStatusLabel(status)),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(footerText, style: TextStyle(color: footerColor, fontSize: 13)),
         ],
-      ),
-    );
+        onChanged: p.setOrderStatus,
+      );
+    }
+    return null;
   }
 }

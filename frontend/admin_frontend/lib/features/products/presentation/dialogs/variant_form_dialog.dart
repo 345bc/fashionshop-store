@@ -45,7 +45,7 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
     _colorId = (variant?['colorId'] as num?)?.toInt();
     _price = TextEditingController(text: variant?['price']?.toString() ?? '');
     _costPrice = TextEditingController(
-      text: variant?['costPrice']?.toString() ?? '',
+      text: variant?['costPrice']?.toString() ?? '0',
     );
     _stock = TextEditingController(
       text: variant?['stockQuantity']?.toString() ?? '0',
@@ -398,6 +398,10 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
                           Expanded(
                             child: TextFormField(
                               controller: _costPrice,
+                              readOnly:
+                                  (widget.variant?['stockQuantity'] as num? ??
+                                      0) >
+                                  0,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                     decimal: true,
@@ -416,9 +420,12 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
                           Expanded(
                             child: TextFormField(
                               controller: _stock,
+                              readOnly: true,
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
-                                labelText: 'Tồn kho *',
+                                labelText: 'Tồn kho',
+                                helperText:
+                                    'Cập nhật tại Nhập hàng hoặc Tồn kho',
                               ),
                               validator: _quantityValidator,
                             ),
@@ -427,9 +434,10 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
                           Expanded(
                             child: TextFormField(
                               controller: _reserved,
+                              readOnly: true,
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
-                                labelText: 'Đã đặt *',
+                                labelText: 'Số lượng đã giữ',
                               ),
                               validator: _quantityValidator,
                             ),

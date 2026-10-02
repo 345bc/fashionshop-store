@@ -13,6 +13,9 @@ import java.util.Optional;
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select variant from ProductVariant variant where variant.id = :id")
+    Optional<ProductVariant> findByIdForInventoryUpdate(@Param("id") Long id);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select variant from ProductVariant variant where variant.id = :id")
     Optional<ProductVariant> findByIdForImageUpdate(@Param("id") Long id);
 
     boolean existsBySizeId(Integer sizeId);

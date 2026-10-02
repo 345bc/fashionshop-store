@@ -7,15 +7,23 @@ import 'features/auth/presentation/provider/auth_provider.dart';
 import 'core/network/api_client.dart';
 import 'widgets/app_layout.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'features/products/presentation/screens/products_screen.dart';
 import 'features/inventory/presentation/screens/inventory_screen.dart';
 import 'features/promotions/presentation/screens/promotions_screen.dart';
+import 'features/promotions/presentation/screens/campaign_management_screen.dart';
+import 'features/promotions/presentation/providers/campaigns_provider.dart';
+import 'features/promotions/data/models/campaign_model.dart';
 import 'features/orders/presentation/screens/orders_screen.dart';
+import 'features/orders/presentation/providers/orders_provider.dart';
 import 'features/customers/presentation/screens/customers_screen.dart';
 import 'features/customers/presentation/providers/customers_provider.dart';
 import 'features/purchases/presentation/screens/purchases_screen.dart';
+import 'features/purchases/presentation/providers/purchases_provider.dart';
+import 'features/inventory/presentation/providers/inventory_provider.dart';
 import 'features/suppliers/presentation/screens/suppliers_screen.dart';
 import 'features/feedback/presentation/screens/feedback_screen.dart';
+import 'features/feedback/presentation/providers/feedback_provider.dart';
 import 'features/staff/presentation/screens/staff_screen.dart';
 import 'features/reports/presentation/screens/reports_screen.dart';
 import 'features/users/presentation/screens/users_screen.dart';
@@ -61,6 +69,12 @@ class ZellaAdminApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CategoriesProvider()),
         ChangeNotifierProvider(create: (_) => SuppliersProvider()),
         ChangeNotifierProvider(create: (_) => CustomersProvider()),
+        ChangeNotifierProvider(create: (_) => PurchasesProvider()),
+        ChangeNotifierProvider(create: (_) => OrdersProvider()),
+        ChangeNotifierProvider(create: (_) => InventoryProvider()),
+        ChangeNotifierProvider(create: (_) => FeedbackProvider()),
+        ChangeNotifierProvider(create: (_) => CampaignsProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => SizeGuidesProvider()),
       ],
       child: Consumer<AuthProvider>(
@@ -155,6 +169,10 @@ class MainScreenState extends State<MainScreen> {
         return const InventoryScreen();
       case '/promotions':
         return const PromotionsScreen();
+      case '/vouchers':
+        return const CampaignManagementScreen(kind: CampaignKind.voucher);
+      case '/promotion-programs':
+        return const CampaignManagementScreen(kind: CampaignKind.promotion);
       case '/orders':
         return const OrdersScreen();
       case '/customers':
