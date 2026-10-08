@@ -4,14 +4,25 @@ import '../../../inventory/data/api/inventory_repository.dart';
 import '../models/goods_receipt_response_model.dart';
 
 class GoodsReceiptRepository {
+  Future<Map<String, dynamic>> getAll({
+    int page = 0,
+    int size = 15,
+    String? query,
+    String? status,
+  }) => warehouseRequest(() async {
+    final response = await _api.get(
+      ApiEndpoints.goodsReceipts,
+      queryParameters: {
+        'page': page,
+        'size': size,
+        'q': ?query,
+        'status': ?status,
+      },
+    );
+    return Map<String, dynamic>.from(response.data['data'] as Map);
+  });
+
   final _api = ApiClient();
-  Future<List<GoodsReceiptResponseModel>> getAll() =>
-      warehouseRequest(() async {
-        final response = await _api.get(ApiEndpoints.goodsReceipts);
-        return (response.data['data'] as List)
-            .map((j) => GoodsReceiptResponseModel(j as Map<String, dynamic>))
-            .toList();
-      });
   Future<GoodsReceiptResponseModel> getById(int id) =>
       warehouseRequest(() async {
         final response = await _api.get('${ApiEndpoints.goodsReceipts}/$id');

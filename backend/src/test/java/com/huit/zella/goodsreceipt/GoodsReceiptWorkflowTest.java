@@ -42,7 +42,7 @@ class GoodsReceiptWorkflowTest extends com.huit.zella.inventory.WarehouseFixture
         assertEquals(15, stored.getStockQuantity());
         assertEquals(new BigDecimal("133.33"), stored.getCostPrice());
         assertEquals(new BigDecimal("1000.00"), posted.totalAmount().setScale(2));
-        var history = inventory.history(stored.getId());
+        var history = inventory.history(stored.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent();
         assertEquals(1, history.size());
         assertEquals(5, history.getFirst().quantityChange());
         assertEquals("INVALID_RECEIPT_STATUS",
@@ -57,7 +57,7 @@ class GoodsReceiptWorkflowTest extends com.huit.zella.inventory.WarehouseFixture
         var stored = em.find(ProductVariant.class, variant.getId());
         assertEquals(10, stored.getStockQuantity());
         assertEquals(new BigDecimal("100.00"), stored.getCostPrice());
-        assertEquals(2, inventory.history(stored.getId()).size());
+        assertEquals(2, inventory.history(stored.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent().size());
         assertEquals("CANCELLED", receipts.get(receipt.id()).status());
     }
     @Test

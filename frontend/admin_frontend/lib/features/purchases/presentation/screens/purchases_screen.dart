@@ -45,7 +45,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Công nợ phiếu đã nhập: ${money(p.items.where((r) => r.status == "POSTED").fold<num>(0, (n, r) => n + r.remainingAmount))}',
+            'Công nợ phiếu đã nhập trên trang: ${money(p.items.where((r) => r.status == "POSTED").fold<num>(0, (n, r) => n + r.remainingAmount))}',
           ),
           const SizedBox(height: 24),
           FeatureToolbar(
@@ -90,7 +90,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
             loading: p.isLoading,
             error: p.error,
             page: p.currentPage,
-            total: p.filtered.length,
+            total: p.totalElements,
             pageSize: p.pageSize,
             onPage: p.page,
             onRetry: p.loadItems,

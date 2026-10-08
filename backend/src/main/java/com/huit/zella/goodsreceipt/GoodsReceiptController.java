@@ -1,4 +1,9 @@
 package com.huit.zella.goodsreceipt;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
+import com.huit.zella.common.api.PageResponse;
 import com.huit.zella.auth.CurrentUser;
 import com.huit.zella.common.api.ApiResponse;
 import jakarta.validation.Valid;
@@ -8,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 @RestController @RequestMapping("/api/v1/goods-receipt") @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
 public class GoodsReceiptController {
@@ -23,7 +27,21 @@ public class GoodsReceiptController {
             @Valid @RequestBody CreateSupplierPaymentRequest request, @AuthenticationPrincipal CurrentUser actor) {
         return ApiResponse.success(service.supplierRefund(id, request, actor.id()));
     }
-    @GetMapping public ApiResponse<List<GoodsReceiptResponse>> list() { return ApiResponse.success(service.list()); }
+
+    @GetMapping
+    public ApiResponse<PageResponse<GoodsReceiptResponse>> list(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        int safeSize = Math.max(1, Math.min(size, 100));
+        return ApiResponse.success(PageResponse.from(service.list(
+                q, status,
+                PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "id"))
+        )));
+    }
+
     @GetMapping("/{id}") public ApiResponse<GoodsReceiptResponse> get(@PathVariable Long id) { return ApiResponse.success(service.get(id)); }
     @PostMapping public ResponseEntity<ApiResponse<GoodsReceiptResponse>> create(@Valid @RequestBody CreateGoodsReceiptRequest request,
         @AuthenticationPrincipal CurrentUser actor) {
