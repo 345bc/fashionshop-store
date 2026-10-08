@@ -43,15 +43,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
             spacing: 24,
             runSpacing: 12,
             children: [
-              Text('SKU: ${p.items.length}'),
+              Text('SKU: ${p.totalElements}'),
               Text(
-                'Tồn thực tế: ${p.items.fold<int>(0, (n, i) => n + i.stockQuantity)}',
+                'Tồn trên trang: ${p.items.fold<int>(0, (n, i) => n + i.stockQuantity)}',
               ),
               Text(
-                'Đã giữ: ${p.items.fold<int>(0, (n, i) => n + i.reservedQuantity)}',
+                'Đã giữ trên trang: ${p.items.fold<int>(0, (n, i) => n + i.reservedQuantity)}',
               ),
               Text(
-                'Có thể bán: ${p.items.fold<int>(0, (n, i) => n + i.availableQuantity)}',
+                'Có thể bán trên trang: ${p.items.fold<int>(0, (n, i) => n + i.availableQuantity)}',
               ),
             ],
           ),
@@ -87,7 +87,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             loading: p.isLoading,
             error: p.error,
             page: p.currentPage,
-            total: p.filtered.length,
+            total: p.totalElements,
             pageSize: p.pageSize,
             onPage: p.page,
             onRetry: p.loadItems,

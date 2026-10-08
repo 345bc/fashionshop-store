@@ -70,9 +70,19 @@ class ProductVariantRepository {
   }
 
   Future<List<Map<String, dynamic>>> getColors() async {
-    final response = await _apiClient.get(ApiEndpoints.colors);
-    return (response.data['data'] as List<dynamic>)
-        .cast<Map<String, dynamic>>();
+    final items = <Map<String, dynamic>>[];
+    var page = 0;
+    while (true) {
+      final response = await _apiClient.get(
+        ApiEndpoints.colors,
+        queryParameters: {'page': page, 'size': 100},
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      items.addAll((data['content'] as List).cast<Map<String, dynamic>>());
+      page++;
+      if (page >= (data['totalPages'] as num).toInt()) break;
+    }
+    return items;
   }
 
   Never _throwMessage(DioException error) {

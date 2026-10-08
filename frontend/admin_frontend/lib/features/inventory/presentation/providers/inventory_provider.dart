@@ -11,52 +11,64 @@ class InventoryProvider extends ChangeNotifier {
   String query = '', status = 'all';
   int currentPage = 0;
   final int pageSize = 15;
-  List<InventoryResponseModel> get filtered => items.where((i) {
-    final q = query.trim().toLowerCase();
-    return (q.isEmpty ||
-            i.label.toLowerCase().contains(q) ||
-            i.categoryName.toLowerCase().contains(q)) &&
-        (status == 'all' ||
-            (status == 'out'
-                ? i.availableQuantity == 0
-                : i.availableQuantity > 0));
-  }).toList();
-  List<InventoryResponseModel> get pageItems =>
-      filtered.skip(currentPage * pageSize).take(pageSize).toList();
+  int totalElements = 0;
+  int _requestId = 0;
+  List<InventoryResponseModel> get pageItems => items;
   void search(String value) {
     query = value;
     currentPage = 0;
-    notifyListeners();
+    loadItems();
   }
 
   void filter(String value) {
     status = value;
     currentPage = 0;
-    notifyListeners();
+    loadItems();
   }
 
   void page(int value) {
     currentPage = value;
-    notifyListeners();
+    loadItems();
   }
 
   Future<void> loadItems() async {
     isLoading = true;
     error = null;
     notifyListeners();
+    final requestId = ++_requestId;
     try {
-      items = await _repository.getAll();
-      final lastPage = filtered.isEmpty ? 0 : (filtered.length - 1) ~/ pageSize;
-      if (currentPage > lastPage) currentPage = lastPage;
+      final data = await _repository.getAll(
+        page: currentPage,
+        size: pageSize,
+        query: query,
+        status: status,
+      );
+      if (requestId != _requestId) return;
+      items = (data['content'] as List)
+          .map(
+            (json) =>
+                InventoryResponseModel(Map<String, dynamic>.from(json as Map)),
+          )
+          .toList();
+      totalElements = (data['totalElements'] as num).toInt();
+      final lastPage = totalElements == 0 ? 0 : (totalElements - 1) ~/ pageSize;
+      if (currentPage > lastPage) {
+        currentPage = lastPage;
+        await loadItems();
+      }
     } catch (e) {
+      if (requestId != _requestId) return;
       error = e.toString();
     } finally {
-      isLoading = false;
-      notifyListeners();
+      if (requestId == _requestId) {
+        isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
-  Future<List<Map<String, dynamic>>> history(int id) => _repository.history(id);
+  Future<Map<String, dynamic>> history(int id, {int page = 0}) =>
+      _repository.history(id, page: page);
   Future<void> adjust(Map<String, dynamic> data) async {
     await _repository.adjust(data);
     await loadItems();

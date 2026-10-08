@@ -1,11 +1,13 @@
 package com.huit.zella.inventory;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.huit.zella.auth.User;
 import com.huit.zella.auth.UserRepository;
 import com.huit.zella.common.exception.BusinessException;
 import com.huit.zella.productvariant.ProductVariant;
 import com.huit.zella.productvariant.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,19 +21,17 @@ public class InventoryService {
     private final UserRepository users;
 
     @Transactional(readOnly = true)
-    public List<InventoryResponse> list(String query, Long supplierId) {
-        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        return variants.findAll(Sort.by("sku")).stream()
-            .filter(v -> supplierId == null || (v.getProduct().getSupplier() != null && supplierId.equals(v.getProduct().getSupplier().getId())))
-            .filter(v -> q.isEmpty() || v.getSku().toLowerCase(Locale.ROOT).contains(q)
-                || v.getProduct().getName().toLowerCase(Locale.ROOT).contains(q))
-            .map(InventoryResponse::from).toList();
+    public Page<InventoryResponse> list(String query, Long supplierId, String status, Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        String filter = status == null || "all".equals(status) ? null : status;
+        Page<ProductVariant> page = variants.searchInventory(q, supplierId, filter, pageable);
+        return page.map(InventoryResponse::from);
     }
 
     @Transactional(readOnly = true)
-    public List<InventoryMovementResponse> history(Long variantId) {
+    public Page<InventoryMovementResponse> history(Long variantId, Pageable pageable) {
         if (!variants.existsById(variantId)) throw error("VARIANT_NOT_FOUND", "Không tìm thấy biến thể");
-        return movements.findByVariantIdOrderByIdDesc(variantId).stream().map(InventoryMovementResponse::from).toList();
+        return movements.findByVariantId(variantId, pageable).map(InventoryMovementResponse::from);
     }
 
     @Transactional

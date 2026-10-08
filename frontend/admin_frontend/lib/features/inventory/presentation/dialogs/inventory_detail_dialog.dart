@@ -1,3 +1,5 @@
+import '../../../../widgets/common/pagination_footer.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -14,7 +16,9 @@ class InventoryDetailDialog extends StatefulWidget {
 }
 
 class _InventoryDetailDialogState extends State<InventoryDetailDialog> {
-  late Future<List<Map<String, dynamic>>> _future;
+  late Future<Map<String, dynamic>> _future;
+  int _page = 0;
+  int _total = 0;
   @override
   void initState() {
     super.initState();
@@ -22,7 +26,10 @@ class _InventoryDetailDialogState extends State<InventoryDetailDialog> {
   }
 
   void _load() {
-    _future = context.read<InventoryProvider>().history(widget.item.variantId);
+    _future = context.read<InventoryProvider>().history(
+      widget.item.variantId,
+      page: _page,
+    );
   }
 
   @override
@@ -72,7 +79,11 @@ class _InventoryDetailDialogState extends State<InventoryDetailDialog> {
                     ),
                   );
                 }
-                if (snapshot.data!.isEmpty) {
+                final data = snapshot.data!;
+                final rows = (data['content'] as List)
+                    .cast<Map<String, dynamic>>();
+                _total = (data['totalElements'] as num).toInt();
+                if (rows.isEmpty) {
                   return const Center(child: Text('Chưa có biến động kho'));
                 }
                 const labels = {
@@ -87,24 +98,40 @@ class _InventoryDetailDialogState extends State<InventoryDetailDialog> {
                   'RETURN_DAMAGED': 'Nhận hàng trả hỏng',
                   'SUPPLIER_RETURN': 'Trả nhà cung cấp',
                 };
-                return ListView(
+                return Column(
                   children: [
-                    for (final m in snapshot.data!)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          '${labels[m["movementType"]] ?? m["movementType"]} • ${m["referenceCode"]}',
-                        ),
-                        subtitle: Text(
-                          'Tồn: ${m["beforeQuantity"]} → ${m["afterQuantity"]}'
-                          '${m["beforeReserved"] == null ? "" : " • Đã giữ: ${m["beforeReserved"]} → ${m["afterReserved"]}"}'
-                          ' • ${m["createdBy"] ?? "Hệ thống"} • '
-                          '${DateFormat("dd/MM/yyyy HH:mm").format(DateTime.parse(m["createdAt"] as String).toLocal())}\n${m["reason"] ?? ""}',
-                        ),
-                        trailing: Text(
-                          '${(m["quantityChange"] as int) > 0 ? "+" : ""}${m["quantityChange"]}',
-                        ),
+                    Expanded(
+                      child: ListView(
+                        children: [
+                          for (final m in rows)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                '${labels[m["movementType"]] ?? m["movementType"]} • ${m["referenceCode"]}',
+                              ),
+                              subtitle: Text(
+                                'Tồn: ${m["beforeQuantity"]} → ${m["afterQuantity"]}'
+                                '${m["beforeReserved"] == null ? "" : " • Đã giữ: ${m["beforeReserved"]} → ${m["afterReserved"]}"}'
+                                ' • ${m["createdBy"] ?? "Hệ thống"} • '
+                                '${DateFormat("dd/MM/yyyy HH:mm").format(DateTime.parse(m["createdAt"] as String).toLocal())}\n${m["reason"] ?? ""}',
+                              ),
+                              trailing: Text(
+                                '${(m["quantityChange"] as int) > 0 ? "+" : ""}${m["quantityChange"]}',
+                              ),
+                            ),
+                        ],
                       ),
+                    ),
+                    PaginationFooter(
+                      currentPage: _page,
+                      totalPages: _total == 0 ? 1 : (_total / 15).ceil(),
+                      totalElements: _total,
+                      pageSize: 15,
+                      onPageChanged: (page) => setState(() {
+                        _page = page;
+                        _load();
+                      }),
+                    ),
                   ],
                 );
               },
