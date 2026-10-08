@@ -2,15 +2,23 @@ package com.huit.zella.product;
 
 import com.huit.zella.category.Category;
 import com.huit.zella.category.CategoryRepository;
+import com.huit.zella.color.Color;
 import com.huit.zella.common.exception.BusinessException;
+import com.huit.zella.productimage.ProductImage;
+import com.huit.zella.productimage.ProductImageRepository;
+import com.huit.zella.productvariant.ProductVariant;
+import com.huit.zella.productvariant.ProductVariantRepository;
 import com.huit.zella.sizeguide.SizeGuide;
 import com.huit.zella.sizeguide.SizeGuideRepository;
 import com.huit.zella.supplier.Supplier;
 import com.huit.zella.supplier.SupplierRepository;
+import com.huit.zella.variantimage.VariantImageRepository;
+import com.huit.zella.variantimage.VariantImage;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.Normalizer;
-import java.util.Locale;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -28,12 +36,108 @@ public class ProductService {
     CategoryRepository categoryRepository;
     SupplierRepository supplierRepository;
     SizeGuideRepository sizeGuideRepository;
+    ProductImageRepository productImageRepository;
+    ProductVariantRepository productVariantRepository;
+    VariantImageRepository variantImageRepository;
 
     @Transactional(readOnly = true)
-    public Page<ProductResponse> list(String query, Pageable pageable) {
-        Page<Product> page = query == null || query.isBlank()
-                ? productRepository.findAll(pageable)
-                : productRepository.findByNameContainingIgnoreCase(query.trim(), pageable);
+    public Page<ProductCardResponse> listCards(
+            String query,
+            Long categoryId,
+            List<Integer> colorIds,
+            List<Integer> sizeIds,
+            Pageable pageable
+    ) {
+        String q = query == null ? "" : query.trim();
+
+        boolean filterColors = colorIds != null && !colorIds.isEmpty();
+        List<Integer> safeColorIds = filterColors ? colorIds : List.of(-1);
+
+        boolean filterSizes = sizeIds != null && !sizeIds.isEmpty();
+        List<Integer> safeSizeIds = filterSizes ? sizeIds : List.of(-1);
+
+        Page<Product> page = productRepository.searchCards(
+                q,
+                categoryId,
+                filterColors,
+                safeColorIds,
+                sizeIds,
+                pageable
+        );
+
+        if (page.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, page.getTotalElements());
+        }
+
+        List<Long> ids = page.getContent().stream()
+                .map(Product::getId)
+                .toList();
+
+        Map<Long, String> images = new HashMap<>();
+
+        for (ProductImage image :
+                productImageRepository
+                        .findByProductIdInOrderByIsPrimaryDescDisplayOrderAscIdAsc(ids)) {
+            images.putIfAbsent(
+                    image.getProduct().getId(),
+                    image.getImageUrl()
+            );
+        }
+
+        List<ProductVariant> variants = productVariantRepository.findCardVariants(ids);
+        List<Long> variantIds = variants.stream().map(ProductVariant::getId).toList();
+        Map<Long, String> variantImages = new HashMap<>();
+
+        if (!variantIds.isEmpty()) {
+            for (VariantImage image : variantImageRepository
+                    .findByVariantIdInOrderByIsPrimaryDescDisplayOrderAscIdAsc(variantIds)) {
+                variantImages.putIfAbsent(image.getVariant().getId(), image.getImageUrl());
+            }
+        }
+
+        Map<Long, Map<Integer, ProductCardResponse.ColorItem>> colors = new HashMap<>();
+
+        for (ProductVariant variant : variants) {
+            Color color = variant.getColor();
+            Map<Integer, ProductCardResponse.ColorItem> productColors = colors.computeIfAbsent(
+                    variant.getProduct().getId(), id -> new LinkedHashMap<>());
+            ProductCardResponse.ColorItem existing = productColors.get(color.getId());
+            String imageUrl = variantImages.get(variant.getId());
+
+            // The same color can have several sizes. Keep the first variant with an image.
+            if (existing == null || (existing.imageUrl() == null && imageUrl != null)) {
+                productColors.put(color.getId(), new ProductCardResponse.ColorItem(
+                        color.getId(), color.getName(), color.getHexCode(), imageUrl));
+            }
+        }
+
+        return page.map(product -> new ProductCardResponse(
+                product.getId(),
+                product.getName(),
+                product.getSlug(),
+                product.getBasePrice(),
+                images.get(product.getId()),
+                new ArrayList<>(
+                        colors.getOrDefault(product.getId(), Map.of()).values()
+                )
+        ));
+
+    }
+
+
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> list(String query, Long categoryId, Pageable pageable) {
+        boolean hasQuery = query != null && !query.isBlank();
+        Page<Product> page;
+        if (categoryId == null) {
+            page = hasQuery
+                    ? productRepository.findByNameContainingIgnoreCase(query.trim(), pageable)
+                    : productRepository.findAll(pageable);
+        } else {
+            page = hasQuery
+                    ? productRepository.findByCategoryIdAndNameContainingIgnoreCase(categoryId, query.trim(), pageable)
+                    : productRepository.findByCategoryId(categoryId, pageable);
+        }
         return page.map(ProductResponse::from);
     }
 

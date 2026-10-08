@@ -11,10 +11,14 @@ class ProductRepository {
     int page = 0,
     int size = 15,
     String? query,
+    int? categoryId,
     String? role,
   }) async {
     try {
       final Map<String, dynamic> queryParams = {'page': page, 'size': size};
+      if (categoryId != null) {
+        queryParams['categoryId'] = categoryId;
+      }
       if (query != null && query.isNotEmpty) {
         queryParams['q'] = query;
       }

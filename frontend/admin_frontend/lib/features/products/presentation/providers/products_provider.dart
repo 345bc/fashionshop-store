@@ -21,6 +21,8 @@ class ProductsProvider extends ChangeNotifier {
   final int _pageSize = 15;
 
   String? _currentQuery;
+  int? _categoryId;
+  int _requestId = 0;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -29,8 +31,15 @@ class ProductsProvider extends ChangeNotifier {
   int get currentPage => _currentPage;
   int get pageSize => _pageSize;
   String? get currentQuery => _currentQuery;
+  int? get categoryId => _categoryId;
+
+  Future<void> setCategory(int? categoryId) async {
+    _categoryId = categoryId;
+    await loadItems();
+  }
 
   Future<void> loadItems({int page = 0, String? query}) async {
+    final requestId = ++_requestId;
     try {
       _isLoading = true;
       _error = null;
@@ -41,18 +50,23 @@ class ProductsProvider extends ChangeNotifier {
         page: page,
         size: _pageSize,
         query: _currentQuery,
+        categoryId: _categoryId,
       );
 
+      if (requestId != _requestId) return;
       _items = (result['content'] as List)
           .map((e) => ProductResponseModel.fromJson(e))
           .toList();
       _totalElements = result['totalElements'] ?? 0;
       _currentPage = result['number'] ?? 0;
     } catch (e) {
+      if (requestId != _requestId) return;
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (requestId == _requestId) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

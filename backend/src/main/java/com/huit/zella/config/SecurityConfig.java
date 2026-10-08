@@ -30,8 +30,9 @@ public class SecurityConfig {
     private static final String[] PUBLIC_GET = {
             "/api/health", "/api/project-info", "/api/v1/auth/csrf",
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
-            "/api/v1/product", "/api/v1/product-image/files/*",
-            "/api/v1/category", "/api/v1/checkout/orders/*"
+            "/api/v1/product/**", "/api/v1/product-image/files/*",
+            "/api/v1/category/**", "/api/v1/checkout/orders/*",
+            "/api/v1/size/**","/api/v1/color/**",
     };
 
 //    @Bean

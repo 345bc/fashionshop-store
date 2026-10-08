@@ -14,6 +14,7 @@ import '../dialogs/product_edit_dialog.dart';
 import '../dialogs/product_create_dialog.dart';
 import '../dialogs/product_detail_dialog.dart';
 import '../../../../main.dart';
+import '../../../categories/presentation/providers/categories_provider.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -27,7 +28,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<ProductsProvider>().loadItems();
+      context.read<CategoriesProvider>().loadOptions();
     });
   }
 
@@ -58,15 +61,59 @@ class _ProductsScreenState extends State<ProductsScreen> {
               },
             ),
             const SizedBox(height: 32),
-            FeatureToolbar(
-              searchHint: 'Tìm kiếm sản phẩm theo tên...',
-              onSearchChanged: (query) {
-                context.read<ProductsProvider>().loadItems(
-                  query: query,
-                  page: 0,
-                );
-              },
-              initialSearchText: context.read<ProductsProvider>().currentQuery,
+            Consumer2<ProductsProvider, CategoriesProvider>(
+              builder: (context, products, categories, _) => FeatureToolbar(
+                searchHint: 'Tìm kiếm sản phẩm theo tên...',
+                onSearchChanged: (query) => products.loadItems(query: query),
+                initialSearchText: products.currentQuery,
+                filterWidget: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 240,
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: products.categoryId ?? 0,
+                          isExpanded: true,
+                          items: [
+                            const DropdownMenuItem(
+                              value: 0,
+                              child: Text('Tất cả danh mục'),
+                            ),
+                            if (products.categoryId != null &&
+                                !categories.options.any(
+                                  (c) => c.id == products.categoryId,
+                                ))
+                              DropdownMenuItem(
+                                value: products.categoryId,
+                                child: const Text('Danh mục đang chọn'),
+                              ),
+                            ...categories.options.map(
+                              (category) => DropdownMenuItem(
+                                value: category.id,
+                                child: Text(
+                                  category.parentName == null
+                                      ? category.name
+                                      : '${category.parentName} / ${category.name}',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                          onChanged: (id) =>
+                              products.setCategory(id == 0 ? null : id),
+                        ),
+                      ),
+                    ),
+                    if (categories.optionsError != null)
+                      IconButton(
+                        tooltip: 'Không tải được danh mục. Nhấn để thử lại.',
+                        onPressed: categories.loadOptions,
+                        icon: const Icon(Icons.refresh, color: AppTheme.error),
+                      ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 24),
             Container(
@@ -93,14 +140,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget _buildTable(BuildContext context) {
     return Consumer<ProductsProvider>(
       builder: (context, provider, child) {
-        if (provider.isLoading && provider.items.isEmpty) {
+        if (provider.isLoading) {
           return const Padding(
             padding: EdgeInsets.all(48.0),
             child: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (provider.error != null && provider.items.isEmpty) {
+        if (provider.error != null) {
           final errorMsg = provider.error!.replaceAll('Exception: ', '');
           return Padding(
             padding: const EdgeInsets.all(48.0),
