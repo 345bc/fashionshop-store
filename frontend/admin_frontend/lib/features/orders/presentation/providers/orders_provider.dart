@@ -14,47 +14,59 @@ class OrdersProvider extends ChangeNotifier {
   String query = '', status = 'all';
   int currentPage = 0;
   final int pageSize = 15;
-  List<OrderResponseModel> get filtered => items
-      .where(
-        (r) =>
-            (status == 'all' || r.status == status) &&
-            '${r.code} ${r.customerName} ${r.recipientPhone}'
-                .toLowerCase()
-                .contains(query.trim().toLowerCase()),
-      )
-      .toList();
-  List<OrderResponseModel> get pageItems =>
-      filtered.skip(currentPage * pageSize).take(pageSize).toList();
+  int totalElements = 0;
+  int _requestId = 0;
+  List<OrderResponseModel> get pageItems => items;
   void search(String value) {
     query = value;
     currentPage = 0;
-    notifyListeners();
+    loadItems();
   }
 
   void filter(String value) {
     status = value;
     currentPage = 0;
-    notifyListeners();
+    loadItems();
   }
 
   void page(int value) {
     currentPage = value;
-    notifyListeners();
+    loadItems();
   }
 
   Future<void> loadItems() async {
     isLoading = true;
     error = null;
     notifyListeners();
+    final requestId = ++_requestId;
     try {
-      items = await _repository.getAll();
-      final lastPage = filtered.isEmpty ? 0 : (filtered.length - 1) ~/ pageSize;
-      if (currentPage > lastPage) currentPage = lastPage;
+      final data = await _repository.getAll(
+        page: currentPage,
+        size: pageSize,
+        query: query,
+        status: status,
+      );
+      if (requestId != _requestId) return;
+      items = (data['content'] as List)
+          .map(
+            (json) =>
+                OrderResponseModel(Map<String, dynamic>.from(json as Map)),
+          )
+          .toList();
+      totalElements = (data['totalElements'] as num).toInt();
+      final lastPage = totalElements == 0 ? 0 : (totalElements - 1) ~/ pageSize;
+      if (currentPage > lastPage) {
+        currentPage = lastPage;
+        await loadItems();
+      }
     } catch (e) {
+      if (requestId != _requestId) return;
       error = e.toString();
     } finally {
-      isLoading = false;
-      notifyListeners();
+      if (requestId == _requestId) {
+        isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -75,11 +87,11 @@ class OrdersProvider extends ChangeNotifier {
     })
   >
   options() async {
-    final customers = (await CustomerRepository().getAll())
+    final customers = (await CustomerRepository().getOptions())
         .cast<Map<String, dynamic>>()
         .where((c) => c['isActive'] == true)
         .toList();
-    final variants = (await InventoryRepository().getAll())
+    final variants = (await InventoryRepository().getOptions())
         .where((v) => v.isActive && v.availableQuantity > 0)
         .toList();
     return (customers: customers, variants: variants);

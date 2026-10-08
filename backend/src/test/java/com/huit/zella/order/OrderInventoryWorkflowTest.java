@@ -52,7 +52,7 @@ class OrderInventoryWorkflowTest extends WarehouseFixture {
         assertEquals(10, variant.getStockQuantity());
         assertEquals(2, variant.getReservedQuantity());
         assertThrows(BusinessException.class, () -> orders.cancel(order.id(), "Lần hai", actor.getId()));
-        assertEquals(2, inventory.history(variant.getId()).size());
+        assertEquals(2, inventory.history(variant.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent().size());
     }
 
     @Test
@@ -74,9 +74,9 @@ class OrderInventoryWorkflowTest extends WarehouseFixture {
         assertThrows(BusinessException.class, () -> orders.cancel(order.id(), "Đã xuất", actor.getId()));
         orders.deliver(order.id(), actor.getId());
         assertEquals("PAID", orders.get(order.id()).paymentStatus());
-        assertEquals(2, inventory.history(variant.getId()).size());
-        assertEquals(5, inventory.history(variant.getId()).getFirst().beforeReserved());
-        assertEquals(2, inventory.history(variant.getId()).getFirst().afterReserved());
+        assertEquals(2, inventory.history(variant.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent().size());
+        assertEquals(5, inventory.history(variant.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent().getFirst().beforeReserved());
+        assertEquals(2, inventory.history(variant.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent().getFirst().afterReserved());
     }
 
     @Test
@@ -116,8 +116,8 @@ class OrderInventoryWorkflowTest extends WarehouseFixture {
         assertEquals("RETURN_EXCEEDS_SOLD", assertThrows(BusinessException.class, () -> draftReturn(order, 2)).getCode());
         receive(document, "DAMAGED");
         assertEquals(7, variant.getStockQuantity());
-        assertEquals("RETURN_DAMAGED", inventory.history(variant.getId()).getFirst().movementType());
-        assertEquals(0, inventory.history(variant.getId()).getFirst().quantityChange());
+        assertEquals("RETURN_DAMAGED", inventory.history(variant.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent().getFirst().movementType());
+        assertEquals(0, inventory.history(variant.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent().getFirst().quantityChange());
         assertThrows(BusinessException.class, () -> returns.cancel(document.id(), "Already received", actor.getId()));
     }
 

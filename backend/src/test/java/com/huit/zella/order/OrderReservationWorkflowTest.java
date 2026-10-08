@@ -75,7 +75,7 @@ class OrderReservationWorkflowTest extends WarehouseFixture {
         assertEquals("EXPIRED", orders.get(order.id()).paymentStatus());
         assertEquals("Hệ thống", orders.get(order.id()).histories().getLast().createdBy());
         assertFalse(orders.expire(order.id()));
-        assertEquals(2, inventory.history(variant.getId()).size());
+        assertEquals(2, inventory.history(variant.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent().size());
     }
     @Test
     void paidBeforeDeadlineAutomaticallyConfirmsAndRepeatedNotificationIsIdempotent() {
@@ -104,7 +104,7 @@ class OrderReservationWorkflowTest extends WarehouseFixture {
         assertEquals(2, variant.getReservedQuantity());
         assertEquals(10, variant.getStockQuantity());
         pay(order, "TX-LATE");
-        assertEquals(2, inventory.history(variant.getId()).size());
+        assertEquals(2, inventory.history(variant.getId(), org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))).getContent().size());
     }
     @Test
     void paymentAfterSchedulerHasCancelledOrderDoesNotResurrectIt() {

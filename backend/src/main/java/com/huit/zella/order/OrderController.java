@@ -1,5 +1,10 @@
 package com.huit.zella.order;
 
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
+
+import com.huit.zella.common.api.PageResponse;
+
 import com.huit.zella.auth.CurrentUser;
 import com.huit.zella.common.api.ApiResponse;
 import jakarta.validation.Valid;
@@ -10,7 +15,6 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/order")
@@ -21,7 +25,18 @@ public class OrderController {
     public record NoteRequest(@NotBlank @Size(max = 400) String note) {}
 
     @GetMapping
-    public ApiResponse<List<OrderResponse>> list() { return ApiResponse.success(orderService.list()); }
+    public ApiResponse<PageResponse<OrderResponse>> list(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        int safeSize = Math.max(1, Math.min(size, 100));
+        return ApiResponse.success(PageResponse.from(orderService.list(
+                q, status,
+                PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "id"))
+        )));
+    }
     @GetMapping("/{id}")
     public ApiResponse<OrderResponse> get(@PathVariable Long id) { return ApiResponse.success(orderService.get(id)); }
     @PostMapping

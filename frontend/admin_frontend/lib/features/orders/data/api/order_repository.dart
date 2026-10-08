@@ -7,6 +7,24 @@ import '../../../inventory/data/api/inventory_repository.dart';
 import '../models/order_response_model.dart';
 
 class OrderRepository {
+  Future<Map<String, dynamic>> getAll({
+    int page = 0,
+    int size = 15,
+    String? query,
+    String? status,
+  }) => warehouseRequest(() async {
+    final response = await _api.get(
+      ApiEndpoints.orders,
+      queryParameters: {
+        'page': page,
+        'size': size,
+        'q': ?query,
+        'status': ?status,
+      },
+    );
+    return Map<String, dynamic>.from(response.data['data'] as Map);
+  });
+
   final _api = ApiClient();
   // BEGIN TEMP_ORDER_PAYMENT_SIMULATION: remove when integrating the real gateway.
   Future<bool> paymentSimulationEnabled() async {
@@ -25,12 +43,6 @@ class OrderRepository {
     await _api.post('/order-test/$id/confirm');
   });
   // END TEMP_ORDER_PAYMENT_SIMULATION
-  Future<List<OrderResponseModel>> getAll() => warehouseRequest(() async {
-    final r = await _api.get(ApiEndpoints.orders);
-    return (r.data['data'] as List)
-        .map((j) => OrderResponseModel(j as Map<String, dynamic>))
-        .toList();
-  });
   Future<OrderResponseModel> getById(int id) => warehouseRequest(() async {
     final r = await _api.get('${ApiEndpoints.orders}/$id');
     return OrderResponseModel(r.data['data'] as Map<String, dynamic>);

@@ -83,7 +83,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             loading: p.isLoading,
             error: p.error,
             page: p.currentPage,
-            total: p.filtered.length,
+            total: p.totalElements,
             pageSize: p.pageSize,
             onPage: p.page,
             onRetry: p.loadItems,

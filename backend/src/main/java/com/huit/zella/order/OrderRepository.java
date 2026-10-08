@@ -1,5 +1,7 @@
 package com.huit.zella.order;
 
+import org.springframework.data.domain.Page;
+
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -19,4 +21,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("select o.id from Order o where o.inventoryManaged = true and o.status = com.huit.zella.order.OrderStatus.PENDING and o.paymentStatus = 'PENDING' and o.paymentExpiresAt <= :now order by o.paymentExpiresAt, o.id")
     List<Long> findExpiredOrderIds(@Param("now") LocalDateTime now, Pageable pageable);
+
+    @Query("""
+            select o from Order o left join o.customer u left join u.customer c
+                where (:status is null or o.status = :status)
+                and (:query = '' or lower(o.code) like lower(concat('%', :query, '%'))
+                    or lower(o.recipientName) like lower(concat('%', :query, '%'))
+                    or lower(o.recipientPhone) like lower(concat('%', :query, '%'))
+                    or lower(u.userName) like lower(concat('%', :query, '%'))
+                    or lower(c.fullName) like lower(concat('%', :query, '%')))
+            """)
+    Page<Order> search(@Param("query") String query, @Param("status") OrderStatus status, Pageable pageable);
 }

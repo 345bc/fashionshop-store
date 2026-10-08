@@ -1,5 +1,8 @@
 package com.huit.zella.order;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.huit.zella.auth.User;
 import com.huit.zella.auth.UserRepository;
 import com.huit.zella.common.exception.BusinessException;
@@ -7,7 +10,6 @@ import com.huit.zella.inventory.InventoryService;
 import com.huit.zella.orderreturn.ReturnRepository;
 import com.huit.zella.productvariant.ProductVariant;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,9 +32,19 @@ public class OrderService {
     private final Clock orderClock;
     private static final BigDecimal MAX_AMOUNT = new BigDecimal("9999999999999999.99");
 
+    private OrderStatus parseListStatus(String value) {
+        if (value == null || value.equals("all")) return null;
+        try { return OrderStatus.valueOf(value); }
+        catch (IllegalArgumentException error) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_ORDER_STATUS", "Trạng thái đơn hàng không hợp lệ");
+        }
+    }
+
     @Transactional(readOnly = true)
-    public List<OrderResponse> list() {
-        return orderRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream().map(this::response).toList();
+    public Page<OrderResponse> list(String query, String status, Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        Page<Order> page = orderRepository.search(q, parseListStatus(status), pageable);
+        return page.map(this::response);
     }
 
     @Transactional(readOnly = true)
