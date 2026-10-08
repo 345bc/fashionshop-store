@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductRail from "@/components/ProductRail";
+import NewArrivalsRail from "@/components/NewArrivalsRail";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -13,17 +14,6 @@ const featured = [
   { id: "6", name: "Quần ống rộng Cocoa", price: "489.000₫", image: "/assets/images/v7_1923.png", rating: 4.8, reviewsCount: 57 },
   { id: "7", name: "Áo dệt kim Ivory Air", price: "299.000₫", image: "/assets/images/v7_2123.png", rating: 4.6, reviewsCount: 23 },
   { id: "8", name: "Túi cói Studio Basket", price: "359.000₫", image: "/assets/images/v7_1944.png", badge: "Mới", rating: 4.9, reviewsCount: 49 },
-];
-
-const newArrivals = [
-  { id: "9", name: "Váy midi Olive Line", price: "619.000₫", image: "/assets/images/v7_2020.png", badge: "Mới", rating: 4.8, reviewsCount: 75 },
-  { id: "10", name: "Áo dài tay Minimal Knit", price: "329.000₫", image: "/assets/images/v7_1909.png", badge: "Mới", rating: 4.7, reviewsCount: 18 },
-  { id: "11", name: "Chân váy Sage Pleat", price: "459.000₫", image: "/assets/images/v7_2019.png", badge: "Mới", rating: 4.9, reviewsCount: 66 },
-  { id: "12", name: "Blazer Taupe Structure", price: "799.000₫", image: "/assets/images/v7_1713.png", badge: "Mới", rating: 4.8, reviewsCount: 39 },
-  { id: "13", name: "Áo kiểu Soft Cream", price: "389.000₫", image: "/assets/images/v7_1930.png", rating: 4.8, reviewsCount: 26 },
-  { id: "14", name: "Set dệt kim Quiet Ivory", price: "759.000₫", image: "/assets/images/v7_3793.png", rating: 4.9, reviewsCount: 31 },
-  { id: "15", name: "Đầm linen Morning Sage", price: "689.000₫", image: "/assets/images/v7_3783.png", rating: 4.7, reviewsCount: 22 },
-  { id: "16", name: "Quần linen Cinnamon", price: "529.000₫", image: "/assets/images/v7_3788.png", rating: 4.8, reviewsCount: 41 },
 ];
 
 export default function Home() {
@@ -39,7 +29,7 @@ export default function Home() {
               <p>Một tủ đồ hiện đại không cần quá nhiều. Chỉ cần phom dáng đẹp, màu sắc dễ phối và những món bạn muốn mặc lại nhiều lần.</p>
               <div className="hero-actions">
                 <Link href="/products" className="modern-btn dark">Khám phá bộ sưu tập</Link>
-                <Link href="/products?cat=new" className="modern-text-link">Xem sản phẩm mới <span>↗</span></Link>
+                <Link href="/products?new=true" className="modern-text-link">Xem sản phẩm mới <span>↗</span></Link>
               </div>
               <div className="hero-notes">
                 <span>01 / Natural palette</span><span>02 / Easy tailoring</span><span>03 / Everyday pieces</span>
@@ -95,7 +85,7 @@ export default function Home() {
           </Link>
         </section>
 
-        <ProductRail products={newArrivals} href="/products?cat=new" />
+        <NewArrivalsRail />
 
         <div className="modern-container">
 
