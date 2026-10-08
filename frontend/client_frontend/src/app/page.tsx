@@ -89,9 +89,9 @@ export default function Home() {
         <ProductRail products={featured} href="/products" />
 
         <section className="campaign-fullwidth" aria-label="Bộ sưu tập Soft Tailoring">
-          <Link href="/products?cat=soft-tailoring" className="campaign-panel-full">
-            <Image src="/assets/images/v7_3590.png" alt="Bộ sưu tập Soft Tailoring" fill sizes="100vw" />
-            <div><span>SOFT TAILORING</span><strong>Phom dáng mềm, hiện diện rõ</strong><small>Xem thiết kế mới →</small></div>
+          <Link href="/products?cat=5" className="campaign-panel-full">
+            <Image src="https://pub-830cafaa2d594f81ba2a433664da10a5.r2.dev/common/nimble-made-7RIMS-NMsbc-unsplash.jpg" alt="Bộ sưu tập Soft Tailoring" fill sizes="100vw" />
+            <div className="container mx-auto px-8"><span>SOFT TAILORING</span><strong>Phom dáng mềm, hiện diện rõ</strong><small>Xem thiết kế mới →</small></div>
           </Link>
         </section>
 
