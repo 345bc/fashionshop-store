@@ -5,59 +5,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../auth/AuthContext";
+import { getCategories, getCategoriesParent } from "../service/categoriesApi";
 
-type CatalogSection = "Nữ" | "Nam" | "Phụ kiện" | "Bộ sưu tập";
 
-type CatalogItem = {
-  label: string;
-  href: string;
-  image: string;
-};
-
-const catalog: Record<CatalogSection, CatalogItem[]> = {
-  "Nữ": [
-    { label: "Áo & sơ mi", href: "/products?cat=nu-ao", image: "/assets/images/images2.png" },
-    { label: "Váy & đầm", href: "/products?cat=nu-vay", image: "/assets/images/v7_1916.png" },
-    { label: "Quần", href: "/products?cat=nu-quan", image: "/assets/images/v7_1730.png" },
-    { label: "Áo khoác", href: "/products?cat=nu-khoac", image: "/assets/images/v7_1951.png" },
-    { label: "Áo dệt kim", href: "/products?cat=nu-knit", image: "/assets/images/v7_2123.png" },
-    { label: "Chân váy", href: "/products?cat=nu-chan-vay", image: "/assets/images/v7_2019.png" },
-    { label: "Đồ mặc nhà", href: "/products?cat=nu-mac-nha", image: "/assets/images/v7_3793.png" },
-    { label: "Xem tất cả", href: "/products?cat=nu", image: "/assets/images/v7_3778.png" },
-  ],
-  "Nam": [
-    { label: "Áo thun", href: "/products?cat=nam-ao-thun", image: "/assets/images/v7_3034.png" },
-    { label: "Sơ mi", href: "/products?cat=nam-ao-somi", image: "/assets/images/v7_3025.png" },
-    { label: "Quần dài", href: "/products?cat=nam-quan", image: "/assets/images/v7_1730.png" },
-    { label: "Áo khoác", href: "/products?cat=nam-khoac", image: "/assets/images/v7_1713.png" },
-    { label: "Dệt kim", href: "/products?cat=nam-det-kim", image: "/assets/images/v7_1909.png" },
-    { label: "Đồ mặc nhà", href: "/products?cat=nam-mac-nha", image: "/assets/images/v7_2111.png" },
-    { label: "Linen", href: "/products?cat=nam-linen", image: "/assets/images/v7_1930.png" },
-    { label: "Xem tất cả", href: "/products?cat=nam", image: "/assets/images/v7_1717.png" },
-  ],
-  "Phụ kiện": [
-    { label: "Túi", href: "/products?cat=phu-kien-tui", image: "/assets/images/v7_1944.png" },
-    { label: "Khăn", href: "/products?cat=phu-kien-khan", image: "/assets/images/v7_3025.png" },
-    { label: "Mũ", href: "/products?cat=phu-kien-mu", image: "/assets/images/v7_3034.png" },
-    { label: "Thắt lưng", href: "/products?cat=phu-kien-that-lung", image: "/assets/images/v7_1730.png" },
-    { label: "Trang sức", href: "/products?cat=phu-kien-trang-suc", image: "/assets/images/v7_1725.png" },
-    { label: "Phụ kiện tóc", href: "/products?cat=phu-kien-toc", image: "/assets/images/v7_1909.png" },
-    { label: "Quà tặng", href: "/products?cat=qua-tang", image: "/assets/images/v7_1754.png" },
-    { label: "Xem tất cả", href: "/products?cat=phu-kien", image: "/assets/images/v7_1827.png" },
-  ],
-  "Bộ sưu tập": [
-    { label: "Soft Tailoring", href: "/products?cat=soft-tailoring", image: "/assets/images/v7_1754.png" },
-    { label: "Natural Linen", href: "/products?cat=linen", image: "/assets/images/v7_1758.png" },
-    { label: "Sage Notes", href: "/products?cat=sage", image: "/assets/images/v7_1916.png" },
-    { label: "Modern Balance", href: "/products?cat=modern-balance", image: "/assets/images/v7_1951.png" },
-    { label: "Quiet Knit", href: "/products?cat=quiet-knit", image: "/assets/images/v7_3793.png" },
-    { label: "Studio Essentials", href: "/products?cat=essentials", image: "/assets/images/v7_1725.png" },
-    { label: "New arrivals", href: "/products?cat=new", image: "/assets/images/v7_1705.png" },
-    { label: "Xem tất cả", href: "/products", image: "/assets/images/v7_1795.png" },
-  ],
-};
-
-const sections = Object.keys(catalog) as CatalogSection[];
+interface category {
+  id: number,
+  name: string,
+  slug: string,
+  imageUrl: string
+}
 
 export default function Header() {
   const auth = useAuth();
@@ -68,10 +24,46 @@ export default function Header() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartQuantity, setCartQuantity] = useState(1);
   const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<CatalogSection>("Nữ");
+  const [activeSection, setActiveSection] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const mobileSearchRef = useRef<HTMLInputElement>(null);
+  const [categoryParent, setCategoryParent] = useState<category[] | null>(null);
+  const [category, setCategory] = useState<category[] | null>(null);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const response = await getCategoriesParent();
+        const categories = response?.data;
+
+        setCategoryParent(categories);
+
+        if (categories && categories.length > 0) {
+          setActiveSection(categories[0].id);
+        }
+      } catch (error) {
+        console.error("Lỗi khi fetch category:", error);
+      }
+    }
+
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    async function fetchSubCategories() {
+      if (activeSection) {
+        try {
+          const response = await getCategories(activeSection);
+          setCategory(response?.data || []);
+        } catch (error) {
+          console.error("Lỗi khi fetch category con:", error);
+        }
+      }
+    }
+
+    fetchSubCategories();
+  }, [activeSection]);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -86,10 +78,13 @@ export default function Header() {
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, []);
 
+
+
   const handleSearch = (event: FormEvent) => {
     event.preventDefault();
     const value = query.trim();
-    router.push(value ? `/products?q=${encodeURIComponent(value)}` : "/products");
+    if (!value) return;
+    router.push(`/products?q=${encodeURIComponent(value)}`);
     setCatalogOpen(false);
     setMobileOpen(false);
   };
@@ -164,6 +159,7 @@ export default function Header() {
             <Link href="/blog" onClick={closeNavigation} className="relative flex h-full items-center text-[13.5px] font-bold uppercase tracking-[0.06em] text-black/90 transition-colors after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-black after:transition-all hover:text-black hover:after:w-full">Journal</Link>
           </nav>
 
+          {/* Tìm kiếm */}
           <div className="flex items-center justify-end gap-1.5">
             <button type="button" className="grid size-10 place-items-center rounded-full text-black transition-colors hover:bg-black/5" aria-label="Tìm kiếm" onClick={openSearch}>
               <span className="material-symbols-outlined" style={{ fontSize: 22 }}>search</span>
@@ -206,7 +202,7 @@ export default function Header() {
                       <Link href="/orders" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-black/80 transition-colors hover:bg-black/5 hover:text-black">
                         <span className="material-symbols-outlined text-[16px]">local_mall</span>
                         Đơn hàng
-                      </Link>
+                      </Link>s
                       <Link href="/wishlist" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-black/80 transition-colors hover:bg-black/5 hover:text-black">
                         <span className="material-symbols-outlined text-[16px]">favorite</span>
                         Yêu thích
@@ -245,6 +241,7 @@ export default function Header() {
           </div>
         </div>
 
+        {/* Danh mục sản phẩm  */}
         <section
           id="catalog-menu"
           aria-label="Danh mục sản phẩm"
@@ -254,18 +251,18 @@ export default function Header() {
           <div className="container mx-auto max-h-[calc(100vh-100px)] overflow-y-auto px-8 pt-6 pb-7 xl:px-12">
             <div className="flex items-center justify-between border-b border-black/10">
               <div role="tablist" aria-label="Nhóm sản phẩm" className="flex items-center gap-7">
-                {sections.map((section) => (
+                {(categoryParent || []).map((category) => (
                   <button
                     type="button"
                     role="tab"
-                    aria-selected={activeSection === section}
-                    key={section}
-                    className={`relative border-0 bg-transparent pb-4 text-[12px] font-semibold tracking-[0.08em] uppercase transition-colors after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-[#1d211c] after:transition-all ${activeSection === section ? "text-[#1d211c] after:w-full" : "text-[#8a8d85] after:w-0 hover:text-[#1d211c]"}`}
-                    onMouseEnter={() => setActiveSection(section)}
-                    onFocus={() => setActiveSection(section)}
-                    onClick={() => setActiveSection(section)}
+                    aria-selected={activeSection === category.id}
+                    key={category.id}
+                    className={`relative border-0 bg-transparent pb-4 text-[12px] font-semibold tracking-[0.08em] uppercase transition-colors after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-[#1d211c] after:transition-all ${activeSection === category.id ? "text-[#1d211c] after:w-full" : "text-[#8a8d85] after:w-0 hover:text-[#1d211c]"}`}
+                    onMouseEnter={() => setActiveSection(category.id)}
+                    onFocus={() => setActiveSection(category.id)}
+                    onClick={() => setActiveSection(category.id)}
                   >
-                    {section}
+                    {category.name}
                   </button>
                 ))}
               </div>
@@ -277,9 +274,8 @@ export default function Header() {
             <form onSubmit={handleSearch} className="my-6 grid h-12 grid-cols-[22px_1fr_auto] items-center gap-3 rounded-full border border-black/15 bg-white px-5 transition-shadow focus-within:border-black/30 focus-within:shadow-[0_0_0_3px_rgba(29,33,28,0.05)]">
               <span className={`material-symbols-outlined ${"text-[#777a72]"}`} style={{ fontSize: 19 }}>search</span>
               <input
-                ref={searchRef}
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(e) => setQuery(e.target.value)}
                 className="min-w-0 border-0 bg-transparent text-[14px] text-[#1d211c] outline-none placeholder:text-[#96988f]"
                 placeholder="Tìm áo, váy, quần hoặc chất liệu..."
                 aria-label="Từ khóa tìm kiếm"
@@ -288,13 +284,15 @@ export default function Header() {
             </form>
 
             <div role="tabpanel" className="grid grid-cols-4 gap-x-4 gap-y-6 xl:grid-cols-8">
-              {catalog[activeSection].map((item) => (
-                <Link key={`${activeSection}-${item.label}`} href={item.href} onClick={closeNavigation} className="group min-w-0">
+              {(category || []).map((item) => (
+                <Link key={item.id}
+                  href={`/products?cat=${item.id}&categoryName=${encodeURIComponent(item.name)}`}
+                  onClick={closeNavigation} className="group min-w-0">
                   <div className="relative aspect-4/3 overflow-hidden rounded-[10px] bg-[#eeece6]">
-                    <Image src={item.image} alt="" fill sizes="(max-width: 1280px) 25vw, 160px" className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]" />
+                    <Image src={item.imageUrl || "/assets/images/v7_1795.png"} alt={item.name || ""} fill sizes="(max-width: 1280px) 25vw, 160px" className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]" />
                   </div>
                   <div className="mt-2.5 flex items-center justify-between gap-2">
-                    <span className="truncate text-[12px] font-medium text-[#2b2e29] transition-colors group-hover:text-black">{item.label}</span>
+                    <span className="truncate text-[12px] font-medium text-[#2b2e29] transition-colors group-hover:text-black">{item.name}</span>
                     <span aria-hidden="true" className="translate-x-0 text-[13px] text-[#9a9c95] transition-all group-hover:translate-x-0.5 group-hover:text-black">→</span>
                   </div>
                 </Link>
@@ -310,11 +308,12 @@ export default function Header() {
             </div>
           </div>
         </section>
-      </header>
+      </header >
 
       {catalogOpen && (
         <button type="button" className="fixed inset-0 z-40 hidden cursor-default bg-[#171914]/25 backdrop-blur-[1px] lg:block" aria-label="Đóng danh mục sản phẩm" onClick={() => setCatalogOpen(false)} />
-      )}
+      )
+      }
 
       <button
         type="button"
@@ -401,15 +400,6 @@ export default function Header() {
             Sản phẩm
             <span className={`material-symbols-outlined transition-transform ${mobileProductsOpen ? "rotate-180" : ""}`} style={{ fontSize: 16 }}>expand_more</span>
           </button>
-          <div className={`grid overflow-hidden transition-[grid-template-rows] duration-200 ${mobileProductsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-            <div className="min-h-0">
-              <div className="grid grid-cols-2 gap-2 border-b border-black/10 py-3">
-                {catalog["Nữ"].slice(0, 6).map((item) => (
-                  <Link key={item.label} href={item.href} onClick={closeNavigation} className="rounded-lg px-3 py-2.5 text-[12px] text-[#555851] hover:bg-black/5 hover:text-black">{item.label}</Link>
-                ))}
-              </div>
-            </div>
-          </div>
           <Link href="/products?cat=nu" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Thời trang nữ</Link>
           <Link href="/products?cat=nam" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Thời trang nam</Link>
           <Link href="/blog" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Journal</Link>
