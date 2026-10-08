@@ -3,7 +3,9 @@ package com.huit.zella.product;
 import com.huit.zella.category.Category;
 import com.huit.zella.category.CategoryRepository;
 import com.huit.zella.color.Color;
+import com.huit.zella.common.api.PageResponse;
 import com.huit.zella.common.exception.BusinessException;
+import com.huit.zella.enums.BadgeEnum;
 import com.huit.zella.productimage.ProductImage;
 import com.huit.zella.productimage.ProductImageRepository;
 import com.huit.zella.productvariant.ProductVariant;
@@ -26,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.Normalizer;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -46,6 +50,8 @@ public class ProductService {
             Long categoryId,
             List<Integer> colorIds,
             List<Integer> sizeIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
             Pageable pageable
     ) {
         String q = query == null ? "" : query.trim();
@@ -61,12 +67,46 @@ public class ProductService {
                 categoryId,
                 filterColors,
                 safeColorIds,
-                sizeIds,
+                filterSizes,
+                safeSizeIds,
+                minPrice,
+                maxPrice,
                 pageable
         );
 
+        return toCardPage(page,null);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductCardResponse> listNewArrivals(Pageable pageable) {
+        Instant now = Instant.now();
+        Page<Product> page = productRepository.findNewArrivals(
+                now.minus(7, ChronoUnit.DAYS), now, pageable
+        );
+        return toCardPage(page,null);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductCardResponse> listProductSimilar(Long productId, Pageable pageable) {
+        Product product = requireProduct(productId);
+        BigDecimal price = product.getBasePrice();
+        BigDecimal minPrice = price.multiply(new BigDecimal("0.70"));
+        BigDecimal maxPrice = price.multiply(new BigDecimal("1.30"));
+        Page<Product> page = productRepository.getProductsSimilar(
+                product.getCategory().getId(),
+                product.getId(),
+                price,
+                minPrice,
+                maxPrice,
+                pageable
+
+        );
+        return toCardPage(page, BadgeEnum.Similar.name());
+    }
+
+    private Page<ProductCardResponse> toCardPage(Page<Product> page,String badgeOverride) {
         if (page.isEmpty()) {
-            return new PageImpl<>(List.of(), pageable, page.getTotalElements());
+            return new PageImpl<>(List.of(), page.getPageable(), page.getTotalElements());
         }
 
         List<Long> ids = page.getContent().stream()
@@ -83,6 +123,7 @@ public class ProductService {
                     image.getImageUrl()
             );
         }
+
 
         List<ProductVariant> variants = productVariantRepository.findCardVariants(ids);
         List<Long> variantIds = variants.stream().map(ProductVariant::getId).toList();
@@ -111,6 +152,8 @@ public class ProductService {
             }
         }
 
+        Instant badgeNow = Instant.now();
+        Instant newProductFrom = badgeNow.minus(7, ChronoUnit.DAYS);
         return page.map(product -> new ProductCardResponse(
                 product.getId(),
                 product.getName(),
@@ -119,11 +162,92 @@ public class ProductService {
                 images.get(product.getId()),
                 new ArrayList<>(
                         colors.getOrDefault(product.getId(), Map.of()).values()
-                )
+                ),
+                badgeOverride != null
+                        ? badgeOverride
+                        : product.getCreatedAt() != null
+                        && !product.getCreatedAt().isBefore(newProductFrom)
+                        && !product.getCreatedAt().isAfter(badgeNow)
+                          ? BadgeEnum.New.name()
+                          : null
         ));
 
     }
 
+    @Transactional(readOnly = true)
+    public ProductDetailResponse getProductDetail(String slug) {
+        Product product = productRepository.findBySlugWithDetails(slug)
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found"));
+
+        List<ProductImage> images = productImageRepository.findByProductIdOrderByDisplayOrderAscIdAsc(product.getId());
+        List<ProductVariant> variants = productVariantRepository.findDetailVariants(product.getId());
+
+
+        List<ProductDetailResponse.SizeItem> sizeItems = variants.stream()
+                .map(ProductVariant::getSize)
+                .distinct()
+                .map(s -> new ProductDetailResponse.SizeItem(s.getId(), s.getName()))
+                .toList();
+
+        List<Long> variantIds = variants.stream().map(ProductVariant::getId).toList();
+        // We get variant images next
+
+        Map<Integer, ProductDetailResponse.ColorItem> colorMap = new LinkedHashMap<>();
+        for (ProductVariant variant : variants) {
+            Color color = variant.getColor();
+            colorMap.putIfAbsent(color.getId(), new ProductDetailResponse.ColorItem(
+                    color.getId(), color.getName(), color.getHexCode()
+            ));
+        }
+        List<ProductDetailResponse.ColorItem> colorItems = new ArrayList<>(colorMap.values());
+
+        // Group variant images
+        Map<Long, List<ProductDetailResponse.ImageItem>> variantImagesListMap = new HashMap<>();
+        if (!variantIds.isEmpty()) {
+            for (VariantImage image : variantImageRepository
+                    .findByVariantIdInOrderByIsPrimaryDescDisplayOrderAscIdAsc(variantIds)) {
+                variantImagesListMap.computeIfAbsent(image.getVariant().getId(), k -> new ArrayList<>())
+                        .add(new ProductDetailResponse.ImageItem(
+                                image.getId(), image.getImageUrl(), image.isPrimary(), image.getDisplayOrder()
+                        ));
+            }
+        }
+
+        List<ProductDetailResponse.VariantItem> variantItems = variants.stream()
+                .map(v -> new ProductDetailResponse.VariantItem(
+                        v.getId(),
+                        v.getSku(),
+                        v.getColor().getId(),
+                        v.getSize().getId(),
+                        v.getPrice(),
+                        v.getStockQuantity() - v.getReservedQuantity(),
+                        variantImagesListMap.getOrDefault(v.getId(), List.of())
+                ))
+                .toList();
+
+        // Stub out reviews for now
+        BigDecimal averageRating = BigDecimal.ZERO;
+        long reviewsCount = 0;
+        PageResponse<ProductDetailResponse.ReviewItem> reviews = null;
+
+        return new ProductDetailResponse(
+                product.getId(),
+                product.getName(),
+                product.getSlug(),
+                product.getDescription(),
+                product.getStyle(),
+                product.getOccasion(),
+                product.getBasePrice(),
+                product.getCategory() != null ? product.getCategory().getName() : null,
+                product.getSizeGuide() != null ? product.getSizeGuide().getGuideImageUrl() : null,
+                colorItems,
+                sizeItems,
+                variantItems,
+                averageRating,
+                reviewsCount,
+                reviews
+        );
+    }
 
     @Transactional(readOnly = true)
     public Page<ProductResponse> list(String query, Long categoryId, Pageable pageable) {

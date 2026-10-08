@@ -2,7 +2,6 @@ package com.huit.zella.product;
 
 import com.huit.zella.common.api.ApiResponse;
 import com.huit.zella.common.api.PageResponse;
-import com.huit.zella.user.UpdateUserRequest;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -27,6 +27,8 @@ public class ProductController {
     public ApiResponse<PageResponse<ProductCardResponse>> listCards(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "15") int size,
             @RequestParam(defaultValue = "featured") String sort,
@@ -46,12 +48,20 @@ public class ProductController {
             default -> Sort.by(Sort.Direction.DESC, "id");
         };
 
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            BigDecimal temp = minPrice;
+            minPrice = maxPrice;
+            maxPrice = temp;
+        }
+
         return ApiResponse.success(PageResponse.from(
                 productService.listCards(
                         q,
                         categoryId,
                         colorIds,
                         sizeIds,
+                        minPrice,
+                        maxPrice,
                         PageRequest.of(
                                 Math.max(page, 0),
                                 safeSize,
@@ -60,6 +70,43 @@ public class ProductController {
                 )
         ));
     }
+
+    @GetMapping("/similars")
+    public ApiResponse<PageResponse<ProductCardResponse>> listSimilar(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size,
+            @RequestParam() Long productId
+    ) {
+        int safeSize = Math.max(1, Math.min(size, 100));
+        return ApiResponse.success(PageResponse.from(
+                productService.listProductSimilar(
+                        productId,
+                        PageRequest.of(
+                                Math.max(page, 0),
+                                safeSize
+                        )
+                )
+        ));
+    }
+
+    @GetMapping("/new-arrivals")
+    public ApiResponse<PageResponse<ProductCardResponse>> listNewArrivals(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        int safeSize = Math.max(1, Math.min(size, 100));
+        return ApiResponse.success(PageResponse.from(productService.listNewArrivals(
+                PageRequest.of(Math.max(page, 0), safeSize,
+                        Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")))
+        )));
+    }
+
+    @GetMapping("/detail/{slug}")
+    public ApiResponse<ProductDetailResponse> getDetail(@PathVariable String slug) {
+        return ApiResponse.success(productService.getProductDetail(slug));
+    }
+
+
 
     @GetMapping
     public ApiResponse<PageResponse<ProductResponse>> list(

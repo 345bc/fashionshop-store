@@ -9,7 +9,8 @@ public record ProductCardResponse(
         String slug,
         BigDecimal basePrice,
         String imageUrl,
-        List<ColorItem> colors
+        List<ColorItem> colors,
+        String badge
 ) {
     public record ColorItem(
             Integer id,

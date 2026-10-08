@@ -40,7 +40,7 @@ class ProductCardServiceTest {
         ProductVariant medium = variant(11L, first, color);
         ProductVariant otherProduct = variant(12L, second, color);
         PageRequest pageable = PageRequest.of(0, 12);
-        when(products.searchCards("", null, false, List.of(-1), pageable))
+        when(products.searchCards("", null, false, List.of(-1), false, List.of(-1), null, null, pageable))
                 .thenReturn(new PageImpl<>(List.of(first, second), pageable, 2));
 
         ProductImage productImage = new ProductImage();
@@ -53,7 +53,7 @@ class ProductCardServiceTest {
         when(variantImages.findByVariantIdInOrderByIsPrimaryDescDisplayOrderAscIdAsc(List.of(10L, 11L, 12L)))
                 .thenReturn(List.of(image(medium, "white-primary.jpg"), image(medium, "white-other.jpg")));
 
-        Page<ProductCardResponse> result = service.listCards(null, null, null, pageable);
+        Page<ProductCardResponse> result = service.listCards(null, null, null, null, null, null, pageable);
 
         ProductCardResponse firstCard = result.getContent().getFirst();
         assertEquals("product.jpg", firstCard.imageUrl());
@@ -68,10 +68,10 @@ class ProductCardServiceTest {
     @Test
     void emptyPageSkipsImageAndVariantQueriesAndKeepsTotal() {
         PageRequest pageable = PageRequest.of(3, 12);
-        when(products.searchCards("shirt", null, false, List.of(-1), pageable))
+        when(products.searchCards("shirt", null, false, List.of(-1), false, List.of(-1), null, null, pageable))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 24));
 
-        Page<ProductCardResponse> result = service.listCards(" shirt ", null, null, pageable);
+        Page<ProductCardResponse> result = service.listCards(" shirt ", null, null, null, null, null, pageable);
 
         assertTrue(result.isEmpty());
         assertEquals(24, result.getTotalElements());

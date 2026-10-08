@@ -63,5 +63,13 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
             @Param("productIds") List<Long> productIds
     );
 
-
+    @Query("""
+        select v from ProductVariant v
+        join fetch v.color
+        join fetch v.size
+        where v.product.id = :productId
+          and v.isActive = true
+        order by v.color.id, v.size.id
+        """)
+    List<ProductVariant> findDetailVariants(@Param("productId") Long productId);
 }
