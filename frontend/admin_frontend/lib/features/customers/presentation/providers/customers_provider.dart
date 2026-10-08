@@ -18,63 +18,64 @@ class CustomersProvider extends ChangeNotifier {
   List<CustomerResponseModel> get items => _items;
   int get currentPage => _page;
   int get pageSize => _pageSize;
-  List<CustomerResponseModel> get _filtered => _items.where((c) {
-    final q = _query.trim().toLowerCase();
-    final matches =
-        q.isEmpty ||
-        [
-          c.fullName,
-          c.email,
-          c.phone,
-          c.username,
-        ].any((v) => v?.toLowerCase().contains(q) ?? false);
-    return matches && (_filter == 'all' || c.membershipTier == _filter);
-  }).toList();
-  int get totalElements => _filtered.length;
-  List<CustomerResponseModel> get pageItems {
-    final list = _filtered;
-    final start = _page * _pageSize;
-    if (start >= list.length) return [];
-    return list.sublist(start, (start + _pageSize).clamp(0, list.length));
-  }
+  int _totalElements = 0;
+  int _requestId = 0;
+  int get totalElements => _totalElements;
+  List<CustomerResponseModel> get pageItems => _items;
 
   void setQuery(String q) {
     _query = q;
     _page = 0;
-    notifyListeners();
+    loadItems();
   }
 
   void setFilter(String filter) {
     _filter = filter;
     _page = 0;
-    notifyListeners();
+    loadItems();
   }
 
   void setPage(int page) {
     _page = page;
-    notifyListeners();
+    loadItems();
   }
 
   Future<void> loadItems() async {
     _loading = true;
     _error = null;
     notifyListeners();
+    final requestId = ++_requestId;
     try {
-      _items = (await _repository.getAll())
+      final data = await _repository.getAll(
+        page: _page,
+        size: _pageSize,
+        query: _query,
+        tier: _filter,
+      );
+      if (requestId != _requestId) return;
+      _items = (data['content'] as List)
           .map(
-            (json) =>
-                CustomerResponseModel.fromJson(json as Map<String, dynamic>),
+            (json) => CustomerResponseModel.fromJson(
+              Map<String, dynamic>.from(json as Map),
+            ),
           )
           .toList();
-      _page = _page.clamp(
-        0,
-        totalElements == 0 ? 0 : (totalElements - 1) ~/ _pageSize,
-      );
+      _totalElements = (data['totalElements'] as num).toInt();
+      final lastPage = _totalElements == 0
+          ? 0
+          : (_totalElements - 1) ~/ _pageSize;
+      if (_page > lastPage) {
+        _page = lastPage;
+        await loadItems();
+      }
     } catch (e) {
+      if (requestId != _requestId) return;
       _error = e.toString();
     } finally {
-      _loading = false;
-      notifyListeners();
+      if (requestId == _requestId) {
+        _loading = false;
+        notifyListeners();
+      }
     }
   }
 

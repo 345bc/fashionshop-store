@@ -1,5 +1,8 @@
 package com.huit.zella.customer;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.huit.zella.auth.CurrentUser;
 import com.huit.zella.auth.UserService;
 import com.huit.zella.common.exception.BusinessException;
@@ -7,12 +10,9 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,12 +23,10 @@ class CustomerService {
     PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
-    public List<CustomerResponse> list(String query) {
-        String q = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
-        return customerRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
-                .filter(c -> q.isEmpty() || contains(c.getFullName(), q) || contains(c.getPhone(), q)
-                        || contains(c.getUser().getEmail(), q))
-                .map(CustomerResponse::from).toList();
+    public Page<CustomerResponse> list(String query, String tier, Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        Page<Customer> page = customerRepository.search(q, (tier == null || "all".equals(tier) ? null : tier), pageable);
+        return page.map(CustomerResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -41,8 +39,6 @@ class CustomerService {
         return CustomerResponse.from(customerRepository.findById(id).orElseThrow(() ->
                 new BusinessException(HttpStatus.NOT_FOUND, "CUSTOMER_NOT_FOUND", "Customer not found")));
     }
-
-
 
     @Transactional
     public CustomerResponse update(Long id, UpdateCustomerRequest request) {
@@ -59,10 +55,6 @@ class CustomerService {
 
     private String clean(String value) {
         return value == null || value.trim().isEmpty() ? null : value.trim();
-    }
-
-    private boolean contains(String value, String query) {
-        return value != null && value.toLowerCase(java.util.Locale.ROOT).contains(query);
     }
 
     private Customer requireFeature(Long id) {

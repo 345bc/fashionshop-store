@@ -1,5 +1,10 @@
 package com.huit.zella.customer;
 
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
+
+import com.huit.zella.common.api.PageResponse;
+
 import com.huit.zella.common.api.ApiResponse;
 import com.huit.zella.auth.CurrentUser;
 import com.huit.zella.common.exception.BusinessException;
@@ -13,8 +18,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/customers")
 @RequiredArgsConstructor
@@ -25,8 +28,17 @@ public class CustomerController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     @GetMapping
-    public ApiResponse<List<CustomerResponse>> list(@RequestParam(required = false) String q) {
-        return ApiResponse.success(customerService.list(q));
+    public ApiResponse<PageResponse<CustomerResponse>> list(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String tier,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        int safeSize = Math.max(1, Math.min(size, 100));
+        return ApiResponse.success(PageResponse.from(customerService.list(
+                q, tier,
+                PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "id"))
+        )));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
