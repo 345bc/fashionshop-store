@@ -6,39 +6,73 @@ import Image from "next/image";
 import Link from "next/link";
 import ProductAccordion from "@/components/ProductAccordion";
 import ProductRail from "@/components/ProductRail";
+import ProductSimilar from "@/components/ui/ProductSimilar";
+
+import { getProductDetail } from "@/service/productService";
+import type { PageResponse } from "@/type/api";
+
+interface Review {
+  id: number;
+  customerName: string;
+  rating: number;
+  comment: string | null;
+  colorName: string | null;
+  sizeName: string | null;
+  createdAt: string | null;
+  adminReply: string | null;
+  repliedAt: string | null;
+}
+
+const ratingStars = (rating: number) => {
+  const stars = Math.max(0, Math.min(5, Math.round(rating)));
+  return "★".repeat(stars) + "☆".repeat(5 - stars);
+};
 
 interface Product {
   id: number;
-  title: string;
-  price: number;
+  name: string;
+  slug: string;
   description: string;
-  category: string;
-  image: string;
-  rating?: {
-    rate: number;
-    count: number;
-  };
-  [key: string]: unknown;
+  style: string;
+  occasion: string;
+  basePrice: number;
+  categoryName: string;
+  sizeGuideUrl: string;
+  colors: { id: number; name: string; hexCode: string }[];
+  sizes: { id: number; name: string }[];
+  variants: {
+    id: number;
+    sku: string;
+    colorId: number;
+    sizeId: number;
+    price: number;
+    stockQuantity: number;
+    images: { id: number; imageUrl: string; isPrimary: boolean; displayOrder: number }[];
+  }[];
+  averageRating: number;
+  reviewsCount: number;
+  reviews?: PageResponse<Review> | null;
 }
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [selectedColor, setSelectedColor] = useState(0);
-  const [selectedSize, setSelectedSize] = useState("M");
+  const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
+  const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`https://fakestoreapi.com/products/${id}`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Product not found");
-        const text = await res.text();
-        return text ? JSON.parse(text) : null;
-      })
-      .then((data) => {
+    getProductDetail(id)
+      .then((res) => {
+        const data = res.data;
         setProduct(data);
+        const firstVariant = data.variants?.[0];
+        setSelectedColorId(firstVariant?.colorId ?? null);
+        setSelectedSizeId(firstVariant?.sizeId ?? null);
+        setSelectedImageId(null);
         setLoading(false);
       })
       .catch((err) => {
@@ -47,12 +81,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         setLoading(false);
       });
   }, [id]);
-
-  const colors = [
-    { name: "60 LIGHT BLUE", hex: "#c2d6e6" },
-    { name: "03 LIGHT GRAY", hex: "#e5e5e5" },
-    { name: "09 BLACK", hex: "#111111" },
-  ];
 
   if (loading) {
     return (
@@ -74,48 +102,84 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const formattedPrice = `${(product.price * 25000).toLocaleString('vi-VN')} VND`;
+  const selectedVariant = product.variants?.find(
+    (v) => v.colorId === selectedColorId && v.sizeId === selectedSizeId
+  );
+  const colorVariants = product.variants?.filter((v) => v.colorId === selectedColorId) || [];
+
+  const galleryImages = [...(selectedVariant?.images ?? [])].sort(
+    (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
+      || a.displayOrder - b.displayOrder || a.id - b.id
+  );
+  const activeImage = galleryImages.find(image => image.id === selectedImageId) ?? galleryImages[0];
+  const displayImage = activeImage?.imageUrl;
+
+  const displayPrice = selectedVariant?.price || product.basePrice || 0;
+  const formattedPrice = `${displayPrice.toLocaleString("vi-VN")} VNĐ`;
+  const selectedColorObj = product.colors?.find(c => c.id === selectedColorId);
+  const selectedSizeObj = product.sizes?.find(s => s.id === selectedSizeId);
+  const canAddToCart = !!selectedVariant && selectedVariant.stockQuantity > 0;
+  const reviews = product.reviews?.content ?? [];
+  const hasReviews = reviews.length > 0;
+
+  const selectColor = (colorId: number) => {
+    const variants = product.variants?.filter(v => v.colorId === colorId) ?? [];
+    const nextVariant = variants.find(v => v.sizeId === selectedSizeId) ?? variants[0];
+    if (!nextVariant) return;
+    setSelectedColorId(nextVariant.colorId);
+    setSelectedSizeId(nextVariant.sizeId);
+    setSelectedImageId(null);
+  };
 
   return (
     <>
       <Header />
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 main-content">
-
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 main-content" style={{ paddingBottom: 0 }}>
 
         {/* ── OUTER 3/5 + 2/5 LAYOUT ── */}
-        <div className="product-page-layout">
+        <div className="product-page-layout" style={{ marginBottom: 0 }}>
 
           {/* LEFT COL – 3/5: gallery + description + reviews */}
           <div className="product-left-col">
 
             {/* Gallery */}
             <div className="gallery-container">
-              <div className="gallery-thumbs">
-                <div className="thumb-item active">
-                  <Image src={product.image} alt="góc chính" width={100} height={130} style={{ objectFit: 'contain' }} />
-                </div>
+              <div className="gallery-thumbs" style={{ width: "clamp(84px, 10vw, 120px)" }}>
+                {galleryImages.map((image, index) => (
+                  <button
+                    key={image.id}
+                    type="button"
+                    className={`thumb-item ${activeImage?.id === image.id ? "active" : ""}`}
+                    aria-label={`Xem ảnh ${index + 1} của ${product.name}`}
+                    aria-pressed={activeImage?.id === image.id}
+                    onClick={() => setSelectedImageId(image.id)}
+                    style={{ padding: 0, background: "transparent", flexShrink: 0 }}
+                  >
+                    <Image src={image.imageUrl} alt={`${product.name} - ảnh ${index + 1}`} width={120} height={160} style={{ objectFit: "contain" }} />
+                  </button>
+                ))}
               </div>
 
-              <div className="gallery-main">
-                <Image
-                  src={product.image}
-                  alt={product.title}
+              <div className="gallery-main" style={{ aspectRatio: "4 / 5", alignSelf: "flex-start", minWidth: 0 }}>
+                {displayImage ? <Image
+                  src={displayImage}
+                  alt={product.name}
                   width={700}
-                  height={933}
-                  style={{ width: "100%", height: "auto", objectFit: "contain" }}
+                  height={875}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
                   priority
-                />
+                /> : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "var(--ink-secondary)" }}>Biến thể chưa có ảnh</div>}
               </div>
             </div>
 
             {/* ── DESCRIPTION ── */}
             <section className="product-description-section">
               <h2>Mô tả</h2>
-              <p className="desc-subtitle">Mã sản phẩm: {product.id}</p>
+              <p className="desc-subtitle">Mã sản phẩm: {selectedVariant ? selectedVariant.sku : product.id}</p>
 
               <div className="desc-accordions">
                 <ProductAccordion title="Điểm nổi bật" defaultOpen={true}>
-                  <p>{product.description}</p>
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{product.description}</p>
                 </ProductAccordion>
                 <ProductAccordion title="Chi Tiết">
                   <p>- Có túi kangaroo phía trước.</p>
@@ -139,82 +203,99 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </section>
 
             {/* ── REVIEWS – vertical list ── */}
-            <section id="reviews" className="reviews-section">
+            {hasReviews && <section id="reviews" className="reviews-section">
               <div className="reviews-section-header">
                 <div>
                   <p className="subtext">Phản hồi thực tế</p>
                   <h2>Đánh giá từ khách hàng</h2>
                 </div>
                 <div className="reviews-rating-summary">
-                  <div className="rating-num">{product.rating?.rate || "5.0"}</div>
-                  <div className="rating-stars">★★★★★</div>
-                  <div className="rating-count">{product.rating?.count || "0"} đánh giá</div>
+                  <div className="rating-num">{product.averageRating.toFixed(1)}</div>
+                  <div className="rating-stars">{ratingStars(product.averageRating)}</div>
+                  <div className="rating-count">{product.reviewsCount} đánh giá</div>
                 </div>
               </div>
 
               <div className="reviews-list">
-                {[
-                  { name: "Mai Anh", rating: 5, date: "12/09/2026", size: "M", text: "Form váy rất đẹp, vải mát và màu giống hình chụp. Mặc đi làm ai cũng khen phong cách thanh lịch, rất hài lòng với Zella!" },
-                  { name: "Thu Hà", rating: 5, date: "08/09/2026", size: "S", text: "Đóng gói rất chỉn chu và thơm mùi hoa cỏ nhẹ nhàng. Mình cao 1m60 nặng 52kg chọn size M vừa vặn y như may đo." },
-                  { name: "Ngọc Linh", rating: 4, date: "05/09/2026", size: "L", text: "Thiết kế tối giản nhưng đường may rất sắc nét. Mặc đi dạo phố hay du lịch chụp ảnh rất thơ và thanh thoát." },
-                ].map((r) => (
-                  <div key={r.name} className="review-item">
+                {reviews.map((r) => (
+                  <div key={r.id} className="review-item">
                     <div className="review-header">
-                      <div className="review-avatar">{r.name.charAt(0)}</div>
+                      <div className="review-avatar">{r.customerName.charAt(0)}</div>
                       <div>
-                        <div className="review-name">{r.name}</div>
-                        <div className="review-meta">{r.date} · Size {r.size}</div>
+                        <div className="review-name">{r.customerName}</div>
+                        <div className="review-meta">{[
+                          r.createdAt ? new Date(r.createdAt).toLocaleDateString("vi-VN") : null,
+                          r.sizeName ? `Size ${r.sizeName}` : null,
+                          r.colorName,
+                        ].filter(Boolean).join(" · ")}</div>
                       </div>
                       <div className="review-stars">
-                        {"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}
+                        {ratingStars(r.rating)}
                       </div>
                     </div>
-                    <p className="review-text">{r.text}</p>
+                    {r.comment && <p className="review-text">{r.comment}</p>}
+                    {r.adminReply && <div className="review-text" style={{ marginTop: 12 }}>
+                      <strong>Phản hồi từ ZELLA</strong>
+                      <p>{r.adminReply}</p>
+                    </div>}
                   </div>
                 ))}
               </div>
-            </section>
+            </section>}
           </div>
 
           {/* RIGHT COL – 2/5: sticky info panel */}
           <div className="product-right-col">
             <div className="detail-info detail-info-sticky">
-              <h1 className="detail-title">{product.title}</h1>
+              <h1 className="detail-title">{product.name}</h1>
 
               {/* Color */}
               <div className="detail-section">
                 <div className="detail-section-label">
-                  Màu sắc: <span>{colors[selectedColor].name}</span>
+                  Màu sắc: <span>{selectedColorObj?.name}</span>
                 </div>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  {colors.map((c, idx) => (
-                    <button
-                      key={idx}
-                      className={`color-swatch ${selectedColor === idx ? "active" : ""}`}
-                      style={{ background: c.hex }}
-                      title={c.name}
-                      onClick={() => setSelectedColor(idx)}
-                    ></button>
-                  ))}
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  {product.colors?.map((c) => {
+                    const disabled = !product.variants?.some(v => v.colorId === c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        disabled={disabled}
+                        aria-pressed={selectedColorId === c.id}
+                        className={`color-swatch ${selectedColorId === c.id ? "active" : ""}`}
+                        style={{ background: c.hexCode, opacity: disabled ? 0.3 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
+                        title={disabled ? `${c.name}: không có biến thể` : c.name}
+                        onClick={() => selectColor(c.id)}
+                      ></button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Size */}
               <div className="detail-section">
                 <div className="detail-section-label">
-                  Kích cỡ: <span>Nam {selectedSize}</span>
+                  Kích cỡ: <span>{selectedSizeObj?.name}</span>
                 </div>
-                <div className="size-btn-group">
-                  {["S", "M", "L", "XL"].map((sz) => (
-                    <button
-                      key={sz}
-                      className={`size-btn ${selectedSize === sz ? "active" : ""}`}
-                      type="button"
-                      onClick={() => setSelectedSize(sz)}
-                    >
-                      {sz}
-                    </button>
-                  ))}
+                <div className="size-btn-group" style={{ flexWrap: "wrap" }}>
+                  {product.sizes?.map((sz) => {
+                    const disabled = !colorVariants.some(v => v.sizeId === sz.id);
+                    return (
+                      <button
+                        key={sz.id}
+                        className={`size-btn ${selectedSizeId === sz.id ? "active" : ""}`}
+                        type="button"
+                        disabled={disabled}
+                        aria-pressed={selectedSizeId === sz.id}
+                        title={disabled ? `${sz.name}: không có cho màu đang chọn` : sz.name}
+                        style={{ opacity: disabled ? 0.3 : 1, cursor: disabled ? "not-allowed" : "pointer", textDecoration: disabled ? "line-through" : "none" }}
+                        onClick={() => { if (!disabled) { setSelectedSizeId(sz.id); setSelectedImageId(null); } }}
+                      >
+                        {sz.name}
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="size-guide-link">
                   <button type="button" onClick={() => setShowSizeGuide(true)} className="size-guide-btn">
@@ -227,11 +308,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               {/* Price + Rating */}
               <div className="detail-price-row">
                 <div className="detail-price">{formattedPrice}</div>
-                <div className="detail-rating-inline">
-                  <span style={{ color: "#e8a000", letterSpacing: "2px" }}>★★★★★</span>
-                  <span style={{ fontWeight: 600 }}>{product.rating?.rate || "5.0"}</span>
-                  <Link href="#reviews" style={{ color: "var(--ink-secondary)", textDecoration: "none" }}>({product.rating?.count || "0"})</Link>
-                </div>
+                {hasReviews && <div className="detail-rating-inline">
+                  <span style={{ color: "#e8a000", letterSpacing: "2px" }}>{ratingStars(product.averageRating)}</span>
+                  <span style={{ fontWeight: 600 }}>{product.averageRating.toFixed(1)}</span>
+                  <Link href="#reviews" style={{ color: "var(--ink-secondary)", textDecoration: "none" }}>({product.reviewsCount})</Link>
+                </div>}
               </div>
 
               {/* Cart */}
@@ -241,32 +322,24 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   <input type="text" defaultValue="1" readOnly className="qty-input" />
                   <button type="button" className="qty-btn" style={{ color: "var(--ink-primary)" }}>+</button>
                 </div>
-                <button type="button" onClick={() => setShowCartPopup(true)} className="add-to-cart-btn">
+                <button type="button" disabled={!canAddToCart} onClick={() => { if (canAddToCart) setShowCartPopup(true); }} className="add-to-cart-btn"
+                  style={{ opacity: canAddToCart ? 1 : 0.4, cursor: canAddToCart ? "pointer" : "not-allowed" }}>
                   THÊM VÀO GIỎ HÀNG
                 </button>
               </div>
 
-              <div className="detail-stock-note">Còn hàng</div>
+              <div className="detail-stock-note">
+                {selectedVariant && selectedVariant.stockQuantity > 0
+                  ? `Còn hàng (${selectedVariant.stockQuantity})`
+                  : "Hết hàng"}
+              </div>
             </div>
           </div>
         </div>{/* end product-page-layout */}
       </main>
 
       {/* ── SIMILAR PRODUCTS ── */}
-      <div className="product-related-rails" style={{ marginTop: 64 }}>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="slider-section-title" style={{ marginBottom: 12, fontSize: "1.5rem" }}>Sản phẩm tương tự</h2>
-        </div>
-        <ProductRail
-          products={[
-            { id: "1", name: "Áo Thun Kẻ Ngang", price: "299.000₫", image: "/assets/images/v7_1909.png", badge: "Hàng bán chạy", rating: 4.8, reviewsCount: 24 },
-            { id: "2", name: "Áo Thun Màu Vàng", price: "299.000₫", image: "/assets/images/v7_1916.png", badge: "Hàng bán chạy", rating: 4.9, reviewsCount: 128 },
-            { id: "3", name: "Áo Thun Kẻ Ngang Trắng Xanh", price: "299.000₫", image: "/assets/images/v7_1923.png", rating: 4.8, reviewsCount: 45 },
-            { id: "4", name: "Áo Thun Cổ Cảm Hứng Đi Phượt", price: "299.000₫", image: "/assets/images/v7_1930.png", rating: 4.7, reviewsCount: 30 },
-            { id: "5", name: "Áo Thun Basic Trắng", price: "249.000₫", image: "/assets/images/v7_1909.png", rating: 4.6, reviewsCount: 88 },
-          ]}
-        />
-      </div>
+      <ProductSimilar key={product.id} productId={product.id} />
 
       {/* ── FREQUENTLY BOUGHT TOGETHER ── */}
       <div className="product-related-rails" style={{ marginTop: 64, marginBottom: 80 }}>
@@ -298,7 +371,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               &times;
             </button>
             <Image
-              src="/assets/images/v7_3803.png"
+              src={product.sizeGuideUrl || "/assets/images/v7_3803.png"}
               alt="Bảng Kích Cỡ"
               width={600}
               height={800}
@@ -329,13 +402,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             {/* Added Product Info */}
             <div style={{ borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea", padding: "32px 0", display: "flex", gap: "32px", marginBottom: "40px" }}>
               <div style={{ width: "160px", flexShrink: 0 }}>
-                <Image src={product.image} alt={product.title} width={300} height={400} style={{ width: "100%", height: "auto", objectFit: "contain", borderRadius: "8px" }} />
+                {displayImage && <Image src={displayImage} alt={product.name} width={300} height={400} style={{ width: "100%", height: "auto", objectFit: "contain", borderRadius: "8px" }} />}
               </div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <h3 style={{ fontSize: "1.2rem", fontWeight: 400, marginBottom: "12px", letterSpacing: "0.5px" }}>{product.title}</h3>
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 400, marginBottom: "12px", letterSpacing: "0.5px" }}>{product.name}</h3>
                 <div style={{ fontSize: "0.95rem", color: "#555", fontWeight: 300, display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <p><span style={{ color: "#999", display: "inline-block", width: "80px" }}>Màu sắc:</span> {colors[selectedColor].name}</p>
-                  <p><span style={{ color: "#999", display: "inline-block", width: "80px" }}>Kích cỡ:</span> Nam {selectedSize}</p>
+                  <p><span style={{ color: "#999", display: "inline-block", width: "80px" }}>Màu sắc:</span> {selectedColorObj?.name}</p>
+                  <p><span style={{ color: "#999", display: "inline-block", width: "80px" }}>Kích cỡ:</span> {selectedSizeObj?.name}</p>
                   <p><span style={{ color: "#999", display: "inline-block", width: "80px" }}>Số lượng:</span> 1</p>
                 </div>
                 <p style={{ fontSize: "1.2rem", fontWeight: 500, marginTop: "24px" }}>{formattedPrice}</p>
