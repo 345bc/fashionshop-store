@@ -16,18 +16,21 @@ class AttributeProvider extends ChangeNotifier {
 
   bool get loading => _loading;
   String? get error => _error;
-  List<Map<String, dynamic>> get items => _items.where((item) {
-    final term = _query.trim().toLowerCase();
-    return term.isEmpty ||
-        item.values.any(
-          (value) => value?.toString().toLowerCase().contains(term) == true,
-        );
-  }).toList();
+  int currentPage = 0, totalElements = 0;
+  final int pageSize = 15;
+  int _requestId = 0;
+  List<Map<String, dynamic>> get items => _items;
 
   void search(String query) {
     if (_disposed) return;
     _query = query;
-    notifyListeners();
+    currentPage = 0;
+    load();
+  }
+
+  void setPage(int page) {
+    currentPage = page;
+    load();
   }
 
   Future<void> load() async {
@@ -35,13 +38,41 @@ class AttributeProvider extends ChangeNotifier {
     _loading = true;
     _error = null;
     notifyListeners();
+    final requestId = ++_requestId;
     try {
-      final loaded = await _repository.getAll(kind);
-      if (!_disposed) _items = loaded;
+      if (kind == AttributeKind.size) {
+        final loaded = (await _repository.getAll(kind) as List)
+            .cast<Map<String, dynamic>>();
+        if (_disposed || requestId != _requestId) return;
+        final term = _query.trim().toLowerCase();
+        _items = loaded
+            .where(
+              (item) => item.values.any(
+                (v) => v?.toString().toLowerCase().contains(term) ?? false,
+              ),
+            )
+            .toList();
+        totalElements = _items.length;
+      } else {
+        final data = await _repository.getAll(
+          kind,
+          page: currentPage,
+          size: pageSize,
+          query: _query,
+        );
+        if (_disposed || requestId != _requestId) return;
+        _items = (data['content'] as List).cast<Map<String, dynamic>>();
+        totalElements = (data['totalElements'] as num).toInt();
+        final last = totalElements == 0 ? 0 : (totalElements - 1) ~/ pageSize;
+        if (currentPage > last) {
+          currentPage = last;
+          await load();
+        }
+      }
     } catch (error) {
-      if (!_disposed) _error = error.toString();
+      if (!_disposed && requestId == _requestId) _error = error.toString();
     } finally {
-      if (!_disposed) {
+      if (!_disposed && requestId == _requestId) {
         _loading = false;
         notifyListeners();
       }

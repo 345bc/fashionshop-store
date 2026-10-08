@@ -7,6 +7,18 @@ import '../../../../core/network/api_endpoints.dart';
 class SizeGuideRepository {
   final ApiClient _apiClient = ApiClient();
 
+  Future<List<Map<String, dynamic>>> getOptions() async {
+    final items = <Map<String, dynamic>>[];
+    var page = 0;
+    while (true) {
+      final data = await getAll(page: page, size: 100) as Map<String, dynamic>;
+      items.addAll((data['content'] as List).cast<Map<String, dynamic>>());
+      page++;
+      if (page >= (data['totalPages'] as num).toInt()) break;
+    }
+    return items;
+  }
+
   Future<dynamic> getAll({
     int page = 0,
     int size = 15,
@@ -49,7 +61,10 @@ class SizeGuideRepository {
 
   Future<Map<String, dynamic>> create(Map<String, dynamic> data) async {
     try {
-      final response = await _apiClient.post(ApiEndpoints.sizeGuides, data: data);
+      final response = await _apiClient.post(
+        ApiEndpoints.sizeGuides,
+        data: data,
+      );
       if (response.statusCode == 201 || response.statusCode == 200) {
         return response.data['data'];
       }

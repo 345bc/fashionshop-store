@@ -8,11 +8,18 @@ import 'attribute_kind.dart';
 class AttributeRepository {
   final ApiClient _api = ApiClient();
 
-  Future<List<Map<String, dynamic>>> getAll(AttributeKind kind) async {
+  Future<dynamic> getAll(
+    AttributeKind kind, {
+    int page = 0,
+    int size = 15,
+    String? query,
+  }) async {
     try {
-      final response = await _api.get(kind.path);
-      return (response.data['data'] as List<dynamic>)
-          .cast<Map<String, dynamic>>();
+      final response = await _api.get(
+        kind.path,
+        queryParameters: {'page': page, 'size': size, 'q': ?query},
+      );
+      return response.data['data'];
     } on DioException catch (error) {
       _throwMessage(error);
     }

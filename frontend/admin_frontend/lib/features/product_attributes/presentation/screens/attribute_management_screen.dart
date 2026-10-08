@@ -1,3 +1,5 @@
+import '../../../../widgets/common/pagination_footer.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -224,13 +226,13 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
               ),
               child: Consumer<AttributeProvider>(
                 builder: (context, provider, _) {
-                  if (provider.loading && provider.items.isEmpty) {
+                  if (provider.loading) {
                     return const Padding(
                       padding: EdgeInsets.all(48),
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  if (provider.error != null && provider.items.isEmpty) {
+                  if (provider.error != null) {
                     return Padding(
                       padding: const EdgeInsets.all(48),
                       child: Center(
@@ -429,6 +431,17 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
                               ),
                             );
                           },
+                        ),
+                      if (widget.kind != AttributeKind.size)
+                        PaginationFooter(
+                          currentPage: provider.currentPage,
+                          totalPages: provider.totalElements == 0
+                              ? 1
+                              : (provider.totalElements / provider.pageSize)
+                                    .ceil(),
+                          totalElements: provider.totalElements,
+                          pageSize: provider.pageSize,
+                          onPageChanged: provider.setPage,
                         ),
                     ],
                   );

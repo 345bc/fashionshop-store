@@ -1,5 +1,10 @@
 package com.huit.zella.sizeguide;
 
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
+
+import com.huit.zella.common.api.PageResponse;
+
 import com.huit.zella.common.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -11,8 +16,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/sizeguide")
 @RequiredArgsConstructor
@@ -22,8 +25,17 @@ public class SizeGuideController {
     SizeGuideImageUploadService imageUploadService;
 
     @GetMapping
-    public ApiResponse<List<SizeGuideResponse>> list() {
-        return ApiResponse.success(sizeGuideService.list());
+    public ApiResponse<PageResponse<SizeGuideResponse>> list(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        int safeSize = Math.max(1, Math.min(size, 100));
+        return ApiResponse.success(PageResponse.from(sizeGuideService.list(
+                q, active,
+                PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "id"))
+        )));
     }
 
     @GetMapping("/{id}")
