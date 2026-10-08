@@ -121,7 +121,6 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Vui lòng nhập tên' : null,
               ),
-              _field('code', 'Mã nhà cung cấp', maxLength: 50),
               _field('contactPerson', 'Người liên hệ'),
               _field(
                 'contactEmail',

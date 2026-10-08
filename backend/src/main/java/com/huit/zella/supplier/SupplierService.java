@@ -1,16 +1,18 @@
 package com.huit.zella.supplier;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import com.huit.zella.common.GenerateCode;
 import com.huit.zella.common.exception.BusinessException;
 import com.huit.zella.product.ProductRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -21,12 +23,10 @@ public class SupplierService {
     ProductRepository productRepository;
 
     @Transactional(readOnly = true)
-    public List<SupplierResponse> list(String query) {
-        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        return supplierRepository.findAll(Sort.by("name", "id")).stream()
-                .filter(s -> q.isEmpty() || contains(s.getName(), q) || contains(s.getCode(), q)
-                        || contains(s.getContactEmail(), q) || contains(s.getPhone(), q))
-                .map(SupplierResponse::from).toList();
+    public Page<SupplierResponse> list(String query, Boolean active, Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        Page<Supplier> page = supplierRepository.search(q, active, pageable);
+        return page.map(SupplierResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +63,7 @@ public class SupplierService {
     }
 
     private void apply(Supplier supplier, CreateSupplierRequest request) {
-        String code = clean(request.code());
+        String code = GenerateCode.generate("NCC");
         if (code != null && (supplier.getId() == null
                 ? supplierRepository.existsByCodeIgnoreCase(code)
                 : supplierRepository.existsByCodeIgnoreCaseAndIdNot(code, supplier.getId()))) {
@@ -80,10 +80,6 @@ public class SupplierService {
 
     private String clean(String value) {
         return value == null || value.trim().isEmpty() ? null : value.trim();
-    }
-
-    private boolean contains(String value, String query) {
-        return value != null && value.toLowerCase(Locale.ROOT).contains(query);
     }
 
 }

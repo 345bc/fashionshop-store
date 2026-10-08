@@ -8,6 +8,9 @@ class SuppliersProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   List<SupplierResponseModel> _items = [];
+  List<SupplierResponseModel> _options = [];
+  String? optionsError;
+  List<SupplierResponseModel> get options => _options;
   String _query = '';
   String _status = 'all';
   int _page = 0;
@@ -19,70 +22,85 @@ class SuppliersProvider extends ChangeNotifier {
   String get currentQuery => _query;
   int get currentPage => _page;
   int get pageSize => _pageSize;
-  List<SupplierResponseModel> get _filtered => _items.where((item) {
-    final q = _query.trim().toLowerCase();
-    final matchesQuery =
-        q.isEmpty ||
-        [
-          item.name,
-          item.code,
-          item.phone,
-          item.contactEmail,
-          item.contactPerson,
-        ].any((v) => v?.toLowerCase().contains(q) ?? false);
-    return matchesQuery &&
-        (_status == 'all' || item.isActive == (_status == 'active'));
-  }).toList();
-  int get totalElements => _filtered.length;
-  List<SupplierResponseModel> get pageItems {
-    final data = _filtered;
-    final start = _page * _pageSize;
-    if (start >= data.length) return [];
-    return data.sublist(start, (start + _pageSize).clamp(0, data.length));
-  }
+  int _totalElements = 0;
+  int _requestId = 0;
+  int get totalElements => _totalElements;
+  List<SupplierResponseModel> get pageItems => _items;
 
   void setQuery(String query) {
     _query = query;
     _page = 0;
-    notifyListeners();
+    loadItems();
   }
 
   void setStatus(String status) {
     _status = status;
     _page = 0;
-    notifyListeners();
+    loadItems();
   }
 
   void setPage(int page) {
     _page = page;
-    notifyListeners();
+    loadItems();
   }
 
   Future<void> loadItems() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
+    final requestId = ++_requestId;
     try {
-      _items = (await _repository.getAll())
+      final data = await _repository.getAll(
+        page: _page,
+        size: _pageSize,
+        query: _query,
+        status: _status,
+      );
+      if (requestId != _requestId) return;
+      _items = (data['content'] as List)
           .map(
-            (json) =>
-                SupplierResponseModel.fromJson(json as Map<String, dynamic>),
+            (json) => SupplierResponseModel.fromJson(
+              Map<String, dynamic>.from(json as Map),
+            ),
           )
           .toList();
-      final lastPage = totalElements == 0
+      _totalElements = (data['totalElements'] as num).toInt();
+      final lastPage = _totalElements == 0
           ? 0
-          : (totalElements - 1) ~/ _pageSize;
-      _page = _page.clamp(0, lastPage);
+          : (_totalElements - 1) ~/ _pageSize;
+      if (_page > lastPage) {
+        _page = lastPage;
+        await loadItems();
+      }
     } catch (e) {
+      if (requestId != _requestId) return;
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (requestId == _requestId) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<SupplierResponseModel> loadDetail(int id) async =>
       SupplierResponseModel.fromJson(await _repository.getById(id));
+
+  Future<void> loadOptions() async {
+    optionsError = null;
+    try {
+      _options = (await _repository.getOptions())
+          .map(
+            (json) =>
+                SupplierResponseModel.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    } catch (error) {
+      optionsError = error.toString();
+    }
+    notifyListeners();
+  }
+
   Future<void> createItem(Map<String, dynamic> data) async {
     await _repository.create(data);
     await loadItems();
