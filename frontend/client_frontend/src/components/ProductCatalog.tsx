@@ -1,27 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./skeleton-ui/ProductCardSkeleton";
 import FilterSidebar from "./FilterSidebar";
-import { getProductCards } from "../service/productService";
+import { getProductCards, getNewArrivals } from "../service/productService";
 import type { ApiResponse, PageResponse } from "../type/api";
-
-interface ProductCardData {
-  id: number;
-  name: string;
-  slug: string;
-  basePrice: number;
-  imageUrl: string | null;
-  badge?: string;
-  rating?: number;
-  colors: {
-    id: number;
-    name: string;
-    hexCode: string;
-    imageUrl: string | null;
-  }[];
-}
+import type { ProductCardData } from "../type/product";
 
 type ProductCardsResponse =
   ApiResponse<PageResponse<ProductCardData>>;
@@ -40,40 +26,74 @@ export default function ProductCatalog({
   initialQuery = "",
   initialCategory = "",
   initialCategoryName = "",
+  newArrivalsOnly = false,
 }: {
   initialQuery?: string;
   initialCategory?: string;
   initialCategoryName?: string;
+  newArrivalsOnly?: boolean;
 }) {
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState<FilterState>({ types: [], sizes: [], price: "all" });
-  const [sort, setSort] = useState("featured");
-  const [sortOpen, setSortOpen] = useState(false);
-  const [selectedColorIds, setSelectedColorIds] = useState<number[]>([]);
-  const selectedFilterCount = selectedColorIds.length
-    + filters.types.length
-    + filters.sizes.length
-    + (filters.price !== "all" ? 1 : 0);
+  // 1. Trạng thái khởi tạo / Truy vấn
+  const [query, setQuery] = useState(initialQuery.trim());
+  const [categoryId, setCategoryId] = useState<number | null>(
+    /^[1-9]\d*$/.test(initialCategory) ? Number(initialCategory) : null
+  );
 
-
-
+  // 2. Trạng thái dữ liệu
   const [products, setProducts] = useState<ProductCardData[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
+
+  // 3. Trạng thái phân trang
   const [page, setPage] = useState(0);
   const currentPage = page + 1;
   const [totalPages, setTotalPages] = useState(0);
+
+  // 4. Trạng thái bộ lọc & sắp xếp
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sort, setSort] = useState("featured");
+  const [filters, setFilters] = useState<FilterState>({ types: [], sizes: [], price: "all" });
+  const [selectedColorIds, setSelectedColorIds] = useState<number[]>([]);
+  const [selectedSizeIds, setSelectedSizeIds] = useState<number[]>([]);
+
+  const selectedFilterCount =
+    selectedColorIds.length +
+    selectedSizeIds.length +
+    filters.types.length +
+    (filters.price !== "all" ? 1 : 0);
+
+  // 5. Trạng thái tải & lỗi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [connectionLost, setConnectionLost] = useState(false);
   const [productRetry, setProductRetry] = useState(0);
   const productsLoading = loading || connectionLost;
 
-  const [query, setQuery] = useState(initialQuery.trim());
-  const [categoryId, setCategoryId] = useState<number | null>(
-    /^[1-9]\d*$/.test(initialCategory)
-      ? Number(initialCategory)
-      : null
-  );
+  //Lọc giá
+  let minPrice: number | null = null;
+  let maxPrice: number | null = null;
+
+  if (filters.price === "under199") {
+    maxPrice = 198999;
+  } else if (filters.price === "199to299") {
+    minPrice = 199000;
+    maxPrice = 299000;
+  } else if (filters.price === "299to399") {
+    minPrice = 299000;
+    maxPrice = 399000;
+  } else if (filters.price === "399to499") {
+    minPrice = 399000;
+    maxPrice = 499000;
+  } else if (filters.price === "499to799") {
+    minPrice = 499000;
+    maxPrice = 799000;
+  } else if (filters.price === "799to999") {
+    minPrice = 799000;
+    maxPrice = 999000;
+  } else if (filters.price === "over999") {
+    minPrice = 999000;
+  }
+
 
   useEffect(() => {
     const controller = new AbortController();
@@ -84,15 +104,20 @@ export default function ProductCatalog({
       setError("");
 
       try {
-        const response: ProductCardsResponse = await getProductCards({
-          q: query,
-          categoryId,
-          page,
-          size: 12,
-          sort,
-          colorIds: selectedColorIds,
-          signal: controller.signal,
-        });
+        const response: ProductCardsResponse = newArrivalsOnly
+          ? await getNewArrivals({ page, size: 12, signal: controller.signal })
+          : await getProductCards({
+            q: query,
+            categoryId,
+            page,
+            size: 12,
+            sort,
+            colorIds: selectedColorIds,
+            sizeIds: selectedSizeIds,
+            minPrice,
+            maxPrice,
+            signal: controller.signal,
+          });
 
         if (controller.signal.aborted) return;
 
@@ -124,7 +149,7 @@ export default function ProductCatalog({
       controller.abort();
       clearTimeout(retryTimer);
     };
-  }, [query, categoryId, page, sort, selectedColorIds, productRetry]);
+  }, [query, categoryId, page, sort, selectedColorIds, selectedSizeIds, minPrice, maxPrice, productRetry, newArrivalsOnly]);
 
   function toggleColor(colorId: number) {
     setSelectedColorIds((previous) =>
@@ -136,9 +161,20 @@ export default function ProductCatalog({
     setPage(0);
   }
 
+  function toggleSize(sizeId: number) {
+    setSelectedSizeIds((previous) =>
+      previous.includes(sizeId)
+        ? previous.filter((id) => id !== sizeId)
+        : [...previous, sizeId]
+    );
+
+    setPage(0);
+  }
+
   function clearFilters() {
     setFilters({ types: [], sizes: [], price: "all" });
     setSelectedColorIds([]);
+    setSelectedSizeIds([]);
     setPage(0);
   }
 
@@ -168,18 +204,18 @@ export default function ProductCatalog({
       <section className="catalog-hero">
         <div>
           <h1>
-            {query
+            {newArrivalsOnly ? "Sản phẩm mới" : query
               ? `Kết quả tìm kiếm cho “${query}”`
               : categoryId !== null
                 ? `Kết quả tìm kiếm cho ${initialCategoryName || "danh mục đã chọn"}`
                 : "Tất cả sản phẩm"}
           </h1>
-          <p>Những thiết kế dễ mặc, bảng màu trung tính và phom dáng hiện đại cho tủ đồ mỗi ngày.</p>
+          <p>{newArrivalsOnly ? "Các thiết kế mới ra mắt trong 7 ngày gần nhất, sắp xếp mới nhất trước." : "Những thiết kế dễ mặc, bảng màu trung tính và phom dáng hiện đại cho tủ đồ mỗi ngày."}</p>
         </div>
         <div className="catalog-hero-count">{totalProducts}<span>sản phẩm</span></div>
       </section>
 
-      <div className="mb-6 mt-2 flex flex-col justify-between gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-center">
+      {!newArrivalsOnly && <div className="mb-6 mt-2 flex flex-col justify-between gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
           <button
             className="flex h-9 items-center justify-center gap-2 rounded-full border border-black/20 bg-white px-5 text-[13px] font-semibold tracking-wide text-black transition-all hover:border-black hover:bg-black/5 active:scale-[0.98]"
@@ -241,7 +277,7 @@ export default function ProductCatalog({
             )}
           </div>
         </div>
-      </div>
+      </div>}
 
       {productsLoading && products.length === 0 ? (
         <ProductCardSkeleton />
@@ -260,15 +296,17 @@ export default function ProductCatalog({
                 <ProductCard
                   key={product.id}
                   id={String(product.id)}
+                  slug={product.slug}
                   name={product.name}
                   price={formatPrice(product.basePrice)}
                   image={product.imageUrl ?? ""}
                   colors={product.colors}
+                  badge={product.badge || undefined}
                 />
               ))}
             </div>
 
-            {totalPages > 1 && (
+            {totalPages > 1  && (
               <div className="mt-14 flex items-center justify-center gap-6">
                 <button
                   disabled={currentPage === 1}
@@ -341,13 +379,13 @@ export default function ProductCatalog({
         </div>
       ) : (
         <div className="empty-catalog">
-          <h2>Chưa có sản phẩm phù hợp</h2>
-          <p>Hãy thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác.</p>
-          <button onClick={() => { clearFilters(); setQuery(""); setCategoryId(null); }}>Xem tất cả sản phẩm</button>
+          <h2>{newArrivalsOnly ? "Chưa có sản phẩm mới" : "Chưa có sản phẩm phù hợp"}</h2>
+          <p>{newArrivalsOnly ? "Hiện chưa có sản phẩm được tạo trong 7 ngày gần nhất." : "Hãy thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác."}</p>
+          {newArrivalsOnly ? <Link href="/products">Khám phá sản phẩm</Link> : <button onClick={() => { clearFilters(); setQuery(""); setCategoryId(null); }}>Xem tất cả sản phẩm</button>}
         </div>
       )}
 
-      <FilterSidebar
+      {!newArrivalsOnly && <FilterSidebar
         isOpen={filterOpen}
         onClose={() => setFilterOpen(false)}
         value={filters}
@@ -355,9 +393,11 @@ export default function ProductCatalog({
         resultCount={totalProducts}
         resultsLoading={productsLoading}
         selectedColorIds={selectedColorIds}
+        selectedSizeIds={selectedSizeIds}
         onToggleColor={toggleColor}
+        onToggleSize={toggleSize}
         onReset={clearFilters}
-      />
+      />}
     </>
   );
 }

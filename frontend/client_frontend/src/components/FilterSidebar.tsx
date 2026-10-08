@@ -19,22 +19,33 @@ interface FilterSidebarProps {
   resultCount?: number;
   resultsLoading?: boolean;
   selectedColorIds?: number[];
+  selectedSizeIds?: number[];
   onToggleColor?: (id: number) => void;
+  onToggleSize?: (id: number) => void;
   onReset?: () => void;
+}
+
+interface sizeProps {
+  id: number,
+  name: string
 }
 
 
 
-const priceOptions = [
-  ["all", "Tất cả mức giá"],
-  ["under300", "Dưới 300.000₫"],
-  ["300to500", "300.000₫ – 500.000₫"],
-  ["over500", "Trên 500.000₫"],
+const priceOptions: Array<[string, string]> = [
+  ["all", "Tất cả"],
+  ["under199", "Dưới 199.000 VND"],
+  ["199to299", "199.000 VND - 299.000 VND"],
+  ["299to399", "299.000 VND - 399.000 VND"],
+  ["399to499", "399.000 VND - 499.000 VND"],
+  ["499to799", "499.000 VND - 799.000 VND"],
+  ["799to999", "799.000 VND - 999.000 VND"],
+  ["over999", "Trên 999.000 VND"],
 ];
 
 export default function FilterSidebar({
   isOpen, onClose, value, onChange, resultCount = 0, resultsLoading = false,
-  selectedColorIds = [], onToggleColor, onReset,
+  selectedColorIds = [], selectedSizeIds = [], onToggleColor, onToggleSize, onReset,
 }: FilterSidebarProps) {
   const current: FilterState = {
     types: value?.types || [],
@@ -42,12 +53,8 @@ export default function FilterSidebar({
     price: value?.price || "all",
   };
   const emit = (next: FilterState) => onChange?.(next);
-  const toggleArray = (key: "types" | "sizes", item: string) => {
-    const exists = current[key].includes(item);
-    emit({ ...current, [key]: exists ? current[key].filter((x) => x !== item) : [...current[key], item] });
-  };
 
-  const [sizesResponse, setSizesResponse] = useState<ApiResponse<{ id: number; name: string }[]> | null>(null);
+  const [sizesResponse, setSizesResponse] = useState<ApiResponse<sizeProps[]> | null>(null);
   const [colorOptions, setColorOptions] = useState<ColorOption[]>([]);
   const [colorsLoading, setColorsLoading] = useState(true);
   const [colorError, setColorError] = useState("");
@@ -95,11 +102,16 @@ export default function FilterSidebar({
   }, [colorRetry]);
 
   useEffect(() => {
-    let active = true;
-    getSize().then((res) => {
-      if (active) setSizesResponse(res);
-    }).catch(console.error);
-    return () => { active = false; };
+    const fetchSizes = async () => {
+      try {
+        const response = await getSize();
+        setSizesResponse(response);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchSizes();
   }, []);
 
 
@@ -160,8 +172,8 @@ export default function FilterSidebar({
           <section>
             <div className="mb-5 flex items-center justify-between border-b border-black/5 pb-3">
               <span className="text-[14px] font-bold uppercase tracking-wider text-black">Kích cỡ</span>
-              {current.sizes.length > 0 && (
-                <span className="flex size-6 items-center justify-center rounded-full bg-black text-[12px] font-bold text-white">{current.sizes.length}</span>
+              {selectedSizeIds.length > 0 && (
+                <span className="flex size-6 items-center justify-center rounded-full bg-black text-[12px] font-bold text-white">{selectedSizeIds.length}</span>
               )}
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -169,8 +181,8 @@ export default function FilterSidebar({
                 sizesResponse.data.map((sizeItem) => (
                   <button
                     key={sizeItem.id}
-                    onClick={() => toggleArray("sizes", sizeItem.name)}
-                    className={`flex h-10.5 items-center justify-center rounded-xl border text-[14px] font-bold transition-all ${current.sizes.includes(sizeItem.name)
+                    onClick={() => onToggleSize?.(sizeItem.id)}
+                    className={`flex h-10.5 items-center justify-center rounded-xl border text-[14px] font-bold transition-all ${selectedSizeIds.includes(sizeItem.id)
                       ? "border-black bg-black text-white shadow-md shadow-black/20"
                       : "border-black/15 bg-transparent text-black/70 hover:border-black/40 hover:bg-black/5 hover:text-black"
                       }`}
@@ -247,13 +259,13 @@ export default function FilterSidebar({
             <div className="mb-5 flex items-center justify-between border-b border-black/5 pb-3">
               <span className="text-[14px] font-bold uppercase tracking-wider text-black">Giá</span>
             </div>
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-y-4 gap-x-2">
               {priceOptions.map(([id, label]) => (
-                <label key={id} className="group flex cursor-pointer items-center space-x-3.5">
-                  <div className={`flex size-5 items-center justify-center rounded-full border transition-colors ${current.price === id ? "border-black bg-white" : "border-black/20 bg-white group-hover:border-black/50"}`}>
+                <label key={id} className="group flex cursor-pointer items-center space-x-2">
+                  <div className={`flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${current.price === id ? "border-black bg-white" : "border-black/20 bg-white group-hover:border-black/50"}`}>
                     <div className={`size-2.5 rounded-full bg-black transition-transform ${current.price === id ? "scale-100" : "scale-0"}`} />
                   </div>
-                  <span className={`text-[15px] transition-colors ${current.price === id ? "font-semibold text-black" : "font-medium text-black/70 group-hover:text-black"}`}>{label}</span>
+                  <span className={`text-[13px] leading-tight transition-colors ${current.price === id ? "font-semibold text-black" : "font-medium text-black/70 group-hover:text-black"}`}>{label}</span>
                   <input type="radio" className="hidden" name="catalog-price" checked={current.price === id} onChange={() => emit({ ...current, price: id })} />
                 </label>
               ))}
