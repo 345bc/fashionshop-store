@@ -1,116 +1,363 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useEffect } from "react";
 import ProductCard from "./ProductCard";
+import ProductCardSkeleton from "./skeleton-ui/ProductCardSkeleton";
 import FilterSidebar from "./FilterSidebar";
+import { getProductCards } from "../service/productService";
+import type { ApiResponse, PageResponse } from "../type/api";
 
-type Product = {
-  id: string;
+interface ProductCardData {
+  id: number;
   name: string;
-  price: number;
-  image: string;
-  type: string;
-  sizes: string[];
+  slug: string;
+  basePrice: number;
+  imageUrl: string | null;
   badge?: string;
-  rating: number;
-  reviewsCount: number;
-};
+  rating?: number;
+  colors: {
+    id: number;
+    name: string;
+    hexCode: string;
+    imageUrl: string | null;
+  }[];
+}
+
+type ProductCardsResponse =
+  ApiResponse<PageResponse<ProductCardData>>;
 
 type FilterState = { types: string[]; sizes: string[]; price: string };
 
-const products: Product[] = [
-  { id: "1", name: "Áo sơ mi Relaxed Linen", price: 429000, image: "/assets/images/v7_1725.png", type: "Áo", sizes: ["S", "M", "L"], badge: "Mới", rating: 4.9, reviewsCount: 42 },
-  { id: "2", name: "Quần suông Soft Tailoring", price: 549000, image: "/assets/images/v7_1730.png", type: "Quần", sizes: ["S", "M", "L", "XL"], rating: 4.8, reviewsCount: 61 },
-  { id: "3", name: "Váy midi Sage Flow", price: 679000, image: "/assets/images/v7_1916.png", type: "Váy & đầm", sizes: ["XS", "S", "M", "L"], badge: "Best seller", rating: 4.9, reviewsCount: 128 },
-  { id: "4", name: "Set vest Modern Balance", price: 899000, image: "/assets/images/v7_1951.png", type: "Áo khoác", sizes: ["S", "M", "L"], rating: 4.8, reviewsCount: 30 },
-  { id: "5", name: "Đầm satin Sand Drape", price: 729000, image: "/assets/images/v7_1937.png", type: "Váy & đầm", sizes: ["S", "M", "L"], badge: "Limited", rating: 4.7, reviewsCount: 34 },
-  { id: "6", name: "Quần ống rộng Cocoa", price: 489000, image: "/assets/images/v7_1923.png", type: "Quần", sizes: ["S", "M", "L", "XL"], rating: 4.8, reviewsCount: 57 },
-  { id: "7", name: "Áo dệt kim Ivory Air", price: 299000, image: "/assets/images/v7_2123.png", type: "Áo", sizes: ["XS", "S", "M", "L"], rating: 4.6, reviewsCount: 23 },
-  { id: "8", name: "Túi cói Studio Basket", price: 359000, image: "/assets/images/v7_1944.png", type: "Phụ kiện", sizes: ["M"], badge: "Mới", rating: 4.9, reviewsCount: 49 },
-  { id: "9", name: "Váy midi Olive Line", price: 619000, image: "/assets/images/v7_2020.png", type: "Váy & đầm", sizes: ["S", "M", "L"], rating: 4.8, reviewsCount: 75 },
-  { id: "10", name: "Áo dài tay Minimal Knit", price: 329000, image: "/assets/images/v7_1909.png", type: "Áo", sizes: ["S", "M", "L", "XL"], rating: 4.7, reviewsCount: 18 },
-  { id: "11", name: "Chân váy Sage Pleat", price: 459000, image: "/assets/images/v7_2019.png", type: "Váy & đầm", sizes: ["XS", "S", "M", "L"], rating: 4.9, reviewsCount: 66 },
-  { id: "12", name: "Blazer Taupe Structure", price: 799000, image: "/assets/images/v7_1713.png", type: "Áo khoác", sizes: ["S", "M", "L", "XL"], rating: 4.8, reviewsCount: 39 },
-];
-
 const formatPrice = (price: number) => `${price.toLocaleString("vi-VN")}₫`;
 
-function initialTypes(category: string) {
-  if (category.includes("vay")) return ["Váy & đầm"];
-  if (category.includes("quan")) return ["Quần"];
-  if (category.includes("khoac")) return ["Áo khoác"];
-  if (category.includes("phu-kien")) return ["Phụ kiện"];
-  if (category.includes("ao")) return ["Áo"];
-  return [];
-}
+const sortOptions = [
+  { value: "featured", label: "Mới nhất" },
+  { value: "low", label: "Giá thấp đến cao" },
+  { value: "high", label: "Giá cao đến thấp" },
+];
 
-export default function ProductCatalog({ initialQuery = "", initialCategory = "" }: { initialQuery?: string; initialCategory?: string }) {
+export default function ProductCatalog({
+  initialQuery = "",
+  initialCategory = "",
+  initialCategoryName = "",
+}: {
+  initialQuery?: string;
+  initialCategory?: string;
+  initialCategoryName?: string;
+}) {
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState<FilterState>({ types: initialTypes(initialCategory), sizes: [], price: "all" });
+  const [filters, setFilters] = useState<FilterState>({ types: [], sizes: [], price: "all" });
   const [sort, setSort] = useState("featured");
-  const [query, setQuery] = useState(initialQuery.trim());
+  const [sortOpen, setSortOpen] = useState(false);
+  const [selectedColorIds, setSelectedColorIds] = useState<number[]>([]);
+  const selectedFilterCount = selectedColorIds.length
+    + filters.types.length
+    + filters.sizes.length
+    + (filters.price !== "all" ? 1 : 0);
 
-  const filtered = useMemo(() => {
-    const q = query.toLocaleLowerCase("vi");
-    let list = products.filter((product) => {
-      const queryMatch = !q || product.name.toLocaleLowerCase("vi").includes(q) || product.type.toLocaleLowerCase("vi").includes(q);
-      const typeMatch = filters.types.length === 0 || filters.types.includes(product.type);
-      const sizeMatch = filters.sizes.length === 0 || filters.sizes.some((size) => product.sizes.includes(size));
-      const priceMatch = filters.price === "all" ||
-        (filters.price === "under300" && product.price < 300000) ||
-        (filters.price === "300to500" && product.price >= 300000 && product.price <= 500000) ||
-        (filters.price === "over500" && product.price > 500000);
-      return queryMatch && typeMatch && sizeMatch && priceMatch;
-    });
-    if (sort === "low") list = [...list].sort((a, b) => a.price - b.price);
-    if (sort === "high") list = [...list].sort((a, b) => b.price - a.price);
-    if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
-    return list;
-  }, [filters, sort, query]);
+
+
+  const [products, setProducts] = useState<ProductCardData[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [page, setPage] = useState(0);
+  const currentPage = page + 1;
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [connectionLost, setConnectionLost] = useState(false);
+  const [productRetry, setProductRetry] = useState(0);
+  const productsLoading = loading || connectionLost;
+
+  const [query, setQuery] = useState(initialQuery.trim());
+  const [categoryId, setCategoryId] = useState<number | null>(
+    /^[1-9]\d*$/.test(initialCategory)
+      ? Number(initialCategory)
+      : null
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+
+    async function loadProducts() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const response: ProductCardsResponse = await getProductCards({
+          q: query,
+          categoryId,
+          page,
+          size: 12,
+          sort,
+          colorIds: selectedColorIds,
+          signal: controller.signal,
+        });
+
+        if (controller.signal.aborted) return;
+
+        setConnectionLost(false);
+        setTotalProducts(response.data.totalElements);
+
+        setProducts(response.data.content);
+        setTotalPages(response.data.totalPages);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+
+        if (err instanceof TypeError) {
+          setConnectionLost(true);
+          retryTimer = setTimeout(() => setProductRetry((value) => value + 1), 5000);
+        } else {
+          setConnectionLost(false);
+          setError(err instanceof Error ? err.message : "Không tải được sản phẩm");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      controller.abort();
+      clearTimeout(retryTimer);
+    };
+  }, [query, categoryId, page, sort, selectedColorIds, productRetry]);
+
+  function toggleColor(colorId: number) {
+    setSelectedColorIds((previous) =>
+      previous.includes(colorId)
+        ? previous.filter((id) => id !== colorId)
+        : [...previous, colorId]
+    );
+
+    setPage(0);
+  }
+
+  function clearFilters() {
+    setFilters({ types: [], sizes: [], price: "all" });
+    setSelectedColorIds([]);
+    setPage(0);
+  }
+
+  // const filtered = useMemo(() => {
+  //   const q = query.toLocaleLowerCase("vi");
+  //   let list = products.filter((product) => {
+  //     const queryMatch = !q || product.name.toLocaleLowerCase("vi").includes(q) || product.type.toLocaleLowerCase("vi").includes(q);
+  //     const typeMatch = filters.types.length === 0 || filters.types.includes(product.type);
+  //     const sizeMatch = filters.sizes.length === 0 || filters.sizes.some((size) => product.sizes.includes(size));
+  //     const priceMatch = filters.price === "all" ||
+  //       (filters.price === "under300" && product.price < 300000) ||
+  //       (filters.price === "300to500" && product.price >= 300000 && product.price <= 500000) ||
+  //       (filters.price === "over500" && product.price > 500000);
+  //     return queryMatch && typeMatch && sizeMatch && priceMatch;
+  //   });
+  //   if (sort === "low") list = [...list].sort((a, b) => a.price - b.price);
+  //   if (sort === "high") list = [...list].sort((a, b) => b.price - a.price);
+  //   if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
+  //   return list;
+  // }, [filters, sort, query]);
+
+
+
 
   return (
     <>
       <section className="catalog-hero">
         <div>
-          <h1>{query ? `Kết quả cho “${query}”` : "Tất cả sản phẩm"}</h1>
+          <h1>
+            {query
+              ? `Kết quả tìm kiếm cho “${query}”`
+              : categoryId !== null
+                ? `Kết quả tìm kiếm cho ${initialCategoryName || "danh mục đã chọn"}`
+                : "Tất cả sản phẩm"}
+          </h1>
           <p>Những thiết kế dễ mặc, bảng màu trung tính và phom dáng hiện đại cho tủ đồ mỗi ngày.</p>
         </div>
-        <div className="catalog-hero-count">{filtered.length}<span>sản phẩm</span></div>
+        <div className="catalog-hero-count">{totalProducts}<span>sản phẩm</span></div>
       </section>
 
-      <div className="catalog-toolbar">
-        <div className="catalog-toolbar-left">
-          <button className="catalog-filter-btn" onClick={() => setFilterOpen(true)}><span className="material-symbols-outlined" style={{ fontSize: 17 }}>tune</span> Bộ lọc</button>
-          {(filters.types.length > 0 || filters.sizes.length > 0 || filters.price !== "all") && (
-            <button className="catalog-clear-inline" onClick={() => setFilters({ types: [], sizes: [], price: "all" })}>Xóa bộ lọc</button>
+      <div className="mb-6 mt-2 flex flex-col justify-between gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-4">
+          <button
+            className="flex h-9 items-center justify-center gap-2 rounded-full border border-black/20 bg-white px-5 text-[13px] font-semibold tracking-wide text-black transition-all hover:border-black hover:bg-black/5 active:scale-[0.98]"
+            onClick={() => setFilterOpen(true)}
+            aria-label={`Mở bộ lọc, ${selectedFilterCount} lựa chọn đang được chọn`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16, strokeWidth: 2 }}>tune</span>
+            BỘ LỌC
+            {selectedFilterCount > 0 && (
+              <span className="flex size-5 items-center justify-center rounded-full bg-black text-[11px] font-bold text-white">
+                {selectedFilterCount}
+              </span>
+            )}
+          </button>
+
+          {selectedFilterCount > 0 && (
+            <button
+              className="text-[13px] font-medium text-black/40 underline-offset-4 transition-colors hover:text-black hover:underline"
+              onClick={clearFilters}
+            >
+              Xóa bộ lọc
+            </button>
           )}
         </div>
-        <label className="catalog-sort">
-          <span>Sắp xếp</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="featured">Nổi bật</option>
-            <option value="low">Giá thấp đến cao</option>
-            <option value="high">Giá cao đến thấp</option>
-            <option value="rating">Đánh giá cao nhất</option>
-          </select>
-        </label>
+
+        <div className="flex items-center gap-2">
+          <span className="text-[13px] font-medium text-black/50">Sắp xếp theo</span>
+          <div className="relative">
+            <button
+              onClick={() => setSortOpen(!sortOpen)}
+              className="flex w-36.25 items-center justify-between gap-1 bg-transparent text-[14px] font-bold text-black outline-none transition-colors hover:text-black/70"
+            >
+              <span className="flex-1 truncate text-left">
+                {sortOptions.find((opt) => opt.value === sort)?.label}
+              </span>
+              <span className={`material-symbols-outlined shrink-0 text-[18px] transition-transform duration-300 ${sortOpen ? "rotate-180" : ""}`}>expand_more</span>
+            </button>
+
+            {sortOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setSortOpen(false)} />
+                <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl bg-white py-2 shadow-2xl ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2">
+                  {sortOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setSort(opt.value);
+                        setPage(0);
+                        setSortOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-[14px] transition-colors hover:bg-black/5 ${sort === opt.value ? "font-bold text-black" : "font-medium text-black/60 hover:text-black"}`}
+                    >
+                      {opt.label}
+                      {sort === opt.value && <span className="material-symbols-outlined text-[16px]">check</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {filtered.length > 0 ? (
-        <div className="modern-products-grid">
-          {filtered.map((product) => (
-            <ProductCard key={product.id} {...product} price={formatPrice(product.price)} />
-          ))}
+      {productsLoading && products.length === 0 ? (
+        <ProductCardSkeleton />
+      ) : error ? (
+        <p role="alert">{error}</p>
+      ) : products.length > 0 ? (
+        <div className="grid" aria-busy={productsLoading}>
+          {productsLoading && (
+            <div className="col-start-1 row-start-1">
+              <ProductCardSkeleton />
+            </div>
+          )}
+          <div className={`col-start-1 row-start-1 ${productsLoading ? "invisible" : ""}`} aria-hidden={productsLoading}>
+            <div className="modern-products-grid">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  id={String(product.id)}
+                  name={product.name}
+                  price={formatPrice(product.basePrice)}
+                  image={product.imageUrl ?? ""}
+                  colors={product.colors}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-14 flex items-center justify-center gap-6">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => {
+                    setPage(prev => prev - 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center justify-center text-black transition-opacity hover:opacity-60 disabled:opacity-20"
+                  aria-label="Trang trước"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 24, strokeWidth: 1 }}>chevron_left</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {(function () {
+                    let pages: (number | string)[] = [];
+                    if (totalPages <= 7) {
+                      pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+                    } else {
+                      if (currentPage <= 4) {
+                        pages = [1, 2, 3, 4, 5, '...', totalPages];
+                      } else if (currentPage >= totalPages - 3) {
+                        pages = [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+                      } else {
+                        pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+                      }
+                    }
+
+                    return pages.map((page, index) => {
+                      if (page === '...') {
+                        return (
+                          <span key={`ellipsis-${index}`} className="flex h-10 w-10 items-center justify-center text-[15px] font-medium text-black">
+                            ...
+                          </span>
+                        );
+                      }
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => {
+                            setPage((page as number) - 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className={`flex h-10 min-w-10 items-center justify-center rounded-xl px-2 text-[15px] transition-colors ${currentPage === page
+                            ? 'bg-[#e6e6e6] font-semibold text-black'
+                            : 'font-medium text-black hover:bg-black/5'
+                            }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => {
+                    setPage(prev => prev + 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex items-center justify-center text-black transition-opacity hover:opacity-60 disabled:opacity-20"
+                  aria-label="Trang sau"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 24, strokeWidth: 1 }}>chevron_right</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="empty-catalog">
           <h2>Chưa có sản phẩm phù hợp</h2>
           <p>Hãy thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác.</p>
-          <button onClick={() => { setFilters({ types: [], sizes: [], price: "all" }); setQuery(""); }}>Xem tất cả sản phẩm</button>
+          <button onClick={() => { clearFilters(); setQuery(""); setCategoryId(null); }}>Xem tất cả sản phẩm</button>
         </div>
       )}
 
-      <FilterSidebar isOpen={filterOpen} onClose={() => setFilterOpen(false)} value={filters} onChange={setFilters} resultCount={filtered.length} />
+      <FilterSidebar
+        isOpen={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        value={filters}
+        onChange={(f) => { setFilters(f); setPage(0); }}
+        resultCount={totalProducts}
+        resultsLoading={productsLoading}
+        selectedColorIds={selectedColorIds}
+        onToggleColor={toggleColor}
+        onReset={clearFilters}
+      />
     </>
   );
 }

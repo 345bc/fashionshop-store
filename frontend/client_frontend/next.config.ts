@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'fakestoreapi.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'pub-830cafaa2d594f81ba2a433664da10a5.r2.dev',
+      },
     ],
   },
 };
