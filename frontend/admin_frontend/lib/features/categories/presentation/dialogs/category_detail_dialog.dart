@@ -79,6 +79,16 @@ class _CategoryDetailDialogState extends State<CategoryDetailDialog> {
                         style: const TextStyle(color: AppTheme.textSecondary),
                       ),
                       const SizedBox(height: 24),
+                      if (category.imageUrl != null) ...[
+                        Image.network(
+                          category.imageUrl!,
+                          height: 180,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, _, _) =>
+                              const Text('Không tải được ảnh danh mục'),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       _field('Danh mục cha', category.parentName ?? 'Không có'),
                       _field(
                         'Trạng thái',

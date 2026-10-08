@@ -3,7 +3,8 @@ package com.huit.zella.category;
 public record CategorySummaryResponse(
         Long id,
         String name,
-        String slug
+        String slug,
+        String imageUrl
 ) {
     public static CategorySummaryResponse from(Category category) {
         if (category == null) {
@@ -13,7 +14,8 @@ public record CategorySummaryResponse(
         return new CategorySummaryResponse(
                 category.getId(),
                 category.getName(),
-                category.getSlug()
+                category.getSlug(),
+                category.getImageUrl()
         );
     }
 }

@@ -1,15 +1,38 @@
 // GENERATED FROM TEMPLATE: templates/feature_repository.dart.template
 import 'package:dio/dio.dart';
 
+import 'dart:typed_data';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 
 class CategoryRepository {
   final ApiClient _apiClient = ApiClient();
 
-  Future<List<Map<String, dynamic>>> getAll({String? query}) async {
+  Future<List<Map<String, dynamic>>> getOptions() async {
+    final items = <Map<String, dynamic>>[];
+    var page = 0;
+    while (true) {
+      final data = await getAll(page: page, size: 100);
+      items.addAll((data['content'] as List).cast<Map<String, dynamic>>());
+      page++;
+      if (page >= (data['totalPages'] as num).toInt()) break;
+    }
+    return items;
+  }
+
+  Future<Map<String, dynamic>> getAll({
+    int page = 0,
+    int size = 15,
+    String? query,
+    bool? active,
+  }) async {
     try {
-      final Map<String, dynamic> queryParams = {};
+      final Map<String, dynamic> queryParams = {
+        'page': page,
+        'size': size,
+        'active': ?active,
+      };
       if (query != null && query.isNotEmpty) {
         queryParams['q'] = query;
       }
@@ -20,8 +43,7 @@ class CategoryRepository {
       );
 
       if (response.statusCode == 200) {
-        return (response.data['data'] as List<dynamic>)
-            .cast<Map<String, dynamic>>();
+        return Map<String, dynamic>.from(response.data['data'] as Map);
       }
       throw Exception(response.data['message'] ?? 'Fetch failed');
     } catch (e) {
@@ -93,6 +115,25 @@ class CategoryRepository {
       await _apiClient.delete('${ApiEndpoints.categories}/$id');
     } catch (e) {
       _handleError(e);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> uploadImage(
+    int id,
+    String fileName,
+    Uint8List bytes,
+  ) async {
+    try {
+      final response = await _apiClient.post(
+        '${ApiEndpoints.categories}/$id/image',
+        data: FormData.fromMap({
+          'file': MultipartFile.fromBytes(bytes, filename: fileName),
+        }),
+      );
+      return response.data['data'] as Map<String, dynamic>;
+    } catch (error) {
+      _handleError(error);
       rethrow;
     }
   }

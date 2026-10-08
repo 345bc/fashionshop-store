@@ -5,6 +5,7 @@ class CategoryResponseModel {
   final bool isActive;
   final int? parentId;
   final String? parentName;
+  final String? imageUrl;
 
   const CategoryResponseModel({
     required this.id,
@@ -13,6 +14,7 @@ class CategoryResponseModel {
     required this.isActive,
     this.parentId,
     this.parentName,
+    this.imageUrl,
   });
 
   factory CategoryResponseModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class CategoryResponseModel {
       isActive: json['isActive'] as bool? ?? false,
       parentId: (json['parentId'] as num?)?.toInt(),
       parentName: json['parentName'] as String?,
+      imageUrl: json['imageUrl'] as String?,
     );
   }
 
@@ -34,6 +37,7 @@ class CategoryResponseModel {
       'isActive': isActive,
       'parentId': parentId,
       'parentName': parentName,
+      'imageUrl': imageUrl,
     };
   }
 }

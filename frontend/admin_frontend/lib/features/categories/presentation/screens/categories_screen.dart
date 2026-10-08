@@ -96,13 +96,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               ),
               child: Consumer<CategoriesProvider>(
                 builder: (context, provider, _) {
-                  if (provider.isLoading && provider.allItems.isEmpty) {
+                  if (provider.isLoading) {
                     return const Padding(
                       padding: EdgeInsets.all(48),
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  if (provider.error != null && provider.allItems.isEmpty) {
+                  if (provider.error != null) {
                     return Padding(
                       padding: const EdgeInsets.all(48),
                       child: Center(
@@ -188,21 +188,43 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           children: [
             Expanded(
               flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    category.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: category.imageUrl == null
+                          ? const Icon(Icons.image_outlined)
+                          : Image.network(
+                              category.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) =>
+                                  const Icon(Icons.broken_image_outlined),
+                            ),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    category.slug,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppTheme.textSecondary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          category.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          category.slug,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

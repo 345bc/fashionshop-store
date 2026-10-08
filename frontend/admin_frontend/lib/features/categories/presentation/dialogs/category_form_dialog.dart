@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+
+import 'dart:typed_data';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
@@ -21,6 +24,9 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
   int? _parentId;
   late bool _isActive;
   bool _saving = false;
+  Uint8List? _imageBytes;
+  String? _imageName, _imageUrl;
+  int? _persistedId;
 
   @override
   void initState() {
@@ -28,6 +34,8 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
     _name = TextEditingController(text: widget.category?.name ?? '');
     _parentId = widget.category?.parentId;
     _isActive = widget.category?.isActive ?? true;
+    _persistedId = widget.category?.id;
+    _imageUrl = widget.category?.imageUrl;
     _parentsFuture = context.read<CategoriesProvider>().loadParentOptions();
   }
 
@@ -51,12 +59,23 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
         'name': _name.text.trim(),
         'parentId': _parentId,
         'isActive': _isActive,
+        'imageUrl': _imageUrl,
       };
       final provider = context.read<CategoriesProvider>();
-      if (widget.category == null) {
-        await provider.createItem(data);
+      if (_persistedId == null) {
+        final saved = await provider.createItem(data);
+        _persistedId = saved.id;
       } else {
-        await provider.updateItem(widget.category!.id, data);
+        await provider.updateItem(_persistedId!, data);
+      }
+      if (_imageBytes != null) {
+        final saved = await provider.uploadImage(
+          _persistedId!,
+          _imageName!,
+          _imageBytes!,
+        );
+        _imageUrl = saved.imageUrl;
+        _imageBytes = null;
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,13 +92,40 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Không thể lưu danh mục: $error'),
+            content: Text(
+              'Không thể hoàn tất lưu danh mục: $error. Bạn có thể thử lưu lại.',
+            ),
             backgroundColor: AppTheme.error,
           ),
         );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        withData: true,
+      );
+      if (result == null || !mounted) return;
+      final file = result.files.single;
+      if (file.bytes == null || file.bytes!.isEmpty) {
+        throw Exception('Không đọc được ảnh');
+      }
+      setState(() {
+        _imageBytes = file.bytes;
+        _imageName = file.name;
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Không thể chọn ảnh: $error')));
+      }
     }
   }
 
@@ -192,6 +238,55 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                 value: _isActive,
                 activeThumbColor: AppTheme.primary,
                 onChanged: (value) => setState(() => _isActive = value),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Ảnh danh mục',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              if (_imageBytes != null)
+                Image.memory(
+                  _imageBytes!,
+                  height: 160,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) =>
+                      const Text('Không thể xem trước ảnh'),
+                )
+              else if (_imageUrl != null)
+                Image.network(
+                  _imageUrl!,
+                  height: 160,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) =>
+                      const Text('Không tải được ảnh danh mục'),
+                ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _saving ? null : _pickImage,
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: const Text('Chọn ảnh từ máy'),
+                  ),
+                  if (_imageBytes != null || _imageUrl != null)
+                    TextButton.icon(
+                      onPressed: _saving
+                          ? null
+                          : () => setState(() {
+                              _imageBytes = null;
+                              _imageName = null;
+                              _imageUrl = null;
+                            }),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Bỏ ảnh'),
+                    ),
+                ],
+              ),
+              const Text(
+                'Ảnh được tải lên khi lưu danh mục. Hỗ trợ JPG, PNG, GIF, WebP.',
+                style: TextStyle(color: AppTheme.textSecondary),
               ),
             ],
           ),

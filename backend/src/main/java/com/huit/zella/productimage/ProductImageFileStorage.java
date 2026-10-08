@@ -44,6 +44,15 @@ public class ProductImageFileStorage {
     public StoredImage storeSizeGuide(MultipartFile file) {
         return store(file, "size-guide-images");
     }
+    public StoredImage storeCategory(MultipartFile file) {
+        return store(file, "category-images");
+    }
+    public void deleteCategory(String fileName) {
+        delete(fileName, "category-images");
+    }
+    public String categoryPublicUrlPrefix() {
+        return publicUrl + "/category-images/";
+    }
 
     private StoredImage store(MultipartFile file, String folder) {
         if (file == null || file.isEmpty()) {
