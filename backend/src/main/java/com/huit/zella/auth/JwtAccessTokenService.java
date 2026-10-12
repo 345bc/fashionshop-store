@@ -56,6 +56,7 @@ public class JwtAccessTokenService {
                 .issuedAt(now)
                 .expiresAt(now.plus(tokenTtl))
                 .claim("roles", user.roles())
+                .claim("uid", user.id())
                 .build();
         String token = encoder.encode(JwtEncoderParameters.from(
                 org.springframework.security.oauth2.jwt.JwsHeader.with(MacAlgorithm.HS256).build(), claims

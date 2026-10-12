@@ -55,11 +55,17 @@ public class ProductVariantService {
 
     @Transactional
     public ProductVariantResponse update(Long id, CreateProductVariantRequest request) {
-        ProductVariant variant = requireVariant(id);
+        ProductVariant variant = productVariantRepository.findByIdForInventoryUpdate(id).orElseThrow(() ->
+                new BusinessException(HttpStatus.NOT_FOUND, "PRODUCT_VARIANT_NOT_FOUND", "Product variant not found"));
         return save(variant, request, id);
     }
 
     private ProductVariantResponse save(ProductVariant variant, CreateProductVariantRequest request, Long excludedId) {
+        if (!request.stockQuantity().equals(variant.getStockQuantity())
+                || !request.reservedQuantity().equals(variant.getReservedQuantity())) {
+            throw new BusinessException(HttpStatus.CONFLICT, "INVENTORY_MANAGED_SEPARATELY",
+                    "Tồn kho chỉ được thay đổi qua nhập hàng hoặc điều chỉnh kho");
+        }
         Product product = productRepository.findById(request.productId()).orElseThrow(() ->
                 new BusinessException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found"));
         Size size = sizeRepository.findById(request.sizeId()).orElseThrow(() ->
@@ -83,7 +89,6 @@ public class ProductVariantService {
         variant.setSize(size);
         variant.setColor(color);
         variant.setPrice(request.price());
-        variant.setCostPrice(request.costPrice());
         variant.setStockQuantity(request.stockQuantity());
         variant.setReservedQuantity(request.reservedQuantity());
         variant.setActive(request.isActive() == null || request.isActive());

@@ -34,7 +34,7 @@ class FeatureHeader extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.headlineMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             Text(
@@ -46,14 +46,14 @@ class FeatureHeader extends StatelessWidget {
         ),
         Row(
           children: [
-            if (onExportPressed != null) ...[
-              OutlinedButton.icon(
-                onPressed: onExportPressed,
-                icon: const Icon(Icons.download_outlined, size: 18),
-                label: const Text('Xuất dữ liệu'),
-              ),
-              const SizedBox(width: 12),
-            ],
+            // if (onExportPressed != null) ...[
+            //   OutlinedButton.icon(
+            //     onPressed: onExportPressed,
+            //     icon: const Icon(Symbols.download, size: 18),
+            //     label: const Text('Xuất dữ liệu'),
+            //   ),
+            //   const SizedBox(width: 12),
+            // ],
             if (showAction)
               ElevatedButton.icon(
                 onPressed: onActionPressed,

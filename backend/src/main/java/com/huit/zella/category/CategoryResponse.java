@@ -6,7 +6,8 @@ public record CategoryResponse(
         String slug,
         Boolean isActive,
         Long parentId,
-        String parentName
+        String parentName,
+        String imageUrl
 ) {
     public static CategoryResponse from(Category category) {
         if (category == null) {
@@ -19,7 +20,8 @@ public record CategoryResponse(
                 category.getSlug(),
                 category.getIsActive(),
                 category.getParent() != null ? category.getParent().getId() : null,
-                category.getParent() != null ? category.getParent().getName() : null
+                category.getParent() != null ? category.getParent().getName() : null,
+                category.getImageUrl()
         );
     }
 }

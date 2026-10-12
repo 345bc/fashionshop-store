@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +8,10 @@ import '../../../../widgets/common/feature_toolbar.dart';
 import '../../../../widgets/common/status_badge.dart';
 import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/pagination_footer.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
+import '../../../../widgets/common/zella_checkbox.dart';
+import '../../../../widgets/common/bulk_action_bar.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 import '../providers/products_provider.dart';
 import '../../data/models/product_response_model.dart';
@@ -14,6 +19,7 @@ import '../dialogs/product_edit_dialog.dart';
 import '../dialogs/product_create_dialog.dart';
 import '../dialogs/product_detail_dialog.dart';
 import '../../../../main.dart';
+import '../../../categories/presentation/providers/categories_provider.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -23,32 +29,38 @@ class ProductsScreen extends StatefulWidget {
 }
 
 class _ProductsScreenState extends State<ProductsScreen> {
+  Set<int> selectedIds = {};
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<ProductsProvider>().loadItems();
+      context.read<CategoriesProvider>().loadOptions();
     });
   }
 
   String _fmtVND(double n) {
-    return '${n.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} ₫';
+    return '${n.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}  VND';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent, // Background handled by AppLayout
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             FeatureHeader(
               title: 'Sản phẩm & Bộ sưu tập',
               subtitle: 'Quản lý hàng hoá, giá bán và thuộc tính',
               actionLabel: 'Thêm sản phẩm',
-              actionIcon: Icons.add,
+              actionIcon: Symbols.add,
               onExportPressed: () {},
               onActionPressed: () {
                 showDialog(
@@ -58,15 +70,44 @@ class _ProductsScreenState extends State<ProductsScreen> {
               },
             ),
             const SizedBox(height: 32),
-            FeatureToolbar(
-              searchHint: 'Tìm kiếm sản phẩm theo tên...',
-              onSearchChanged: (query) {
-                context.read<ProductsProvider>().loadItems(
-                  query: query,
-                  page: 0,
-                );
-              },
-              initialSearchText: context.read<ProductsProvider>().currentQuery,
+            Consumer2<ProductsProvider, CategoriesProvider>(
+              builder: (context, products, categories, _) => FeatureToolbar(
+                searchHint: 'Tìm kiếm sản phẩm theo tên',
+                onSearchChanged: (query) => products.loadItems(query: query),
+                initialSearchText: products.currentQuery,
+                filterWidget: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FilterDropdown<int>(
+                      label: 'Danh mục',
+                      searchHint: 'Tìm kiếm danh mục',
+                      value: products.categoryId ?? 0,
+                      defaultValue: 0,
+                      options: [
+                        if (products.categoryId != null &&
+                            !categories.options.any((c) => c.id == products.categoryId))
+                          FilterOption(
+                            value: products.categoryId!,
+                            label: 'Danh mục đang chọn',
+                          ),
+                        ...categories.options.map((category) => FilterOption<int>(
+                              value: category.id,
+                              label: category.parentName == null
+                                  ? category.name
+                                  : '${category.parentName} / ${category.name}',
+                            )),
+                      ],
+                      onChanged: (id) => products.setCategory(id == 0 ? null : id),
+                    ),
+                    if (categories.optionsError != null)
+                      IconButton(
+                        tooltip: 'Không tải được danh mục. Nhấn để thử lại.',
+                        onPressed: categories.loadOptions,
+                        icon: const Icon(Symbols.refresh, color: AppTheme.error),
+                      ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 24),
             Container(
@@ -87,20 +128,61 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ],
         ),
       ),
+      BulkActionBar(
+        selectedCount: selectedIds.length,
+        itemLabel: 'sản phẩm đã chọn',
+        onClear: () => setState(() => selectedIds.clear()),
+        actions: [
+          BulkActionButton(
+            icon: Symbols.visibility_off,
+            tooltip: 'Ẩn',
+            onPressed: () async {
+              final ids = selectedIds.toList();
+              await context.read<ProductsProvider>().toggleActiveBulk(ids, false);
+              if (context.mounted) {
+                ZellaToast.show(
+                  context,
+                  message: 'Đã ẩn ${ids.length} sản phẩm',
+                  type: ToastType.success,
+                );
+              }
+              setState(() => selectedIds.clear());
+            },
+          ),
+          BulkActionButton(
+            icon: Symbols.visibility,
+            tooltip: 'Hoạt động',
+            onPressed: () async {
+              final ids = selectedIds.toList();
+              await context.read<ProductsProvider>().toggleActiveBulk(ids, true);
+              if (context.mounted) {
+                ZellaToast.show(
+                  context,
+                  message: 'Đã hiện ${ids.length} sản phẩm',
+                  type: ToastType.success,
+                );
+              }
+              setState(() => selectedIds.clear());
+            },
+          ),
+        ],
+      ),
+        ],
+      ),
     );
   }
 
   Widget _buildTable(BuildContext context) {
     return Consumer<ProductsProvider>(
       builder: (context, provider, child) {
-        if (provider.isLoading && provider.items.isEmpty) {
+        if (provider.isLoading) {
           return const Padding(
             padding: EdgeInsets.all(48.0),
             child: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (provider.error != null && provider.items.isEmpty) {
+        if (provider.error != null) {
           final errorMsg = provider.error!.replaceAll('Exception: ', '');
           return Padding(
             padding: const EdgeInsets.all(48.0),
@@ -125,6 +207,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ),
               child: Row(
                 children: [
+                  ZellaCheckbox(
+                    value: products.isNotEmpty && selectedIds.length == products.length,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) {
+                          selectedIds = products.map((e) => e.id).toSet();
+                        } else {
+                          selectedIds.clear();
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 16),
                   Expanded(flex: 3, child: _headerText('SẢN PHẨM')),
                   Expanded(flex: 2, child: _headerText('DANH MỤC')),
                   Expanded(flex: 2, child: _headerText('GIÁ BÁN')),
@@ -205,6 +300,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Row(
             children: [
+              ZellaCheckbox(
+                value: selectedIds.contains(product.id),
+                onChanged: (val) {
+                  setState(() {
+                    if (val == true) {
+                      selectedIds.add(product.id);
+                    } else {
+                      selectedIds.remove(product.id);
+                    }
+                  });
+                },
+              ),
+              const SizedBox(width: 16),
               Expanded(
                 flex: 3,
                 child: Row(
@@ -301,23 +409,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     const ActionMenuItem(
                       value: 'view',
                       label: 'Xem chi tiết',
-                      icon: Icons.visibility_outlined,
+                      icon: Symbols.visibility,
                     ),
                     const ActionMenuItem(
                       value: 'edit',
                       label: 'Chỉnh sửa',
-                      icon: Icons.edit_outlined,
+                      icon: Symbols.edit,
                     ),
                     const ActionMenuItem(
                       value: 'variants',
                       label: 'Quản lý biến thể',
-                      icon: Icons.inventory_2_outlined,
+                      icon: Symbols.inventory_2,
                     ),
                     // ActionMenuItem.divider(),
                     // const ActionMenuItem(
                     //   value: 'delete',
                     //   label: 'Xóa sản phẩm',
-                    //   icon: Icons.delete_outline,
+                    //   icon: Symbols.delete,
                     //   color: AppTheme.danger,
                     // ),
                   ],

@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -77,8 +78,8 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<CategoriesProvider>().loadItems();
-      context.read<SuppliersProvider>().loadItems();
+      context.read<CategoriesProvider>().loadOptions();
+      context.read<SuppliersProvider>().loadOptions();
       context.read<SizeGuidesProvider>().loadItems();
       _loadImages();
     });
@@ -351,7 +352,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                 maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: 'Mô tả ngắn',
-                  hintText: 'Nhập mô tả sản phẩm...',
+                  hintText: 'Nhập mô tả sản phẩm',
                 ),
               ),
 
@@ -366,7 +367,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                       controller: _styleController,
                       decoration: const InputDecoration(
                         labelText: 'Phong cách (Style)',
-                        hintText: 'VD: Vintage, Modern...',
+                        hintText: 'VD: Vintage, Modern',
                       ),
                     ),
                   ),
@@ -376,7 +377,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                       controller: _occasionController,
                       decoration: const InputDecoration(
                         labelText: 'Dịp (Occasion)',
-                        hintText: 'VD: Dạo phố, Dự tiệc...',
+                        hintText: 'VD: Dạo phố, Dự tiệc',
                       ),
                     ),
                   ),
@@ -414,10 +415,11 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                         return DropdownButtonFormField<int>(
                           isExpanded: true,
                           initialValue: _selectedCategoryId,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
+                            errorText: provider.optionsError,
                             labelText: 'Danh mục *',
                           ),
-                          items: provider.items.map((cat) {
+                          items: provider.options.map((cat) {
                             return DropdownMenuItem(
                               value: cat.id,
                               child: Text(cat.name),
@@ -444,10 +446,11 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                         return DropdownButtonFormField<int>(
                           isExpanded: true,
                           initialValue: _selectedSupplierId,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
+                            errorText: provider.optionsError,
                             labelText: 'Nhà cung cấp *',
                           ),
-                          items: provider.items.map((sup) {
+                          items: provider.options.map((sup) {
                             return DropdownMenuItem(
                               value: sup.id,
                               child: Text(sup.name),
@@ -541,7 +544,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                                                 width: 132,
                                                 height: 110,
                                                 child: Icon(
-                                                  Icons.broken_image_outlined,
+                                                  Symbols.broken_image,
                                                 ),
                                               ),
                                         )
@@ -555,7 +558,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                                                 width: 132,
                                                 height: 110,
                                                 child: Icon(
-                                                  Icons.broken_image_outlined,
+                                                  Symbols.broken_image,
                                                 ),
                                               ),
                                         ),
@@ -568,7 +571,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                                     onPressed: _isLoading
                                         ? null
                                         : () => _removeImage(image),
-                                    icon: const Icon(Icons.close, size: 18),
+                                    icon: const Icon(Symbols.close, size: 18),
                                   ),
                                 ),
                               ],
@@ -579,8 +582,8 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                                   : () => setState(() => _primaryImage = image),
                               icon: Icon(
                                 identical(_primaryImage, image)
-                                    ? Icons.check_circle
-                                    : Icons.radio_button_unchecked,
+                                    ? Symbols.check_circle
+                                    : Symbols.radio_button_unchecked,
                                 size: 18,
                               ),
                               label: const Text('Ảnh chính'),
@@ -593,7 +596,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: _isLoading ? null : _pickImages,
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  icon: const Icon(Symbols.add_photo_alternate),
                   label: const Text('Thêm ảnh'),
                 ),
               ],

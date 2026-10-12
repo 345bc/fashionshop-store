@@ -18,7 +18,6 @@ public record SupplierResponse(
         Instant updatedAt
 ) {
     public static SupplierResponse from(Supplier supplier) {
-        return new SupplierResponse(supplier.getId(),supplier.getName(),supplier.getContactEmail(),supplier.getPhone(),supplier.getAddress(),supplier.getCode(),supplier.getContactPerson(),supplier.getIsActive(),supplier.getCreatedAt(),supplier.getUpdatedAt());
+        return new SupplierResponse(supplier.getId(), supplier.getName(), supplier.getContactEmail(), supplier.getPhone(), supplier.getAddress(), supplier.getCode(), supplier.getContactPerson(), supplier.getIsActive(), supplier.getCreatedAt(), supplier.getUpdatedAt());
     }
-
 }

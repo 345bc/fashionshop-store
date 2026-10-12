@@ -16,6 +16,7 @@ app.storage.allowed-content-types=application/pdf,image/png,image/jpeg,text/plai
 app.auth.demo-password=Demo@123
 app.auth.jwt.secret=CHANGE_THIS_TO_A_LONG_LOCAL_SECRET_AT_LEAST_32_CHARS
 app.auth.jwt.access-token-minutes=30
+app.auth.jwt.refresh-token-days=7
 app.auth.jwt.cookie-secure=false
 
 # M01 có thể dùng mock-auth để làm CRUD trước: local,mock-auth.
@@ -24,3 +25,12 @@ app.auth.jwt.cookie-secure=false
 # Bổ sung khi dự án triển khai email:
 # spring.mail.username=CHANGE_ME
 # spring.mail.password=CHANGE_ME
+
+# VNPay sandbox: xem backend/docs/vnpay.md. Dien thong tin VNPay cap truoc khi bat.
+app.payment.vnpay.enabled=false
+app.payment.vnpay.ipn-required=false
+app.payment.vnpay.tmn-code=
+app.payment.vnpay.hash-secret=
+app.payment.vnpay.payment-url=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+app.payment.vnpay.return-url=http://localhost:3000/checkout
+app.order.payment-simulation.enabled=false

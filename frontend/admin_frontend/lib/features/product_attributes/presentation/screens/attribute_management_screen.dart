@@ -1,3 +1,6 @@
+import 'package:material_symbols_icons/symbols.dart';
+import '../../../../widgets/common/pagination_footer.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +10,9 @@ import '../../../../theme/app_theme.dart';
 import '../../../auth/presentation/provider/auth_provider.dart';
 import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
+import '../../../../widgets/common/bulk_action_bar.dart';
+import '../../../../widgets/common/zella_checkbox.dart';
+import '../../../../widgets/common/zella_toast.dart';
 import '../../../sizeguides/presentation/providers/size_guides_provider.dart';
 import '../../data/attribute_kind.dart';
 import '../dialogs/attribute_form_dialog.dart';
@@ -24,6 +30,7 @@ class AttributeManagementScreen extends StatefulWidget {
 
 class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
   late AttributeProvider _provider;
+  Set<int> selectedIds = {};
 
   @override
   void initState() {
@@ -162,18 +169,20 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
         false;
     return ChangeNotifierProvider<AttributeProvider>.value(
       value: _provider,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
+      child: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
               children: [
                 IconButton(
                   tooltip: 'Về thuộc tính sản phẩm',
                   onPressed: () =>
                       MainScreen.of(context).navigate('/product-attributes'),
-                  icon: const Icon(Icons.arrow_back),
+                  icon: const Icon(Symbols.arrow_back),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -204,7 +213,7 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
                           child: AttributeFormDialog(kind: widget.kind),
                         ),
                   ),
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(Symbols.add),
                   label: Text('Thêm ${widget.kind.singular}'),
                 ),
               ],
@@ -212,7 +221,7 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
             const SizedBox(height: 28),
             FeatureToolbar(
               key: ValueKey(widget.kind),
-              searchHint: 'Tìm ${widget.kind.title}...',
+              searchHint: widget.kind == AttributeKind.color ? 'Tìm màu sắc theo tên, mã màu hoặc mã hex' : 'Tìm theo kích cỡ hoặc mô tả',
               onSearchChanged: _provider.search,
             ),
             const SizedBox(height: 24),
@@ -224,13 +233,13 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
               ),
               child: Consumer<AttributeProvider>(
                 builder: (context, provider, _) {
-                  if (provider.loading && provider.items.isEmpty) {
+                  if (provider.loading) {
                     return const Padding(
                       padding: EdgeInsets.all(48),
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  if (provider.error != null && provider.items.isEmpty) {
+                  if (provider.error != null) {
                     return Padding(
                       padding: const EdgeInsets.all(48),
                       child: Center(
@@ -256,6 +265,22 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
                         ),
                         child: Row(
                           children: [
+                            Container(
+                              width: 48,
+                              alignment: Alignment.centerLeft,
+                              child: ZellaCheckbox(
+                                value: provider.items.isNotEmpty && selectedIds.length == provider.items.length,
+                                onChanged: (v) {
+                                  setState(() {
+                                    if (v == true) {
+                                      selectedIds.addAll(provider.items.map((e) => (e['id'] as num).toInt()));
+                                    } else {
+                                      selectedIds.clear();
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
                             Expanded(
                               child: Text(
                                 widget.kind.title.toUpperCase(),
@@ -307,6 +332,22 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
                                   ),
                                   child: Row(
                                     children: [
+                                      Container(
+                                        width: 48,
+                                        alignment: Alignment.centerLeft,
+                                        child: ZellaCheckbox(
+                                          value: selectedIds.contains((item['id'] as num).toInt()),
+                                          onChanged: (v) {
+                                            setState(() {
+                                              if (v == true) {
+                                                selectedIds.add((item['id'] as num).toInt());
+                                              } else {
+                                                selectedIds.remove((item['id'] as num).toInt());
+                                              }
+                                            });
+                                          },
+                                        ),
+                                      ),
                                       if (widget.kind ==
                                           AttributeKind.sizeGuide) ...[
                                         ClipRRect(
@@ -340,7 +381,7 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
                                                   width: 48,
                                                   height: 48,
                                                   child: Icon(
-                                                    Icons.image_outlined,
+                                                    Symbols.image,
                                                   ),
                                                 ),
                                         ),
@@ -384,18 +425,18 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
                                             const ActionMenuItem(
                                               value: 'view',
                                               label: 'Xem chi tiết',
-                                              icon: Icons.visibility_outlined,
+                                              icon: Symbols.visibility,
                                             ),
                                             const ActionMenuItem(
                                               value: 'edit',
                                               label: 'Chỉnh sửa',
-                                              icon: Icons.edit_outlined,
+                                              icon: Symbols.edit,
                                             ),
                                             if (canDelete)
                                               const ActionMenuItem(
                                                 value: 'delete',
                                                 label: 'Xóa',
-                                                icon: Icons.delete_outline,
+                                                icon: Symbols.delete,
                                                 color: AppTheme.danger,
                                               ),
                                           ],
@@ -430,6 +471,17 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
                             );
                           },
                         ),
+                      if (widget.kind != AttributeKind.size)
+                        PaginationFooter(
+                          currentPage: provider.currentPage,
+                          totalPages: provider.totalElements == 0
+                              ? 1
+                              : (provider.totalElements / provider.pageSize)
+                                    .ceil(),
+                          totalElements: provider.totalElements,
+                          pageSize: provider.pageSize,
+                          onPageChanged: provider.setPage,
+                        ),
                     ],
                   );
                 },
@@ -437,6 +489,47 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
             ),
           ],
         ),
+      ),
+      BulkActionBar(
+        selectedCount: selectedIds.length,
+        itemLabel: widget.kind.singular.toLowerCase(),
+        onClear: () => setState(() => selectedIds.clear()),
+      actions: [
+        BulkActionButton(
+          icon: Symbols.visibility_off,
+          tooltip: 'Ẩn',
+          onPressed: () async {
+            final ids = selectedIds.toList();
+            await context.read<AttributeProvider>().toggleActiveBulk(ids, false);
+            if (context.mounted) {
+              ZellaToast.show(
+                context,
+                message: 'Đã ẩn ${ids.length} ${widget.kind.singular.toLowerCase()}',
+                type: ToastType.success,
+              );
+            }
+            setState(() => selectedIds.clear());
+          },
+        ),
+        BulkActionButton(
+          icon: Symbols.visibility,
+          tooltip: 'Hoạt động',
+          onPressed: () async {
+            final ids = selectedIds.toList();
+            await context.read<AttributeProvider>().toggleActiveBulk(ids, true);
+            if (context.mounted) {
+              ZellaToast.show(
+                context,
+                message: 'Đã hiện ${ids.length} ${widget.kind.singular.toLowerCase()}',
+                type: ToastType.success,
+              );
+            }
+            setState(() => selectedIds.clear());
+          },
+        ),
+      ],
+      ),
+        ],
       ),
     );
   }

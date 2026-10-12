@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
@@ -24,13 +25,16 @@ import java.util.Map;
 public class AuthController {
     UserService userService;
     private final boolean secureJwtCookie;
+    private final ObjectProvider<RefreshTokenService> refreshTokens;
 
     public AuthController(
             UserService userService,
-            @Value("${app.auth.jwt.cookie-secure:false}") boolean secureJwtCookie
+            @Value("${app.auth.jwt.cookie-secure:false}") boolean secureJwtCookie,
+            ObjectProvider<RefreshTokenService> refreshTokens
     ) {
         this.userService = userService;
         this.secureJwtCookie = secureJwtCookie;
+        this.refreshTokens = refreshTokens;
     }
 
     @GetMapping("/csrf")
@@ -53,6 +57,8 @@ public class AuthController {
             HttpServletResponse response,
             Authentication authentication
     ) {
+        RefreshTokenService service = refreshTokens.getIfAvailable();
+        if (service != null) { service.revoke(request); service.clearCookie(response); }
         new SecurityContextLogoutHandler().logout(request, response, authentication);
         response.addHeader("Set-Cookie", ResponseCookie.from(JwtAccessTokenService.COOKIE_NAME, "")
                 .httpOnly(true)

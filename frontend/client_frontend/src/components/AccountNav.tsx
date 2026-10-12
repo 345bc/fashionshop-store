@@ -3,10 +3,27 @@
 import Link from "next/link";
 import { useAuth } from "../auth/AuthContext";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getIdByUserId } from "@/service/customerApi";
 
-export default function AccountNav({ active }: { active: "profile" | "orders" | "history" | "loyalty" }) {
+export default function AccountNav({ active }: { active: "profile" | "orders" | "loyalty" }) {
   const auth = useAuth();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    setLogoutError("");
+    try {
+      await auth.logout();
+      router.push("/");
+    } catch {
+      setLogoutError("Chưa thể đăng xuất. Vui lòng thử lại.");
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   const [profileState, setProfileState] = useState<{ status: string; data: Record<string, unknown> | null; error: unknown }>({
     status: "idle",
@@ -32,7 +49,6 @@ export default function AccountNav({ active }: { active: "profile" | "orders" | 
   const navItems = [
     { id: "profile", label: "Hồ sơ cá nhân", href: "/profile", icon: "person" },
     { id: "orders", label: "Đơn hàng của tôi", href: "/orders", icon: "local_mall" },
-    { id: "history", label: "Lịch sử mua & đánh giá", href: "/purchase-history", icon: "history" },
     { id: "loyalty", label: "Điểm thưởng", href: "/loyalty", icon: "loyalty" },
   ];
 
@@ -62,12 +78,12 @@ export default function AccountNav({ active }: { active: "profile" | "orders" | 
               key={item.id}
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isActive
-                ? "bg-zinc-900 text-white shadow-md shadow-zinc-900/20"
-                : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                ? "bg-zinc-800 text-white shadow-md shadow-zinc-900/20"
+                : "text-xl hover:bg-zinc-100 "
                 }`}
             >
               <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
-              <span className={`text-[13px] ${isActive ? "font-bold" : "font-semibold"}`}>{item.label}</span>
+              <span className={`text-[14px]  "font-normal"`}>{item.label}</span>
             </Link>
           );
         })}
@@ -75,12 +91,15 @@ export default function AccountNav({ active }: { active: "profile" | "orders" | 
         <div className="my-2 border-t border-zinc-100"></div>
 
         <button
-          onClick={() => auth?.logout?.()}
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors text-left"
         >
           <span className="material-symbols-outlined text-[20px]">logout</span>
-          <span className="text-[13px] font-bold">Đăng xuất</span>
+          <span className="text-[13px] font-bold">{loggingOut ? "Đang đăng xuất…" : "Đăng xuất"}</span>
         </button>
+        {logoutError && <p role="alert" className="px-4 text-xs text-red-600">{logoutError}</p>}
       </nav>
     </aside>
   );

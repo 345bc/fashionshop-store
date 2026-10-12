@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -42,7 +43,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (match) => '${match[1]}.',
     );
-    return '$digits ₫';
+    return '$digits  VND';
   }
 
   String _imageUrl(String url) {
@@ -75,7 +76,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                 IconButton(
                   tooltip: 'Đóng',
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Symbols.close),
                 ),
               ],
             ),
@@ -205,7 +206,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                           errorBuilder: (_, _, _) => Container(
                             width: 150,
                             color: AppTheme.surface,
-                            child: const Icon(Icons.broken_image_outlined),
+                            child: const Icon(Symbols.broken_image),
                           ),
                         ),
                       ),
@@ -284,7 +285,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                   Navigator.of(context).pop();
                   widget.onManageVariants(product);
                 },
-                icon: const Icon(Icons.inventory_2_outlined),
+                icon: const Icon(Symbols.inventory_2),
                 label: const Text('Quản lý biến thể'),
               ),
             ],

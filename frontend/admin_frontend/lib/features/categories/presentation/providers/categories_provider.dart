@@ -8,8 +8,11 @@ class CategoriesProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _error;
-  List<CategoryResponseModel> _sourceItems = [];
-  List<CategoryResponseModel> _allItems = [];
+  List<CategoryResponseModel> _items = [];
+  List<CategoryResponseModel> _options = [];
+  String? optionsError;
+  int _totalElements = 0;
+  int _requestId = 0;
   String _currentQuery = '';
   String _status = 'all';
   int _currentPage = 0;
@@ -17,30 +20,17 @@ class CategoriesProvider extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String? get error => _error;
-  List<CategoryResponseModel> get allItems => _allItems;
-  List<CategoryResponseModel> get items => _sourceItems;
-  List<CategoryResponseModel> get _filteredItems => _allItems
-      .where(
-        (item) => _status == 'all' || item.isActive == (_status == 'active'),
-      )
-      .toList();
-  List<CategoryResponseModel> get pageItems {
-    final filtered = _filteredItems;
-    final start = _currentPage * _pageSize;
-    if (start >= filtered.length) return [];
-    final end = (start + _pageSize).clamp(0, filtered.length);
-    return filtered.sublist(start, end);
-  }
+  List<CategoryResponseModel> get options => _options;
+  List<CategoryResponseModel> get pageItems => _items;
 
   int get currentPage => _currentPage;
   int get pageSize => _pageSize;
-  int get totalElements => _filteredItems.length;
+  int get totalElements => _totalElements;
   String get currentQuery => _currentQuery;
 
   void setStatus(String status) {
     _status = status;
-    _currentPage = 0;
-    notifyListeners();
+    loadItems();
   }
 
   Future<void> loadItems({int page = 0, String? query}) async {
@@ -49,28 +39,48 @@ class CategoriesProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    _currentPage = page;
+    final requestId = ++_requestId;
     try {
-      final data = await _repository.getAll();
-      _sourceItems = data.map(CategoryResponseModel.fromJson).toList();
-      final term = _currentQuery.trim().toLowerCase();
-      _allItems = _sourceItems
-          .where(
-            (item) =>
-                term.isEmpty ||
-                item.name.toLowerCase().contains(term) ||
-                item.slug.toLowerCase().contains(term),
+      final data = await _repository.getAll(
+        page: page,
+        size: _pageSize,
+        query: _currentQuery,
+        active: _status == 'all' ? null : _status == 'active',
+      );
+      if (requestId != _requestId) return;
+      _items = (data['content'] as List)
+          .map(
+            (json) =>
+                CategoryResponseModel.fromJson(json as Map<String, dynamic>),
           )
           .toList();
-      final lastPage = totalElements == 0
+      _totalElements = (data['totalElements'] as num).toInt();
+      final lastPage = _totalElements == 0
           ? 0
-          : (totalElements - 1) ~/ _pageSize;
-      _currentPage = page.clamp(0, lastPage);
+          : (_totalElements - 1) ~/ _pageSize;
+      if (_currentPage > lastPage) await loadItems(page: lastPage);
     } catch (e) {
+      if (requestId != _requestId) return;
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (requestId == _requestId) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
+  }
+
+  Future<void> loadOptions() async {
+    optionsError = null;
+    try {
+      _options = (await _repository.getOptions())
+          .map(CategoryResponseModel.fromJson)
+          .toList();
+    } catch (error) {
+      optionsError = error.toString();
+    }
+    notifyListeners();
   }
 
   Future<CategoryResponseModel> loadDetail(int id) async =>
@@ -81,14 +91,27 @@ class CategoriesProvider extends ChangeNotifier {
           .map(CategoryResponseModel.fromJson)
           .toList();
 
-  Future<void> createItem(Map<String, dynamic> data) async {
-    await _repository.create(data);
+  Future<CategoryResponseModel> createItem(Map<String, dynamic> data) async {
+    final item = CategoryResponseModel.fromJson(await _repository.create(data));
     await loadItems(page: _currentPage);
+    return item;
   }
 
   Future<void> updateItem(int id, Map<String, dynamic> data) async {
     await _repository.update(id, data);
     await loadItems(page: _currentPage);
+  }
+
+  Future<CategoryResponseModel> uploadImage(
+    int id,
+    String fileName,
+    Uint8List bytes,
+  ) async {
+    final item = CategoryResponseModel.fromJson(
+      await _repository.uploadImage(id, fileName, bytes),
+    );
+    await loadItems(page: _currentPage);
+    return item;
   }
 
   Future<void> deleteItem(int id) async {

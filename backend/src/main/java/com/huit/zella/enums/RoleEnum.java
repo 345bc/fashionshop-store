@@ -4,4 +4,5 @@ public enum RoleEnum {
     ADMIN,
     CUSTOMER,
     EMPLOYEE,
+    WAREHOUSE,
 }

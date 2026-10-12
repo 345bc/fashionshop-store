@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
 
@@ -12,7 +13,7 @@ class EmptyStateWidget extends StatelessWidget {
     super.key,
     this.title = 'Không có dữ liệu',
     this.message,
-    this.icon = Icons.inbox_outlined,
+    this.icon = Symbols.inbox,
     this.actionText,
     this.onAction,
   });
@@ -52,7 +53,7 @@ class EmptyStateWidget extends StatelessWidget {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: onAction,
-                icon: const Icon(Icons.add),
+                icon: const Icon(Symbols.add),
                 label: Text(actionText!),
               ),
             ],

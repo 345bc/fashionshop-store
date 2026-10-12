@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -76,7 +77,7 @@ class _AttributeDetailDialogState extends State<AttributeDetailDialog> {
               IconButton(
                 tooltip: 'Đóng',
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close),
+                icon: const Icon(Symbols.close),
               ),
             ],
           ),
@@ -156,7 +157,7 @@ class _AttributeDetailDialogState extends State<AttributeDetailDialog> {
                               fit: BoxFit.contain,
                               errorBuilder: (_, _, _) => const SizedBox(
                                 height: 160,
-                                child: Icon(Icons.broken_image_outlined),
+                                child: Icon(Symbols.broken_image),
                               ),
                             ),
                           ),

@@ -15,7 +15,8 @@ import static org.mockito.Mockito.*;
 class CategoryServiceTest {
     private final CategoryRepository categories = mock(CategoryRepository.class);
     private final ProductRepository products = mock(ProductRepository.class);
-    private final CategoryService service = new CategoryService(categories, products);
+    private final CategoryService service = new CategoryService(categories, products,
+            mock(com.huit.zella.productimage.ProductImageFileStorage.class));
 
     @Test
     void rejectsParentCycle() {
@@ -24,7 +25,7 @@ class CategoryServiceTest {
         Category child = new Category();
         child.setId(2L);
         child.setParent(category);
-        when(categories.findById(1L)).thenReturn(Optional.of(category));
+        when(categories.findByIdForImageUpdate(1L)).thenReturn(Optional.of(category));
         when(categories.findByIdAndIsActiveTrue(2L)).thenReturn(Optional.of(child));
 
         BusinessException error = assertThrows(BusinessException.class,
@@ -38,7 +39,7 @@ class CategoryServiceTest {
     void cannotDeleteCategoryWithProducts() {
         Category category = new Category();
         category.setId(1L);
-        when(categories.findById(1L)).thenReturn(Optional.of(category));
+        when(categories.findByIdForImageUpdate(1L)).thenReturn(Optional.of(category));
         when(products.existsByCategoryId(1L)).thenReturn(true);
 
         BusinessException error = assertThrows(BusinessException.class, () -> service.delete(1L));

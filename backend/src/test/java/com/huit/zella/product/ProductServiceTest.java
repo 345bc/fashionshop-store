@@ -6,6 +6,9 @@ import com.huit.zella.sizeguide.SizeGuide;
 import com.huit.zella.sizeguide.SizeGuideRepository;
 import com.huit.zella.supplier.Supplier;
 import com.huit.zella.supplier.SupplierRepository;
+import com.huit.zella.productimage.ProductImageRepository;
+import com.huit.zella.productvariant.ProductVariantRepository;
+import com.huit.zella.variantimage.VariantImageRepository;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -20,7 +23,8 @@ class ProductServiceTest {
     private final CategoryRepository categories = mock(CategoryRepository.class);
     private final SupplierRepository suppliers = mock(SupplierRepository.class);
     private final SizeGuideRepository guides = mock(SizeGuideRepository.class);
-    private final ProductService service = new ProductService(products, categories, suppliers, guides);
+    private final ProductService service = new ProductService(new com.huit.zella.promotion.PromotionPricingService(org.mockito.Mockito.mock(com.huit.zella.promotion.PromotionRepository.class), java.time.Clock.systemUTC()), products, categories, suppliers, guides,
+            mock(ProductImageRepository.class), mock(ProductVariantRepository.class), mock(VariantImageRepository.class), mock(com.huit.zella.review.ProductReviewRepository.class));
 
     @Test
     void createAcceptsOptionalTextAndDefaultsToActive() {

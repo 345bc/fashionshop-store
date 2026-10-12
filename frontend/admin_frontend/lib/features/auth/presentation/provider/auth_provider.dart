@@ -74,18 +74,15 @@ class AuthProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
 
-      if (token != null && token.isNotEmpty) {
-        if (_expiresAt(token)?.isBefore(DateTime.now()) == true) {
-          await prefs.remove('access_token');
-        } else {
-          _user = await _authRepository.getProfile();
+      if ((token != null && token.isNotEmpty) ||
+          prefs.getString('refresh_token')?.isNotEmpty == true) {
+        _user = await _authRepository.getProfile();
 
-          if (_user != null && !_hasAdminPermission(_user!)) {
-            await _authRepository.logout();
-            _user = null;
-          }
-          if (_user != null) await _scheduleExpiry();
+        if (_user != null && !_hasAdminPermission(_user!)) {
+          await _authRepository.logout();
+          _user = null;
         }
+        if (_user != null) await _scheduleExpiry();
       }
     } catch (e) {
       await _authRepository.logout();
@@ -134,9 +131,31 @@ class AuthProvider with ChangeNotifier {
     if (expiresAt == null) return;
     final remaining = expiresAt.difference(DateTime.now());
     if (remaining <= Duration.zero) {
-      expireSession();
+      await _renewSession();
     } else {
-      _expiryTimer = Timer(remaining, expireSession);
+      _expiryTimer = Timer(remaining, _renewSession);
+    }
+  }
+
+  Future<void> _renewSession() async {
+    if (_user == null) return;
+    try {
+      if (!await ApiClient().refreshSession()) {
+        expireSession();
+        return;
+      }
+      if (_user == null) return;
+      _user = await _authRepository.getProfile();
+      if (!_hasAdminPermission(_user!)) {
+        await logout();
+        return;
+      }
+      await _scheduleExpiry();
+      notifyListeners();
+    } catch (_) {
+      if (_user != null) {
+        _expiryTimer = Timer(const Duration(seconds: 30), _renewSession);
+      }
     }
   }
 
@@ -151,8 +170,9 @@ class AuthProvider with ChangeNotifier {
     ApiClient().clearCsrfToken();
     onSessionExpired?.call();
     notifyListeners();
-    SharedPreferences.getInstance().then((prefs) {
+    SharedPreferences.getInstance().then((prefs) async {
       if (prefs.getString('access_token') == expiredToken) {
+        await prefs.remove('refresh_token');
         return prefs.remove('access_token');
       }
       return false;

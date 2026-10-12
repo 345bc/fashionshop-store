@@ -6,10 +6,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   ReactNode,
 } from "react";
 import { apiRequest, BACKEND_URL, clearCsrfToken } from "../api/apiClient";
+import { useRouter } from "next/navigation";
 
 const RETURN_TO_KEY = "auth_return_to";
 
@@ -66,6 +68,8 @@ export function takeLoginReturnTo() {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const authEpoch = useRef(0);
   const [state, setState] = useState<AuthState>({
     status: "loading",
     user: null,
@@ -73,11 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const refresh = useCallback(async () => {
+    const epoch = authEpoch.current;
     try {
       const response = await apiRequest("/auth/me");
+      if (epoch !== authEpoch.current) return null;
       setState({ status: "authenticated", user: response.data, error: null });
       return response.data;
     } catch (error: unknown) {
+      if (epoch !== authEpoch.current) return null;
       const err = error as { status?: number };
       if (err?.status === 401) {
         setState({ status: "anonymous", user: null, error: null });
@@ -146,13 +153,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    try {
-      await apiRequest("/auth/logout", { method: "POST" });
-    } finally {
-      clearCsrfToken();
-      setState({ status: "anonymous", user: null, error: null });
-    }
-  }, []);
+    await apiRequest("/auth/logout", { method: "POST" });
+    authEpoch.current++;
+    clearCsrfToken();
+    sessionStorage.removeItem(RETURN_TO_KEY);
+    setState({ status: "anonymous", user: null, error: null });
+    router.replace("/");
+    router.refresh();
+  }, [router]);
 
   const hasRole = useCallback(
     (...allowedRoles: string[]) => {

@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
@@ -32,7 +33,7 @@ class ActionMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       icon: const Icon(
-        Icons.more_vert,
+        Symbols.more_vert,
         color: AppTheme.textSecondary,
         size: 20,
       ),

@@ -1,18 +1,9 @@
 "use client";
 
-import { useRef } from "react";
-import Link from "next/link";
+import { useRef, type ComponentProps } from "react";
 import ProductCard from "./ProductCard";
 
-type ProductRailItem = {
-  id: string;
-  name: string;
-  price: string;
-  image: string;
-  badge?: string;
-  rating: number;
-  reviewsCount: number;
-};
+type ProductRailItem = Omit<ComponentProps<typeof ProductCard>, "slug"> & { slug?: string };
 
 type ProductRailProps = {
   title?: string;
@@ -20,7 +11,7 @@ type ProductRailProps = {
   href?: string;
 };
 
-export default function ProductRail({ title, products, href }: ProductRailProps) {
+export default function ProductRail({ title, products }: ProductRailProps) {
   const railRef = useRef<HTMLDivElement>(null);
 
   const move = (direction: -1 | 1) => {
@@ -37,7 +28,7 @@ export default function ProductRail({ title, products, href }: ProductRailProps)
     <section className="home-section product-rail-section">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div ref={railRef} className="product-rail" tabIndex={0} aria-label={title ?? "Sản phẩm"}>
-          {products.map((item) => <ProductCard key={item.id} {...item} />)}
+          {products.map((item) => <ProductCard key={item.id} {...item} slug={item.slug ?? item.id} />)}
         </div>
         <div className="product-rail-footer">
           <div aria-hidden="true" />
@@ -49,7 +40,7 @@ export default function ProductRail({ title, products, href }: ProductRailProps)
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
             </button>
           </div>
-          {href && <Link href={href} className="product-rail-all">Xem tất cả sản phẩm <span className="material-symbols-outlined" style={{ fontSize: 15 }}>north_east</span></Link>}
+          <div aria-hidden="true" />
         </div>
       </div>
     </section>

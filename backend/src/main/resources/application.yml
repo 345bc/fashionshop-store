@@ -38,6 +38,25 @@ server:
         secure: ${SESSION_COOKIE_SECURE:false}
 
 app:
+  checkout:
+    pricing:
+      standard-shipping-fee: ${CHECKOUT_STANDARD_SHIPPING_FEE:30000}
+      shipping-discount-threshold: ${CHECKOUT_SHIPPING_DISCOUNT_THRESHOLD:600000}
+      shipping-discount-amount: ${CHECKOUT_SHIPPING_DISCOUNT_AMOUNT:30000}
+      standard-discount-percent: ${CHECKOUT_STANDARD_DISCOUNT_PERCENT:5}
+      silver-discount-percent: ${CHECKOUT_SILVER_DISCOUNT_PERCENT:7}
+      gold-discount-percent: ${CHECKOUT_GOLD_DISCOUNT_PERCENT:10}
+  payment:
+    vnpay:
+      enabled: ${VNPAY_ENABLED:false}
+      ipn-required: ${VNPAY_IPN_REQUIRED:true}
+      tmn-code: ${VNPAY_TMN_CODE:}
+      hash-secret: ${VNPAY_HASH_SECRET:}
+      payment-url: ${VNPAY_PAYMENT_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      return-url: ${VNPAY_RETURN_URL:http://localhost:3000/checkout}
+  order:
+    payment-simulation:
+      enabled: ${ORDER_PAYMENT_SIMULATION_ENABLED:false}
   project:
     name: ${PROJECT_NAME:Xây dựng website shop thời trang}
     version: 0.1.0-starter
@@ -48,6 +67,7 @@ app:
       secret: ${JWT_SECRET}
       issuer: ${JWT_ISSUER:HUIT}
       access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:30}
+      refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:7}
       cookie-secure: ${JWT_COOKIE_SECURE:false}
   swagger:
     # Disabled unless explicitly enabled in the local profile.

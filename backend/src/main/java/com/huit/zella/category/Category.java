@@ -28,6 +28,9 @@ public class Category {
     @Column(nullable = false, length = 120, unique = true)
     private String slug;
 
+    @Column(name = "image_url", length = 2048)
+    private String imageUrl;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 

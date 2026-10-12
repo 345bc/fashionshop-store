@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,8 +7,10 @@ import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/feature_header.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
 import '../../../../widgets/common/pagination_footer.dart';
 import '../../../../widgets/common/status_badge.dart';
+import '../../../../widgets/common/zella_checkbox.dart';
 import '../../data/models/category_response_model.dart';
 import '../dialogs/category_create_dialog.dart';
 import '../dialogs/category_delete_dialog.dart';
@@ -24,6 +27,7 @@ class CategoriesScreen extends StatefulWidget {
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
   String _status = 'all';
+  Set<int> selectedIds = {};
 
   @override
   void initState() {
@@ -47,7 +51,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               child: TextButton.icon(
                 onPressed: () =>
                     MainScreen.of(context).navigate('/product-attributes'),
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(Symbols.arrow_back),
                 label: const Text('Thuộc tính sản phẩm'),
               ),
             ),
@@ -56,7 +60,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               title: 'Danh mục',
               subtitle: 'Quản lý cấu trúc danh mục sản phẩm',
               actionLabel: 'Thêm danh mục',
-              actionIcon: Icons.add,
+              actionIcon: Symbols.add,
               onExportPressed: () {},
               onActionPressed: () => showDialog(
                 context: context,
@@ -65,24 +69,23 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
             const SizedBox(height: 32),
             FeatureToolbar(
-              searchHint: 'Tìm kiếm danh mục theo tên hoặc slug...',
+              searchHint: 'Tìm kiếm danh mục theo tên hoặc slug',
               initialSearchText: context
                   .read<CategoriesProvider>()
                   .currentQuery,
               onSearchChanged: (query) =>
                   context.read<CategoriesProvider>().loadItems(query: query),
-              filterWidget: DropdownButton<String>(
+              filterWidget: FilterDropdown<String>(
+                label: 'Trạng thái',
+                searchHint: 'Tìm trạng thái',
                 value: _status,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'all',
-                    child: Text('Tất cả trạng thái'),
-                  ),
-                  DropdownMenuItem(value: 'active', child: Text('Hoạt động')),
-                  DropdownMenuItem(value: 'inactive', child: Text('Đã ẩn')),
+                defaultValue: 'all',
+                options: const [
+                  FilterOption(value: 'active', label: 'Hoạt động', icon: Symbols.check_circle, iconColor: AppTheme.success),
+                  FilterOption(value: 'inactive', label: 'Đã ẩn', icon: Symbols.cancel),
                 ],
                 onChanged: (value) {
-                  setState(() => _status = value ?? 'all');
+                  setState(() => _status = value);
                   context.read<CategoriesProvider>().setStatus(_status);
                 },
               ),
@@ -96,13 +99,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               ),
               child: Consumer<CategoriesProvider>(
                 builder: (context, provider, _) {
-                  if (provider.isLoading && provider.allItems.isEmpty) {
+                  if (provider.isLoading) {
                     return const Padding(
                       padding: EdgeInsets.all(48),
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  if (provider.error != null && provider.allItems.isEmpty) {
+                  if (provider.error != null) {
                     return Padding(
                       padding: const EdgeInsets.all(48),
                       child: Center(
@@ -123,6 +126,19 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         ),
                         child: Row(
                           children: [
+                            ZellaCheckbox(
+                              value: visible.isNotEmpty && selectedIds.length == visible.length,
+                              onChanged: (val) {
+                                setState(() {
+                                  if (val == true) {
+                                    selectedIds = visible.map((e) => e.id).toSet();
+                                  } else {
+                                    selectedIds.clear();
+                                  }
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 16),
                             Expanded(flex: 3, child: _header('DANH MỤC')),
                             Expanded(flex: 2, child: _header('DANH MỤC CHA')),
                             Expanded(flex: 2, child: _header('TRẠNG THÁI')),
@@ -186,23 +202,58 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Row(
           children: [
+            ZellaCheckbox(
+              value: selectedIds.contains(category.id),
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    selectedIds.add(category.id);
+                  } else {
+                    selectedIds.remove(category.id);
+                  }
+                });
+              },
+            ),
+            const SizedBox(width: 16),
             Expanded(
               flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    category.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: category.imageUrl == null
+                          ? const Icon(Symbols.image)
+                          : Image.network(
+                              category.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) =>
+                                  const Icon(Symbols.broken_image),
+                            ),
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    category.slug,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppTheme.textSecondary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          category.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          category.slug,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -230,17 +281,17 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   ActionMenuItem(
                     value: 'view',
                     label: 'Xem chi tiết',
-                    icon: Icons.visibility_outlined,
+                    icon: Symbols.visibility,
                   ),
                   ActionMenuItem(
                     value: 'edit',
                     label: 'Chỉnh sửa',
-                    icon: Icons.edit_outlined,
+                    icon: Symbols.edit,
                   ),
                   ActionMenuItem(
                     value: 'delete',
                     label: 'Xóa danh mục',
-                    icon: Icons.delete_outline,
+                    icon: Symbols.delete,
                     color: AppTheme.danger,
                   ),
                 ],

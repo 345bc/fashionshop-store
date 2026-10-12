@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import '../../../../theme/app_theme.dart';
 
@@ -249,14 +250,14 @@ class StaffTable extends StatelessWidget {
             SizedBox(
               width: 48,
               child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: AppTheme.textSecondary),
+                icon: const Icon(Symbols.more_vert, color: AppTheme.textSecondary),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 itemBuilder: (context) => [
                   const PopupMenuItem(
                     value: 'edit',
                     child: Row(
                       children: [
-                        Icon(Icons.edit_outlined, size: 18),
+                        Icon(Symbols.edit, size: 18),
                         SizedBox(width: 8),
                         Text('Sửa thông tin'),
                       ],
@@ -283,11 +284,11 @@ class StaffTable extends StatelessWidget {
           ),
           Row(
             children: [
-              _buildPageBtn(Icons.chevron_left, null),
+              _buildPageBtn(Symbols.chevron_left, null),
               const SizedBox(width: 8),
               _buildPageBtn('1', true),
               const SizedBox(width: 8),
-              _buildPageBtn(Icons.chevron_right, null),
+              _buildPageBtn(Symbols.chevron_right, null),
             ],
           ),
         ],

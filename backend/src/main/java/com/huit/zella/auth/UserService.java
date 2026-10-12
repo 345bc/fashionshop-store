@@ -35,6 +35,14 @@ public class UserService {
     CustomerRepository customerRepository;
 
     @Transactional(readOnly = true)
+    public CurrentUser requireById(Long id) {
+        User user = user_repository.findById(id).orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED,
+                "USER_NOT_FOUND", "Tài khoản chưa được cấp quyền"));
+        if (!user.isActive()) throw new BusinessException(HttpStatus.FORBIDDEN, "USER_DISABLED", "Tài khoản đã bị khóa");
+        return toCurrentUser(user);
+    }
+
+    @Transactional(readOnly = true)
     public CurrentUser requireByEmail(String email) {
         User user = user_repository.findByEmailIgnoreCase(normalizeEmail(email))
                 .orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED,

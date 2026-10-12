@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
 
@@ -10,13 +11,13 @@ class ErrorStateWidget extends StatelessWidget {
     super.key,
     this.message = 'Đã xảy ra lỗi không xác định',
     this.onRetry,
-    this.icon = Icons.error_outline,
+    this.icon = Symbols.error,
   });
 
   factory ErrorStateWidget.network({VoidCallback? onRetry}) {
     return ErrorStateWidget(
       message: 'Mất kết nối mạng. Vui lòng kiểm tra lại đường truyền.',
-      icon: Icons.wifi_off_outlined,
+      icon: Symbols.wifi_off,
       onRetry: onRetry,
     );
   }
@@ -53,7 +54,7 @@ class ErrorStateWidget extends StatelessWidget {
               const SizedBox(height: 24),
               OutlinedButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
+                icon: const Icon(Symbols.refresh),
                 label: const Text('Thử lại'),
               ),
             ],

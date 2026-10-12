@@ -1,16 +1,17 @@
 package com.huit.zella.color;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.huit.zella.common.exception.BusinessException;
 import com.huit.zella.productvariant.ProductVariantRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -21,9 +22,10 @@ public class ColorService {
     ProductVariantRepository productVariantRepository;
 
     @Transactional(readOnly = true)
-    public List<ColorResponse> list() {
-        return colorRepository.findAll(Sort.by("name", "id"))
-                .stream().map(ColorResponse::from).toList();
+    public Page<ColorResponse> list(String query, Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        Page<Color> page = colorRepository.search(q, pageable);
+        return page.map(ColorResponse::from);
     }
 
     @Transactional(readOnly = true)

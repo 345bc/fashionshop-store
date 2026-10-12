@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+import 'admin_font.dart';
 
 class AppAnimations {
   static const Duration fast = Duration(milliseconds: 150);
@@ -9,6 +10,9 @@ class AppAnimations {
 }
 
 class AppTheme {
+  // Change this selection to preview a font across the admin.
+  static const AdminFont font = AdminFont.sourceSerif4;
+
   // Colors from CSS variables
   static const Color primary = Color(0xFF171717);
   static const Color secondary = Color(0xFF525252);
@@ -30,6 +34,7 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: font.style().fontFamily,
       brightness: Brightness.light,
       primaryColor: primary,
       scaffoldBackgroundColor: surface,
@@ -39,33 +44,60 @@ class AppTheme {
         surface: background,
         error: danger,
       ),
-      textTheme: GoogleFonts.interTextTheme().copyWith(
-        displayLarge: GoogleFonts.inter(
-          color: text,
-          fontWeight: FontWeight.bold,
-        ),
-        displayMedium: GoogleFonts.inter(
-          color: text,
-          fontWeight: FontWeight.w600,
-        ),
-        displaySmall: GoogleFonts.inter(
-          color: text,
-          fontWeight: FontWeight.w600,
-        ),
-        headlineMedium: GoogleFonts.inter(
+      textTheme: font.textTheme().copyWith(
+        displayLarge: font.style(color: text, fontWeight: FontWeight.w600),
+        displayMedium: font.style(color: text, fontWeight: FontWeight.w600),
+        displaySmall: font.style(color: text, fontWeight: FontWeight.w600),
+        headlineMedium: font.style(color: text, fontWeight: FontWeight.w600),
+        headlineLarge: font.style(color: text, fontWeight: FontWeight.w600),
+        headlineSmall: font.style(color: text, fontWeight: FontWeight.w600),
+        titleLarge: font.style(color: text, fontWeight: FontWeight.w600),
+        titleMedium: font.style(
           color: text,
           fontWeight: FontWeight.w600,
+          fontSize: 14,
         ),
-        titleLarge: GoogleFonts.inter(color: text, fontWeight: FontWeight.w600),
-        bodyLarge: const TextStyle(color: text),
-        bodyMedium: const TextStyle(color: text),
-        bodySmall: const TextStyle(color: textSecondary),
+        titleSmall: font.style(
+          color: text,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+        bodyLarge: font.style(
+          color: text,
+          fontWeight: FontWeight.w400,
+          fontSize: 14,
+        ),
+        bodyMedium: font.style(
+          color: text,
+          fontWeight: FontWeight.w400,
+          fontSize: 13,
+        ),
+        bodySmall: font.style(
+          color: textSecondary,
+          fontWeight: FontWeight.w400,
+          fontSize: 13,
+        ),
+        labelLarge: font.style(
+          color: text,
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
+        labelMedium: font.style(
+          color: text,
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
+        labelSmall: font.style(
+          color: textSecondary,
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: background,
         elevation: 0,
-        iconTheme: IconThemeData(color: text),
-        titleTextStyle: TextStyle(
+        iconTheme: const IconThemeData(color: text),
+        titleTextStyle: font.style(
           color: text,
           fontSize: 20,
           fontWeight: FontWeight.w600,
@@ -87,7 +119,7 @@ class AppTheme {
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          textStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          textStyle: font.style(fontWeight: FontWeight.w500, fontSize: 14),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -96,7 +128,7 @@ class AppTheme {
           side: const BorderSide(color: border),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          textStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          textStyle: font.style(fontWeight: FontWeight.w500, fontSize: 14),
         ),
       ),
     );

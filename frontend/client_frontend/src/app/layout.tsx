@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./pages.css";
+import "../cart/cart.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,6 +21,8 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "../auth/AuthContext";
+import { CartProvider } from "../cart/CartContext";
+import CartDrawer from "../cart/CartDrawer";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -29,7 +32,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider><CartProvider>{children}<CartDrawer /></CartProvider></AuthProvider>
       </body>
     </html>
   );

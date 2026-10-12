@@ -49,6 +49,9 @@ public class Customer {
     @Column(name = "reward_points", nullable = false)
     private Integer rewardPoints = 0;
 
+    @Column(name = "reward_point_adjustment", nullable = false)
+    private Integer rewardPointAdjustment = 0;
+
     @Column(name = "total_spending", precision = 18, scale = 2, nullable = false)
     BigDecimal totalSpending = BigDecimal.ZERO;
 

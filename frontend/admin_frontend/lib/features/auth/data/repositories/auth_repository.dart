@@ -17,7 +17,7 @@ class AuthRepository {
 
       // Hỗ trợ cả 2 định dạng trả về từ backend: 
       // 1. Trực tiếp là User object
-      // 2. Nằm trong Map { "user": {...}, "access_token": "..." }
+      // 2. Nằm trong Map { "user": {...}, "access_token": "" }
       dynamic userJson = response.data['data'];
       if (userJson is Map<String, dynamic> && userJson.containsKey('user')) {
         userJson = userJson['user'];
@@ -70,6 +70,7 @@ class AuthRepository {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
+    await prefs.remove('refresh_token');
   }
 
   void _handleError(DioException e) {

@@ -2,6 +2,15 @@ package com.huit.zella.category;
 
 import com.huit.zella.common.exception.BusinessException;
 import com.huit.zella.product.ProductRepository;
+import com.huit.zella.productimage.ProductImageFileStorage;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.util.Objects;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -15,27 +24,13 @@ import java.util.Locale;
 import java.text.Normalizer;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class CategoryService {
     CategoryRepository categoryRepository;
     ProductRepository productRepository;
-
-    @Transactional(readOnly = true)
-    public List<CategoryResponse> list(String query) {
-        String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-
-        return categoryRepository
-                .findByParentIsNotNull(Sort.by("name", "id"))
-                .stream()
-                .filter(category ->
-                        q.isEmpty()
-                                || category.getName().toLowerCase(Locale.ROOT).contains(q)
-                                || category.getSlug().toLowerCase(Locale.ROOT).contains(q)
-                )
-                .map(CategoryResponse::from)
-                .toList();
-    }
+    ProductImageFileStorage fileStorage;
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> listParents() {
@@ -43,6 +38,19 @@ public class CategoryService {
                 .stream()
                 .map(CategoryResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<CategoryResponse> list(String query, Boolean active, Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        Page<Category> page = categoryRepository.search(q, active, pageable);
+        return page.map(CategoryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryResponse> listByParent(Long parentId) {
+        return categoryRepository.findByParentId(parentId, Sort.by("name", "id"))
+                .stream().map(CategoryResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
@@ -59,18 +67,55 @@ public class CategoryService {
 
     @Transactional
     public CategoryResponse update(Long id, CreateCategoryRequest request) {
-        Category category = requireCategory(id);
+        Category category = requireCategoryForUpdate(id);
+        String oldImage = category.getImageUrl();
         apply(category, request);
-        return CategoryResponse.from(categoryRepository.save(category));
+        CategoryResponse response = CategoryResponse.from(categoryRepository.save(category));
+        if (!Objects.equals(oldImage, category.getImageUrl())) scheduleImageDeletion(oldImage);
+        return response;
     }
 
     @Transactional
     public void delete(Long id) {
-        Category category = requireCategory(id);
+        Category category = requireCategoryForUpdate(id);
         if (categoryRepository.existsByParentId(id) || productRepository.existsByCategoryId(id)) {
             throw new BusinessException(HttpStatus.CONFLICT, "CATEGORY_IN_USE", "Category has children or products");
         }
         categoryRepository.delete(category);
+        scheduleImageDeletion(category.getImageUrl());
+    }
+
+    @Transactional
+    public CategoryResponse replaceImage(Long id, String imageUrl) {
+        Category category = requireCategoryForUpdate(id);
+        String oldImage = category.getImageUrl();
+        category.setImageUrl(imageUrl);
+        CategoryResponse response = CategoryResponse.from(categoryRepository.save(category));
+        if (!Objects.equals(oldImage, imageUrl)) scheduleImageDeletion(oldImage);
+        return response;
+    }
+
+    private void scheduleImageDeletion(String url) {
+        if (url == null || !url.startsWith(fileStorage.categoryPublicUrlPrefix())) return;
+        String fileName = url.substring(fileStorage.categoryPublicUrlPrefix().length());
+        if (!fileName.matches("[0-9a-f-]{36}\\.(jpg|png|gif|webp)")) return;
+        Runnable delete = () -> {
+            try {
+                fileStorage.deleteCategory(fileName);
+            } catch (RuntimeException error) {
+                log.warn("Could not delete category image {}", fileName, error);
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    delete.run();
+                }
+            });
+        } else {
+            delete.run();
+        }
     }
 
     private void apply(Category category, CreateCategoryRequest request) {
@@ -96,6 +141,7 @@ public class CategoryService {
             slug = slug + "-" + System.currentTimeMillis();
         }
         category.setName(name);
+        category.setImageUrl(request.imageUrl());
         category.setSlug(slug);
         category.setParent(parent);
         category.setIsActive(request.isActive() == null || request.isActive());
@@ -112,6 +158,11 @@ public class CategoryService {
 
     private Category requireCategory(Long id) {
         return categoryRepository.findById(id).orElseThrow(() ->
+                new BusinessException(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "Category not found"));
+    }
+
+    private Category requireCategoryForUpdate(Long id) {
+        return categoryRepository.findByIdForImageUpdate(id).orElseThrow(() ->
                 new BusinessException(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "Category not found"));
     }
 }

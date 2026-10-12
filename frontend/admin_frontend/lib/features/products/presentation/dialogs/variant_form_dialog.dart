@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -19,9 +20,6 @@ class VariantFormDialog extends StatefulWidget {
 class _VariantFormDialogState extends State<VariantFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _price;
-  late final TextEditingController _costPrice;
-  late final TextEditingController _stock;
-  late final TextEditingController _reserved;
   late final Future<
     ({List<Map<String, dynamic>> sizes, List<Map<String, dynamic>> colors})
   >
@@ -44,15 +42,6 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
     _sizeId = (variant?['sizeId'] as num?)?.toInt();
     _colorId = (variant?['colorId'] as num?)?.toInt();
     _price = TextEditingController(text: variant?['price']?.toString() ?? '');
-    _costPrice = TextEditingController(
-      text: variant?['costPrice']?.toString() ?? '',
-    );
-    _stock = TextEditingController(
-      text: variant?['stockQuantity']?.toString() ?? '0',
-    );
-    _reserved = TextEditingController(
-      text: variant?['reservedQuantity']?.toString() ?? '0',
-    );
     _isActive = variant?['isActive'] == true || variant == null;
     _options = context.read<ProductVariantsProvider>().loadOptions();
     if (variant != null) {
@@ -190,9 +179,6 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
   @override
   void dispose() {
     _price.dispose();
-    _costPrice.dispose();
-    _stock.dispose();
-    _reserved.dispose();
     super.dispose();
   }
 
@@ -206,14 +192,6 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
       return;
     }
     if (_formKey.currentState?.validate() != true) return;
-    if (int.parse(_reserved.text.trim()) > int.parse(_stock.text.trim())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Số lượng đã đặt không được lớn hơn tồn kho'),
-        ),
-      );
-      return;
-    }
     setState(() => _saving = true);
     var variantSaved = false;
     try {
@@ -222,9 +200,9 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
         'sizeId': _sizeId,
         'colorId': _colorId,
         'price': double.parse(_price.text.trim()),
-        'costPrice': double.parse(_costPrice.text.trim()),
-        'stockQuantity': int.parse(_stock.text.trim()),
-        'reservedQuantity': int.parse(_reserved.text.trim()),
+        'costPrice': widget.variant?['costPrice'] ?? 0,
+        'stockQuantity': widget.variant?['stockQuantity'] ?? 0,
+        'reservedQuantity': widget.variant?['reservedQuantity'] ?? 0,
         'isActive': _isActive,
       };
       final provider = context.read<ProductVariantsProvider>();
@@ -283,10 +261,6 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
     return null;
   }
 
-  String? _quantityValidator(String? value) {
-    final number = int.tryParse(value?.trim() ?? '');
-    return number == null || number < 0 ? 'Nhập số nguyên từ 0 trở lên' : null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -377,64 +351,16 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _price,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              decoration: const InputDecoration(
-                                labelText: 'Giá bán (VNĐ) *',
-                              ),
-                              validator: (value) =>
-                                  _moneyValidator(value, positive: true),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _costPrice,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              decoration: const InputDecoration(
-                                labelText: 'Giá vốn (VNĐ) *',
-                              ),
-                              validator: _moneyValidator,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _stock,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Tồn kho *',
-                              ),
-                              validator: _quantityValidator,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _reserved,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Đã đặt *',
-                              ),
-                              validator: _quantityValidator,
-                            ),
-                          ),
-                        ],
+                      TextFormField(
+                        controller: _price,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Giá bán (VND) *',
+                        ),
+                        validator: (value) =>
+                            _moneyValidator(value, positive: true),
                       ),
                       const SizedBox(height: 16),
                       SwitchListTile(
@@ -529,7 +455,7 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
                                                 ? null
                                                 : () => _removeImage(image),
                                             icon: const Icon(
-                                              Icons.close,
+                                              Symbols.close,
                                               size: 18,
                                             ),
                                           ),
@@ -544,8 +470,8 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
                                             ),
                                       icon: Icon(
                                         identical(_primaryImage, image)
-                                            ? Icons.check_circle
-                                            : Icons.radio_button_unchecked,
+                                            ? Symbols.check_circle
+                                            : Symbols.radio_button_unchecked,
                                         size: 18,
                                       ),
                                       label: const Text('Ảnh chính'),
@@ -558,7 +484,7 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
                           onPressed: _saving ? null : _pickImages,
-                          icon: const Icon(Icons.add_photo_alternate_outlined),
+                          icon: const Icon(Symbols.add_photo_alternate),
                           label: const Text('Thêm ảnh'),
                         ),
                       ],

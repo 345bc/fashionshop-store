@@ -1,5 +1,7 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
 
 class StaffToolbar extends StatelessWidget {
   const StaffToolbar({super.key});
@@ -19,9 +21,9 @@ class StaffToolbar extends StatelessWidget {
             flex: 2,
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Tìm kiếm theo tên, mã NV, email...',
+                hintText: 'Tìm kiếm theo tên, mã NV, email',
                 hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 14),
-                prefixIcon: Icon(Icons.search, size: 20, color: AppTheme.textMuted),
+                prefixIcon: Icon(Symbols.search, size: 20, color: AppTheme.textMuted),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -29,29 +31,18 @@ class StaffToolbar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.borderLight),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: 'all',
-                isDense: true,
-                icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: AppTheme.textSecondary),
-                style: const TextStyle(fontSize: 14, color: AppTheme.text),
-                items: const [
-                  DropdownMenuItem(value: 'all', child: Text('Tất cả phòng ban')),
-                  DropdownMenuItem(value: 'sales', child: Text('Bán hàng')),
-                  DropdownMenuItem(value: 'warehouse', child: Text('Kho')),
-                  DropdownMenuItem(value: 'designer', child: Text('Thiết kế')),
-                  DropdownMenuItem(value: 'accountant', child: Text('Kế toán')),
-                ],
-                onChanged: (value) {},
-              ),
-            ),
+          FilterDropdown<String>(
+            label: 'Phòng ban',
+            searchHint: 'Tìm phòng ban',
+            value: 'all',
+            defaultValue: 'all',
+            options: const [
+              FilterOption(value: 'sales', label: 'Bán hàng'),
+              FilterOption(value: 'warehouse', label: 'Kho'),
+              FilterOption(value: 'designer', label: 'Thiết kế'),
+              FilterOption(value: 'accountant', label: 'Kế toán'),
+            ],
+            onChanged: (value) {},
           ),
         ],
       ),

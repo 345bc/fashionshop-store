@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_endpoints.dart';
 import 'api_interceptors.dart';
@@ -33,6 +34,8 @@ class ApiClient {
   String? _csrfToken;
   String? _csrfHeaderName;
   void Function()? onSessionExpired;
+  Future<bool>? _refreshInFlight;
+  bool _loggingOut = false;
 
   ApiClient._internal() {
     dio = Dio(
@@ -80,21 +83,49 @@ class ApiClient {
           }
           return handler.next(options);
         },
-        onResponse: (response, handler) {
+        onResponse: (response, handler) async {
           // Cập nhật CSRF token từ mỗi response.
           // Server có thể rotate token sau mỗi request → phải luôn lấy token mới nhất.
           _updateCsrfFromResponseCookies(response.headers['set-cookie']);
+          await _storeAuthCookies(response.headers['set-cookie']);
           return handler.next(response);
         },
-        onError: (DioException e, handler) {
+        onError: (DioException e, handler) async {
           if (e.response != null) {
             _updateCsrfFromResponseCookies(e.response!.headers['set-cookie']);
+            await _storeAuthCookies(e.response!.headers['set-cookie']);
           }
           if (e.response?.statusCode == 401) {
             clearCsrfToken();
             final path = e.requestOptions.path;
+            if (!_loggingOut &&
+                ![
+                  '/auth/refresh',
+                  ApiEndpoints.login,
+                  ApiEndpoints.logout,
+                  '/auth/csrf',
+                  '/auth/register',
+                ].contains(path) &&
+                e.requestOptions.extra['authRetried'] != true) {
+              try {
+                if (await refreshSession()) {
+                  e.requestOptions.extra['authRetried'] = true;
+                  e.requestOptions.headers.remove('Cookie');
+                  if (e.requestOptions.data is FormData) {
+                    e.requestOptions.data = (e.requestOptions.data as FormData)
+                        .clone();
+                  }
+                  return handler.resolve(await dio.fetch(e.requestOptions));
+                }
+              } on DioException catch (refreshError) {
+                if (refreshError.response?.statusCode != 401) {
+                  return handler.reject(refreshError);
+                }
+              }
+            }
             if (path != ApiEndpoints.login &&
                 path != ApiEndpoints.logout &&
+                path != '/auth/refresh' &&
                 path != '/auth/csrf') {
               onSessionExpired?.call();
             }
@@ -136,6 +167,48 @@ class ApiClient {
     }
   }
 
+  Future<void> _storeAuthCookies(List<String>? cookies) async {
+    if (cookies == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    for (final cookie in cookies) {
+      final part = cookie.split(';').first;
+      final separator = part.indexOf('=');
+      if (separator < 0) continue;
+      final key = switch (part.substring(0, separator)) {
+        'ACCESS_TOKEN' => 'access_token',
+        'REFRESH_TOKEN' => 'refresh_token',
+        _ => null,
+      };
+      if (key == null) continue;
+      final value = part.substring(separator + 1);
+      if (value.isEmpty) {
+        await prefs.remove(key);
+      } else {
+        await prefs.setString(key, value);
+      }
+    }
+  }
+
+  Future<bool> refreshSession() {
+    if (_loggingOut) return Future.value(false);
+    return _refreshInFlight ??= _refreshSession().whenComplete(
+      () => _refreshInFlight = null,
+    );
+  }
+
+  Future<bool> _refreshSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString('refresh_token')?.isNotEmpty != true) return false;
+    clearCsrfToken();
+    try {
+      await dio.post('/auth/refresh');
+      return true;
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) return false;
+      rethrow;
+    }
+  }
+
   void clearCsrfToken() {
     _csrfToken = null;
     _csrfHeaderName = null;
@@ -171,6 +244,19 @@ class ApiClient {
   }
 
   Future<Response> post(String path, {dynamic data, Options? options}) async {
+    if (path == ApiEndpoints.logout) {
+      _loggingOut = true;
+      try {
+        if (_refreshInFlight != null) {
+          try {
+            await _refreshInFlight;
+          } catch (_) {}
+        }
+        return await dio.post(path, data: data, options: options);
+      } finally {
+        _loggingOut = false;
+      }
+    }
     return await dio.post(path, data: data, options: options);
   }
 

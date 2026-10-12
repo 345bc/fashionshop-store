@@ -14,7 +14,7 @@ Chỉ chỉnh sửa giao diện và chức năng phía khách hàng. Không thê
 - Đăng nhập/đăng ký căn giữa màn hình và đồng bộ giao diện.
 - Làm lại Profile, Orders tracking, Loyalty, Purchase History + đánh giá sản phẩm.
 - Làm lại Cart, Checkout, Order Success, Support Chat.
-- Chuẩn hóa font: dùng Geist từ Next.js; bỏ dependency font icon Google bên ngoài, chuyển icon sang lucide-react.
+- Font chữ dùng Geist từ Next.js; toàn bộ icon giao diện dùng Google Material Symbols Outlined, không dùng Lucide hoặc bộ icon khác.
 
 ## Kiểm tra
 - `tsc --noEmit`: PASS

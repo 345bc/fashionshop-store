@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -36,7 +37,7 @@ class _VariantDetailDialogState extends State<VariantDetailDialog> {
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (match) => '${match[1]}.',
     );
-    return '$digits ₫';
+    return '$digits  VND';
   }
 
   String _imageUrl(String url) {
@@ -78,7 +79,7 @@ class _VariantDetailDialogState extends State<VariantDetailDialog> {
               IconButton(
                 tooltip: 'Đóng',
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close),
+                icon: const Icon(Symbols.close),
               ),
             ],
           ),
@@ -203,7 +204,7 @@ class _VariantDetailDialogState extends State<VariantDetailDialog> {
                                     errorBuilder: (_, _, _) => const SizedBox(
                                       width: 150,
                                       height: 150,
-                                      child: Icon(Icons.broken_image_outlined),
+                                      child: Icon(Symbols.broken_image),
                                     ),
                                   ),
                                 ),

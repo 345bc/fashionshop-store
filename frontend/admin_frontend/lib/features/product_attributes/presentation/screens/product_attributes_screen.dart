@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../main.dart';
@@ -12,25 +13,25 @@ class ProductAttributesScreen extends StatelessWidget {
       (
         title: 'Danh mục',
         subtitle: 'Danh mục con và danh mục cha',
-        icon: Icons.category_outlined,
+        icon: Symbols.category,
         route: '/categories',
       ),
       (
         title: 'Màu sắc',
         subtitle: 'Tên màu, mã màu và mã HEX',
-        icon: Icons.palette_outlined,
+        icon: Symbols.palette,
         route: '/colors',
       ),
       (
         title: 'Size',
         subtitle: 'Kích cỡ và thứ tự hiển thị',
-        icon: Icons.straighten_outlined,
+        icon: Symbols.straighten,
         route: '/sizes',
       ),
       (
         title: 'Size Guide',
         subtitle: 'Bảng hướng dẫn chọn size',
-        icon: Icons.menu_book_outlined,
+        icon: Symbols.menu_book,
         route: '/sizeguides',
       ),
     ];
@@ -105,7 +106,7 @@ class ProductAttributesScreen extends StatelessWidget {
                                   ),
                                 ),
                                 const Icon(
-                                  Icons.chevron_right,
+                                  Symbols.chevron_right,
                                   color: AppTheme.textSecondary,
                                 ),
                               ],

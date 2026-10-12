@@ -11,7 +11,8 @@ export default function LoginPage() {
   const auth = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = searchParams?.get("returnTo") ?? "/";
+  const requestedReturn = searchParams?.get("returnTo") ?? "/";
+  const returnTo = !requestedReturn.includes("\\") && /^\/(profile|orders|purchase-history|loyalty|checkout)(\/|\?|$)/.test(requestedReturn) ? requestedReturn : "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

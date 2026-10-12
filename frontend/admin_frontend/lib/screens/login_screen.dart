@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -114,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Nhập email của bạn',
                       hintStyle: const TextStyle(color: AppTheme.textMuted),
                       prefixIcon: const Icon(
-                        Icons.email_outlined,
+                        Symbols.mail,
                         color: AppTheme.textSecondary,
                         size: 20,
                       ),
@@ -184,15 +185,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Nhập mật khẩu',
                       hintStyle: const TextStyle(color: AppTheme.textMuted),
                       prefixIcon: const Icon(
-                        Icons.lock_outline,
+                        Symbols.lock,
                         color: AppTheme.textSecondary,
                         size: 20,
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
+                              ? Symbols.visibility_off
+                              : Symbols.visibility,
                           color: AppTheme.textSecondary,
                           size: 20,
                         ),

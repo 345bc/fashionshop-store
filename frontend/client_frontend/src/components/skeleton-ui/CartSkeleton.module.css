@@ -1,0 +1,16 @@
+.block { display: block; background: #ececec; border-radius: 4px; animation: pulse 1.6s ease-in-out infinite; }
+.item { display: grid; grid-template-columns: 18px 84px minmax(0, 1fr); gap: 14px; padding: 24px 0; border-bottom: 1px solid #e9e9e9; }
+.checkbox { width: 16px; height: 16px; margin-top: 8px; }
+.image { height: 112px; border-radius: 8px; }
+.info { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.title { width: 92%; height: 18px; }
+.subtitle { width: 56%; height: 12px; }
+.price { width: 90px; max-width: 100%; height: 14px; }
+.quantity { width: 108px; height: 34px; margin: 2px 0; }
+.total { width: 104px; max-width: 100%; height: 18px; align-self: flex-end; }
+.summary { display: flex; flex-direction: column; gap: 20px; padding: 8px 0; }
+.summaryTotal { display: flex; align-items: center; justify-content: space-between; }
+.button { width: 100%; height: 48px; margin-top: 8px; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .block { animation: none; } }
+@media (max-width: 420px) { .item { grid-template-columns: 16px 64px minmax(0, 1fr); gap: 10px; } .image { height: 86px; } }

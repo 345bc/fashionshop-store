@@ -9,4 +9,5 @@ public interface VariantImageRepository extends JpaRepository<VariantImage, Long
     List<VariantImage> findByVariantIdOrderByDisplayOrderAscIdAsc(Long variantId);
 
     Optional<VariantImage> findByVariantIdAndIsPrimaryTrue(Long variantId);
+    List<VariantImage>  findByVariantIdInOrderByIsPrimaryDescDisplayOrderAscIdAsc(List<Long> variantIds);
 }

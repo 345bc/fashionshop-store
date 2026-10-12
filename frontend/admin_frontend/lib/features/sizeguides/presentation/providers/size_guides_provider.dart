@@ -20,17 +20,8 @@ class SizeGuidesProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await _repository.getAll(size: 100);
-      if (data is List) {
-        _items = data
-            .map((json) => SizeGuideResponseModel.fromJson(json))
-            .toList();
-      } else if (data is Map && data['content'] != null) {
-        final List<dynamic> content = data['content'];
-        _items = content
-            .map((json) => SizeGuideResponseModel.fromJson(json))
-            .toList();
-      }
+      final data = await _repository.getOptions();
+      _items = data.map(SizeGuideResponseModel.fromJson).toList();
     } catch (e) {
       _error = e.toString();
     } finally {

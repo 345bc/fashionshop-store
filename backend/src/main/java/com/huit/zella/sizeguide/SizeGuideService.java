@@ -1,12 +1,14 @@
 package com.huit.zella.sizeguide;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.huit.zella.common.exception.BusinessException;
 import com.huit.zella.product.ProductRepository;
 import com.huit.zella.productimage.ProductImageFileStorage;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,8 +16,6 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -27,11 +27,10 @@ public class SizeGuideService {
     ProductImageFileStorage fileStorage;
 
     @Transactional(readOnly = true)
-    public List<SizeGuideResponse> list() {
-        return sizeGuideRepository.findAll(Sort.by("name", "id"))
-                .stream()
-                .map(SizeGuideResponse::from)
-                .toList();
+    public Page<SizeGuideResponse> list(String query, Boolean active, Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        Page<SizeGuide> page = sizeGuideRepository.search(q, active, pageable);
+        return page.map(SizeGuideResponse::from);
     }
 
     @Transactional(readOnly = true)

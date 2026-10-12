@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../theme/app_theme.dart';
 import 'zella_dialog.dart';
 
 class ZellaFormDialog extends StatelessWidget {
   final String title;
+  final String? subtitle;
   final Widget content;
   final String cancelText;
   final String confirmText;
@@ -18,6 +20,7 @@ class ZellaFormDialog extends StatelessWidget {
   const ZellaFormDialog({
     super.key,
     required this.title,
+    this.subtitle,
     required this.content,
     this.cancelText = 'Hủy',
     this.confirmText = 'Lưu',
@@ -25,7 +28,7 @@ class ZellaFormDialog extends StatelessWidget {
     required this.onConfirm,
     this.isLoading = false,
     this.formKey,
-    this.width = 480,
+    this.width = 500,
     this.height,
   });
 
@@ -44,13 +47,43 @@ class ZellaFormDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.text,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.text,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        subtitle!,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Symbols.close, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                color: AppTheme.textSecondary,
+                splashRadius: 24,
+              ),
+            ],
           ),
           const SizedBox(height: 24),
 

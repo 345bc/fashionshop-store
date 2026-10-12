@@ -1,5 +1,10 @@
 package com.huit.zella.supplier;
 
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
+
+import com.huit.zella.common.api.PageResponse;
+
 import com.huit.zella.common.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -10,8 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/supplier")
 @RequiredArgsConstructor
@@ -20,8 +23,17 @@ public class SupplierController {
     SupplierService supplierService;
 
     @GetMapping
-    public ApiResponse<List<SupplierResponse>> list(@RequestParam(required = false) String q) {
-        return ApiResponse.success(supplierService.list(q));
+    public ApiResponse<PageResponse<SupplierResponse>> list(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        int safeSize = Math.max(1, Math.min(size, 100));
+        return ApiResponse.success(PageResponse.from(supplierService.list(
+                q, active,
+                PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "id"))
+        )));
     }
 
     @GetMapping("/{id}")

@@ -5,21 +5,45 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 
 class SupplierRepository {
-  final ApiClient _apiClient = ApiClient();
+  Future<List<dynamic>> getOptions() async {
+    final items = <dynamic>[];
+    var page = 0;
+    while (true) {
+      final data = await getAll(page: page, size: 100);
+      final content = data['content'] as List;
+      items.addAll(content);
+      page++;
+      if (page >= (data['totalPages'] as num).toInt()) break;
+    }
+    return items;
+  }
 
-  Future<List<dynamic>> getAll() async {
+  Future<Map<String, dynamic>> getAll({
+    int page = 0,
+    int size = 15,
+    String? query,
+    String? status,
+  }) async {
     try {
-      final response = await _apiClient.get(ApiEndpoints.suppliers);
-
-      if (response.statusCode == 200) {
-        return response.data['data'] as List<dynamic>;
-      }
-      throw Exception(response.data['message'] ?? 'Fetch failed');
+      final response = await _apiClient.get(
+        ApiEndpoints.suppliers,
+        queryParameters: {
+          'page': page,
+          'size': size,
+          'q': ?query,
+          'active': status == null || status == 'all'
+              ? null
+              : status == 'active',
+        },
+      );
+      return Map<String, dynamic>.from(response.data['data'] as Map);
     } catch (e) {
       _handleError(e);
       rethrow;
     }
   }
+
+  final ApiClient _apiClient = ApiClient();
 
   Future<Map<String, dynamic>> getById(int id) async {
     try {
