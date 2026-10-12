@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +8,9 @@ import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
 import '../../../../widgets/common/pagination_footer.dart';
 import '../../../../widgets/common/status_badge.dart';
+import '../../../../widgets/common/bulk_action_bar.dart';
+import '../../../../widgets/common/zella_checkbox.dart';
+import '../../../../widgets/common/zella_toast.dart';
 import '../dialogs/variant_create_dialog.dart';
 import '../dialogs/variant_edit_dialog.dart';
 import '../dialogs/variant_detail_dialog.dart';
@@ -21,6 +25,7 @@ class ProductVariantsScreen extends StatefulWidget {
 }
 
 class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
+  Set<int> selectedIds = {};
   int? get _productId => (widget.product?['id'] as num?)?.toInt();
 
   @override
@@ -57,7 +62,7 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (match) => '${match[1]}.',
     );
-    return '$digits ₫';
+    return '$digits  VND';
   }
 
   @override
@@ -77,17 +82,19 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
         ),
       );
     }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           Row(
             children: [
               IconButton(
                 tooltip: 'Về sản phẩm',
                 onPressed: () => MainScreen.of(context).navigate('/products'),
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(Symbols.arrow_back),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -114,14 +121,14 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
                   context: context,
                   builder: (_) => VariantCreateDialog(productId: id),
                 ),
-                icon: const Icon(Icons.add),
+                icon: const Icon(Symbols.add),
                 label: const Text('Thêm biến thể'),
               ),
             ],
           ),
           const SizedBox(height: 32),
           FeatureToolbar(
-            searchHint: 'Tìm biến thể theo SKU...',
+            searchHint: 'Tìm theo SKU, tên SP, danh mục, kích cỡ hoặc màu sắc',
             onSearchChanged: (query) => context
                 .read<ProductVariantsProvider>()
                 .loadItems(productId: id, query: query),
@@ -173,6 +180,22 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
                       ),
                       child: Row(
                         children: [
+                          Container(
+                            width: 48,
+                            alignment: Alignment.centerLeft,
+                            child: ZellaCheckbox(
+                              value: provider.items.isNotEmpty && selectedIds.length == provider.items.length,
+                              onChanged: (v) {
+                                setState(() {
+                                  if (v == true) {
+                                    selectedIds.addAll(provider.items.map((e) => (e['id'] as num).toInt()));
+                                  } else {
+                                    selectedIds.clear();
+                                  }
+                                });
+                              },
+                            ),
+                          ),
                           Expanded(flex: 3, child: _heading('BIẾN THỂ')),
                           Expanded(
                             flex: 2,
@@ -217,6 +240,47 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
           ),
         ],
       ),
+    ),
+    BulkActionBar(
+      selectedCount: selectedIds.length,
+      itemLabel: 'biến thể',
+      onClear: () => setState(() => selectedIds.clear()),
+      actions: [
+        BulkActionButton(
+          icon: Symbols.visibility_off,
+          tooltip: 'Ẩn',
+          onPressed: () async {
+            final ids = selectedIds.toList();
+            await context.read<ProductVariantsProvider>().toggleActiveBulk(ids, false);
+            if (context.mounted) {
+              ZellaToast.show(
+                context,
+                message: 'Đã ẩn ${ids.length} biến thể',
+                type: ToastType.success,
+              );
+            }
+            setState(() => selectedIds.clear());
+          },
+        ),
+        BulkActionButton(
+          icon: Symbols.visibility,
+          tooltip: 'Hoạt động',
+          onPressed: () async {
+            final ids = selectedIds.toList();
+            await context.read<ProductVariantsProvider>().toggleActiveBulk(ids, true);
+            if (context.mounted) {
+              ZellaToast.show(
+                context,
+                message: 'Đã hiện ${ids.length} biến thể',
+                type: ToastType.success,
+              );
+            }
+            setState(() => selectedIds.clear());
+          },
+        ),
+      ],
+    ),
+      ],
     );
   }
 
@@ -246,6 +310,22 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Row(
             children: [
+              Container(
+                width: 48,
+                alignment: Alignment.centerLeft,
+                child: ZellaCheckbox(
+                  value: selectedIds.contains((variant['id'] as num).toInt()),
+                  onChanged: (v) {
+                    setState(() {
+                      if (v == true) {
+                        selectedIds.add((variant['id'] as num).toInt());
+                      } else {
+                        selectedIds.remove((variant['id'] as num).toInt());
+                      }
+                    });
+                  },
+                ),
+              ),
               Expanded(
                 flex: 3,
                 child: Column(
@@ -316,12 +396,12 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
                     ActionMenuItem(
                       value: 'view',
                       label: 'Xem chi tiết',
-                      icon: Icons.visibility_outlined,
+                      icon: Symbols.visibility,
                     ),
                     ActionMenuItem(
                       value: 'edit',
                       label: 'Chỉnh sửa',
-                      icon: Icons.edit_outlined,
+                      icon: Symbols.edit,
                     ),
                   ],
                   onSelected: (value) {

@@ -73,6 +73,26 @@ class ProductVariantsProvider extends ChangeNotifier {
     await loadItems(productId: _productId, page: _currentPage);
   }
 
+  Future<void> toggleActiveBulk(List<int> ids, bool isActive) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final futures = ids.map((id) {
+        final item = _items.firstWhere((e) => (e['id'] as num).toInt() == id);
+        final data = Map<String, dynamic>.from(item);
+        data['isActive'] = isActive;
+        return _repository.update(id, data);
+      });
+      await Future.wait(futures);
+      await loadItems(productId: _productId, page: _currentPage);
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<
     ({List<Map<String, dynamic>> sizes, List<Map<String, dynamic>> colors})
   >

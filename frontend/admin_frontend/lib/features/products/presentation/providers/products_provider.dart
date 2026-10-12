@@ -155,6 +155,26 @@ class ProductsProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> toggleActiveBulk(List<int> ids, bool isActive) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+      final futures = ids.map((id) {
+        final item = _items.firstWhere((e) => e.id == id);
+        final data = item.toJson();
+        data['isActive'] = isActive;
+        return _repository.update(id, data);
+      });
+      await Future.wait(futures);
+      await loadItems(page: _currentPage);
+    } catch (e) {
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // Future<void> deleteItem(int id) async {
   //   try {
   //     _isLoading = true;

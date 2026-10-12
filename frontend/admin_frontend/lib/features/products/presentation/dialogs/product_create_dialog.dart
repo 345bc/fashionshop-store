@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -194,7 +195,7 @@ class _ProductCreateDialogState extends State<ProductCreateDialog> {
                 maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: 'Mô tả ngắn',
-                  hintText: 'Nhập mô tả sản phẩm...',
+                  hintText: 'Nhập mô tả sản phẩm',
                 ),
               ),
 
@@ -209,7 +210,7 @@ class _ProductCreateDialogState extends State<ProductCreateDialog> {
                       controller: _styleController,
                       decoration: const InputDecoration(
                         labelText: 'Phong cách (Style)',
-                        hintText: 'VD: Vintage, Modern...',
+                        hintText: 'VD: Vintage, Modern',
                       ),
                     ),
                   ),
@@ -219,7 +220,7 @@ class _ProductCreateDialogState extends State<ProductCreateDialog> {
                       controller: _occasionController,
                       decoration: const InputDecoration(
                         labelText: 'Dịp (Occasion)',
-                        hintText: 'VD: Dạo phố, Dự tiệc...',
+                        hintText: 'VD: Dạo phố, Dự tiệc',
                       ),
                     ),
                   ),
@@ -354,7 +355,7 @@ class _ProductCreateDialogState extends State<ProductCreateDialog> {
                     height: 48,
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) =>
-                        const Icon(Icons.broken_image_outlined),
+                        const Icon(Symbols.broken_image),
                   ),
                   title: Text(
                     _selectedImages[i].name,
@@ -366,7 +367,7 @@ class _ProductCreateDialogState extends State<ProductCreateDialog> {
                       ? IconButton(
                           tooltip: 'Xóa ảnh',
                           onPressed: _isLoading ? null : () => _removeImage(i),
-                          icon: const Icon(Icons.close),
+                          icon: const Icon(Symbols.close),
                         )
                       : null,
                 ),
@@ -375,7 +376,7 @@ class _ProductCreateDialogState extends State<ProductCreateDialog> {
               if (_createdProductId == null)
                 OutlinedButton.icon(
                   onPressed: _isLoading ? null : _addImage,
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  icon: const Icon(Symbols.add_photo_alternate),
                   label: const Text('Thêm ảnh'),
                 ),
             ],

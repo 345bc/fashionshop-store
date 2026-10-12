@@ -93,6 +93,22 @@ class AttributeProvider extends ChangeNotifier {
     await load();
   }
 
+  Future<void> toggleActiveBulk(List<int> ids, bool isActive) async {
+    _loading = true;
+    notifyListeners();
+    try {
+      final futures = ids.map((id) {
+        final item = _items.firstWhere((e) => (e['id'] as num).toInt() == id);
+        final data = Map<String, dynamic>.from(item);
+        data['isActive'] = isActive;
+        return _repository.update(kind, id, data);
+      });
+      await Future.wait(futures);
+    } finally {
+      await load();
+    }
+  }
+
   Future<void> delete(int id) async {
     await _repository.delete(kind, id);
     await load();
