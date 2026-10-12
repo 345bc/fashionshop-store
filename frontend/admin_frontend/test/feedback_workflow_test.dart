@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -116,8 +117,8 @@ void main() {
     (tester) async {
       final p = FeedbackProvider();
       await mount(tester, p, const FeedbackScreen(), width: 700);
-      await tester.ensureVisible(find.byIcon(Icons.chevron_right));
-      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.ensureVisible(find.byIcon(Symbols.chevron_right));
+      await tester.tap(find.byIcon(Symbols.chevron_right));
       await tester.pumpAndSettle();
       expect(p.currentPage, 1);
       expect(p.pageItems.any((r) => r.id == p.selectedReview!.id), isTrue);

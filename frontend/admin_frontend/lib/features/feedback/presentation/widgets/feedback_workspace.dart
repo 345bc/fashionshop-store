@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -213,7 +214,7 @@ class _InlineReplyState extends State<_InlineReply> {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: () => widget.provider.openProduct(r.productId),
-              icon: const Icon(Icons.checkroom, size: 18),
+              icon: const Icon(Symbols.checkroom, size: 18),
               label: Text(r.productName),
             ),
           ),
@@ -258,7 +259,7 @@ class _InlineReplyState extends State<_InlineReply> {
                   const SnackBar(content: Text('Đã lưu câu trả lời mẫu')),
                 );
               },
-              icon: const Icon(Icons.send_outlined, size: 18),
+              icon: const Icon(Symbols.send, size: 18),
               label: Text(
                 r.adminReply == null ? 'Gửi & xem tiếp' : 'Cập nhật & xem tiếp',
               ),

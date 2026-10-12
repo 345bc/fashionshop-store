@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
@@ -31,7 +32,8 @@ class ReviewStars extends StatelessWidget {
       children: [
         for (var i = 1; i <= 5; i++)
           Icon(
-            i <= rating ? Icons.star : Icons.star_border,
+            Symbols.star,
+            fill: i <= rating ? 1 : 0,
             size: 18,
             color: Colors.amber.shade700,
           ),

@@ -1,8 +1,10 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
 import '../../data/repositories/feedback_repository.dart';
 import '../providers/feedback_provider.dart';
 import '../widgets/feedback_category_filters.dart';
@@ -70,7 +72,7 @@ class FeedbackScreen extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
                   onPressed: p.backToCatalog,
-                  icon: const Icon(Icons.arrow_back),
+                  icon: const Icon(Symbols.arrow_back),
                   label: const Text('Danh sách sản phẩm'),
                 ),
               ),
@@ -96,21 +98,20 @@ class FeedbackScreen extends StatelessWidget {
             ],
             FeatureToolbar(
               searchHint: catalog
-                  ? 'Tìm sản phẩm theo tên hoặc SKU...'
-                  : 'Tìm khách hàng, nội dung hoặc đơn hàng...',
+                  ? 'Tìm sản phẩm theo tên hoặc SKU'
+                  : 'Tìm khách hàng, nội dung hoặc đơn hàng',
               initialSearchText: catalog ? p.catalogFilters.query : p.query,
               onSearchChanged: catalog ? p.setCatalogQuery : p.setQuery,
               filterWidget: catalog
                   ? null
-                  : DropdownButton<int>(
+                  : FilterDropdown<int>(
+                      label: 'Đánh giá',
+                      searchHint: 'Tìm số sao',
                       value: p.rating ?? 0,
-                      items: [
-                        const DropdownMenuItem(
-                          value: 0,
-                          child: Text('Tất cả số sao'),
-                        ),
+                      defaultValue: 0,
+                      options: [
                         for (var i = 5; i >= 1; i--)
-                          DropdownMenuItem(value: i, child: Text('$i sao')),
+                          FilterOption(value: i, label: '$i sao', icon: Symbols.star, iconColor: const Color(0xFFFFB020)),
                       ],
                       onChanged: (i) => p.setRating(i == 0 ? null : i),
                     ),

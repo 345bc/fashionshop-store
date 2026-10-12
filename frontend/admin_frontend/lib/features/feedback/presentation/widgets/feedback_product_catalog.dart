@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
@@ -60,7 +61,7 @@ class FeedbackProductCatalog extends StatelessWidget {
                     color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.checkroom),
+                  child: const Icon(Symbols.checkroom),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -81,8 +82,13 @@ class FeedbackProductCatalog extends StatelessWidget {
                         spacing: 16,
                         runSpacing: 6,
                         children: [
-                          Text(
-                            '★ ${provider.averageFor(id).toStringAsFixed(1)} / 5',
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Symbols.star, size: 14, fill: 1),
+                              const SizedBox(width: 4),
+                              Text('${provider.averageFor(id).toStringAsFixed(1)} / 5'),
+                            ],
                           ),
                           Text('${provider.reviewsFor(id).length} đánh giá'),
                           Text(
@@ -98,7 +104,7 @@ class FeedbackProductCatalog extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right),
+                const Icon(Symbols.chevron_right),
               ],
             ),
           ),

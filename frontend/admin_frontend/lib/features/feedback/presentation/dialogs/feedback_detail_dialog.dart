@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -54,7 +55,7 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
               IconButton(
                 tooltip: 'Đóng',
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
+                icon: const Icon(Symbols.close),
               ),
             ],
           ),
@@ -75,7 +76,7 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
                     ReviewStars(rating: r.rating),
                     const Chip(
                       label: Text('Đã mua hàng'),
-                      avatar: Icon(Icons.verified_outlined, size: 18),
+                      avatar: Icon(Symbols.verified, size: 18),
                     ),
                   ],
                 ),
@@ -116,7 +117,7 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
                       maxLength: 1000,
                       decoration: const InputDecoration(
                         hintText:
-                            'Nhập câu trả lời sẽ hiển thị cùng đánh giá...',
+                            'Nhập câu trả lời sẽ hiển thị cùng đánh giá',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) =>
@@ -140,7 +141,7 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.send_outlined, size: 18),
+                      icon: const Icon(Symbols.send, size: 18),
                       label: Text(
                         r.adminReply == null
                             ? 'Gửi trả lời'
@@ -160,8 +161,8 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
                       onPressed: () => _moderate(provider, r),
                       icon: Icon(
                         r.visibility == ReviewVisibility.visible
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
+                            ? Symbols.visibility_off
+                            : Symbols.visibility,
                       ),
                       label: Text(
                         r.visibility == ReviewVisibility.visible
