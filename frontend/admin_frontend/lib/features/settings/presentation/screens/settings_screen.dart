@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import '../../../../theme/app_theme.dart';
 
@@ -43,7 +44,7 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     ElevatedButton.icon(
                       onPressed: () {},
-                      icon: const Icon(Icons.save_outlined, size: 18),
+                      icon: const Icon(Symbols.save, size: 18),
                       label: const Text('Lưu thay đổi'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.text,
@@ -79,7 +80,7 @@ class SettingsScreen extends StatelessWidget {
               child: const Center(
                 child: Column(
                   children: [
-                    Icon(Icons.settings_suggest_outlined, size: 48, color: AppTheme.textMuted),
+                    Icon(Symbols.settings_suggest, size: 48, color: AppTheme.textMuted),
                     SizedBox(height: 16),
                     Text(
                       'Tính năng đang được phát triển',
