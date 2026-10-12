@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -34,7 +35,7 @@ class CampaignDetailDialog extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
+                icon: const Icon(Symbols.close),
               ),
             ],
           ),
@@ -61,6 +62,12 @@ class CampaignDetailDialog extends StatelessWidget {
                 _line('Kết thúc', campaignDate(item.endsAt)),
                 if (item is VoucherModel) ...[
                   _line('Mã voucher', item.code),
+                  _line(
+                    'Loại voucher',
+                    item.redeemable ? 'Đổi điểm' : 'Nhập mã',
+                  ),
+                  if (item.redeemable)
+                    _line('Điểm cần đổi', '${item.pointsRequired} điểm'),
                   _line('Giá trị hàng tối thiểu', money(item.minOrderAmount)),
                   _line(
                     'Giảm tối đa',
@@ -73,26 +80,44 @@ class CampaignDetailDialog extends StatelessWidget {
                     '${item.usedCount} / ${item.usageLimit ?? 'Không giới hạn'}',
                   ),
                   const SizedBox(height: 20),
-                  _heading('Lịch sử sử dụng mẫu'),
+                  _heading(
+                    item.redeemable
+                        ? 'Lịch sử đổi điểm (50 lần gần nhất)'
+                        : 'Đơn hàng sử dụng mã (50 đơn gần nhất)',
+                  ),
                   if (item.usages.isEmpty) const Text('Chưa có lượt sử dụng.'),
                   for (final usage in item.usages)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text('${usage.orderCode} • ${usage.buyer}'),
-                      subtitle: Text(campaignDate(usage.usedAt)),
-                      trailing: Text(money(usage.discountAmount)),
+                      subtitle: Text(
+                        '${campaignDate(usage.usedAt)}${usage.pointsRequired == null ? '' : ' · ${usage.pointsRequired} điểm'}',
+                      ),
+                      trailing: Text(
+                        usage.discountType == 'GIFT'
+                            ? 'Gói quà'
+                            : usage.discountType == 'PERCENT'
+                            ? '${usage.discountAmount}%'
+                            : money(usage.discountAmount),
+                      ),
                     ),
-                  const Text(
-                    'Lịch sử đang hiển thị một số lượt mẫu; chưa kết nối với đơn hàng thực tế.',
+                  Text(
+                    item.redeemable
+                        ? 'Số lượt là số mã đã đổi thành công. Mã đã cấp giữ nguyên quyền lợi khi sửa hoặc tắt mẫu.'
+                        : 'Số lượt gồm lượt đã dùng và lượt đang giữ cho đơn chờ thanh toán.',
                   ),
                 ],
                 if (item is PromotionModel) ...[
                   const SizedBox(height: 20),
                   _heading('Sản phẩm áp dụng'),
+                  if (item.targetMode == 'NEW_PRODUCTS')
+                    const Text(
+                      'Tự động áp dụng cho sản phẩm mới tạo trong 7 ngày gần nhất.',
+                    ),
                   for (final product in item.products)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.check_circle_outline),
+                      leading: const Icon(Symbols.check_circle),
                       title: Text(product.name),
                     ),
                   const Text(
@@ -100,7 +125,7 @@ class CampaignDetailDialog extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 20),
-                _heading('Lịch sử xử lý'),
+                if (item.history.isNotEmpty) _heading('Lịch sử xử lý'),
                 for (final event in item.history.reversed)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
@@ -145,7 +170,7 @@ class CampaignDetailDialog extends StatelessWidget {
                     child: CampaignFormDialog(kind: item.kind, item: item),
                   ),
                 ),
-                icon: const Icon(Icons.edit_outlined, size: 18),
+                icon: const Icon(Symbols.edit, size: 18),
                 label: const Text('Chỉnh sửa'),
               ),
             ],
@@ -177,12 +202,8 @@ class _ToggleDialog extends StatefulWidget {
 
 class _ToggleDialogState extends State<_ToggleDialog> {
   final _form = GlobalKey<FormState>();
-  final _reason = TextEditingController();
-  @override
-  void dispose() {
-    _reason.dispose();
-    super.dispose();
-  }
+  bool _saving = false;
+  String? _error;
 
   @override
   Widget build(BuildContext context) {
@@ -198,19 +219,10 @@ class _ToggleDialogState extends State<_ToggleDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (_error != null)
+                Text(_error!, style: const TextStyle(color: Colors.red)),
               const Text(
                 'Bật lại không thay đổi thời gian hiệu lực hoặc số lượt đã sử dụng.',
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _reason,
-                maxLength: 500,
-                minLines: 2,
-                maxLines: 4,
-                decoration: const InputDecoration(labelText: 'Lý do *'),
-                validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Vui lòng nhập lý do'
-                    : null,
               ),
             ],
           ),
@@ -222,11 +234,19 @@ class _ToggleDialogState extends State<_ToggleDialog> {
           child: const Text('Hủy'),
         ),
         ElevatedButton(
-          onPressed: () {
-            if (!_form.currentState!.validate()) return;
-            p.toggle(item.id, _reason.text);
-            Navigator.pop(context);
-          },
+          onPressed: _saving
+              ? null
+              : () async {
+                  setState(() => _saving = true);
+                  try {
+                    await p.toggle(item.id);
+                    if (context.mounted) Navigator.pop(context);
+                  } catch (e) {
+                    if (mounted) setState(() => _error = e.toString());
+                  } finally {
+                    if (mounted) setState(() => _saving = false);
+                  }
+                },
           child: const Text('Xác nhận'),
         ),
       ],

@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,8 +7,21 @@ import '../../../../theme/app_theme.dart';
 import '../../data/models/campaign_model.dart';
 import '../providers/campaigns_provider.dart';
 
-class PromotionsScreen extends StatelessWidget {
+class PromotionsScreen extends StatefulWidget {
   const PromotionsScreen({super.key});
+  @override
+  State<PromotionsScreen> createState() => _PromotionsScreenState();
+}
+
+class _PromotionsScreenState extends State<PromotionsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<CampaignsProvider>().load();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CampaignsProvider>();
@@ -27,7 +41,7 @@ class PromotionsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Dữ liệu mẫu • Chưa áp dụng vào giá sản phẩm hoặc đơn hàng thực tế.',
+            'Voucher nhập tại checkout; khuyến mãi tự động áp dụng cho sản phẩm.',
           ),
           const SizedBox(height: 28),
           LayoutBuilder(
@@ -64,8 +78,8 @@ class PromotionsScreen extends StatelessWidget {
                               children: [
                                 Icon(
                                   kind == CampaignKind.voucher
-                                      ? Icons.confirmation_number_outlined
-                                      : Icons.local_offer_outlined,
+                                      ? Symbols.confirmation_number
+                                      : Symbols.local_offer,
                                   size: 32,
                                 ),
                                 const SizedBox(width: 18),
@@ -92,12 +106,12 @@ class PromotionsScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        '${provider.items(kind).length} chương trình mẫu',
+                                        '${provider.items(kind).length} chương trình',
                                       ),
                                     ],
                                   ),
                                 ),
-                                const Icon(Icons.chevron_right),
+                                const Icon(Symbols.chevron_right),
                               ],
                             ),
                           ),

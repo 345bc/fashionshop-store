@@ -1,18 +1,15 @@
+import '../../../../core/network/api_client.dart';
+import '../../../inventory/data/api/inventory_repository.dart';
 import '../models/campaign_model.dart';
 
-/// Demo catalog and campaigns; does not access product/order APIs.
 class CampaignRepository {
-  static const catalog = [
-    PromotionProductModel(1, 'Áo sơ mi nam Oxford trắng'),
-    PromotionProductModel(2, 'Áo sơ mi nữ lụa cổ nơ'),
-    PromotionProductModel(3, 'Váy nữ midi xếp ly'),
-    PromotionProductModel(4, 'Quần jeans nữ ống đứng'),
-  ];
-  final List<CampaignModel> _items;
-  CampaignRepository({DateTime? now}) : _items = _seed(now ?? DateTime.now());
+  final _api = ApiClient();
+  final List<CampaignModel> _items = [];
   List<CampaignModel> get items => List.unmodifiable(_items);
-  int nextId() => _items.fold<int>(0, (v, r) => v > r.id ? v : r.id) + 1;
-  void save(CampaignModel item) {
+  List<PromotionProductModel> catalog = [];
+  int nextId() => 0;
+  String kind(CampaignModel item) => item.kind.name;
+  void replace(CampaignModel item) {
     final index = _items.indexWhere((r) => r.id == item.id);
     if (index < 0) {
       _items.add(item);
@@ -21,66 +18,131 @@ class CampaignRepository {
     }
   }
 
-  static List<CampaignModel> _seed(DateTime now) => [
-    for (var i = 0; i < 5; i++)
-      VoucherModel(
-        id: i + 1,
-        name: [
-          'Chào khách mới',
-          'Giảm 50.000 đ',
-          'Ưu đãi tháng tới',
-          'Mã đã tắt',
-          'Ưu đãi đã kết thúc',
-        ][i],
-        code: ['WELCOME10', 'SAVE50K', 'NEXTMONTH', 'MEMBER15', 'SUMMER20'][i],
-        description: 'Voucher mẫu áp dụng trên giá trị hàng đủ điều kiện, không gồm phí vận chuyển.',
-        startsAt: now.add(Duration(days: i == 2 ? 7 : -7)),
-        endsAt: now.add(Duration(days: i == 4 ? -1 : 30)),
-        enabled: i != 3,
-        discountType: i == 1 ? DiscountType.fixed : DiscountType.percent,
-        discountValue: i == 1 ? 50000 : 10,
-        minOrderAmount: 300000,
-        maxDiscountAmount: i == 1 ? null : 100000,
-        usageLimit: 100,
-        usedCount: i == 1 ? 100 : 1,
+  Future<void> load() => warehouseRequest(() async {
+    final results = await Future.wait([
+      _api.get('/campaigns/voucher'),
+      _api.get('/campaigns/promotion'),
+      _api.get('/campaigns/products'),
+    ]);
+    final campaigns = [
+      for (final response in results.take(2))
+        for (final json in response.data['data'] as List)
+          _parse(Map<String, dynamic>.from(json)),
+    ];
+    catalog = [
+      for (final json in results[2].data['data'] as List)
+        PromotionProductModel(
+          (json['id'] as num).toInt(),
+          json['name'] as String,
+        ),
+    ];
+    _items
+      ..clear()
+      ..addAll(campaigns);
+  });
+  Future<void> detail(CampaignModel item) => warehouseRequest(() async {
+    final response = await _api.get(
+      '/campaigns/${kind(item)}/${item.id.abs()}',
+    );
+    replace(_parse(Map<String, dynamic>.from(response.data['data'])));
+  });
+  Future<void> save(CampaignModel item, {required bool creating}) =>
+      warehouseRequest(() async {
+        final data = <String, dynamic>{
+          'name': item.name,
+          'description': item.description,
+          'startsAt': item.startsAt.toUtc().toIso8601String(),
+          'endsAt': item.endsAt.toUtc().toIso8601String(),
+          'enabled': item.enabled,
+          if (item is VoucherModel) ...{
+            'code': item.code,
+            'discountType': item.discountType == DiscountType.percent
+                ? 'PERCENT'
+                : item.discountType == DiscountType.gift
+                ? 'GIFT'
+                : 'FIXED',
+            'discountValue': item.discountValue,
+            'minOrderAmount': item.minOrderAmount,
+            'maxDiscountAmount': item.maxDiscountAmount,
+            'usageLimit': item.usageLimit,
+            'redeemable': item.redeemable,
+            'pointsRequired': item.pointsRequired,
+          },
+          if (item is PromotionModel) ...{
+            'discountPercent': item.discountPercent,
+            'targetMode': item.targetMode,
+            'productIds': item.products.map((p) => p.id).toList(),
+          },
+        };
+        final path = '/campaigns/${kind(item)}';
+        final response = creating
+            ? await _api.post(path, data: data)
+            : await _api.put('$path/${item.id.abs()}', data: data);
+        replace(_parse(Map<String, dynamic>.from(response.data['data'])));
+      });
+  Future<void> state(CampaignModel item, bool enabled) =>
+      warehouseRequest(() async {
+        final response = await _api.patch(
+          '/campaigns/${kind(item)}/${item.id.abs()}/state',
+          data: {'enabled': enabled},
+        );
+        replace(_parse(Map<String, dynamic>.from(response.data['data'])));
+      });
+  CampaignModel _parse(Map<String, dynamic> j) {
+    final voucher = j['kind'] == 'voucher';
+    final id = (j['id'] as num).toInt();
+    final start = DateTime.parse(j['startsAt']).toLocal(),
+        end = DateTime.parse(j['endsAt']).toLocal();
+    if (voucher) {
+      return VoucherModel(
+        id: id,
+        name: j['name'],
+        description: j['description'] ?? '',
+        startsAt: start,
+        endsAt: end,
+        enabled: j['enabled'],
+        code: j['code'],
+        discountType: j['discountType'] == 'PERCENT'
+            ? DiscountType.percent
+            : j['discountType'] == 'GIFT'
+            ? DiscountType.gift
+            : DiscountType.fixed,
+        redeemable: j['redeemable'] ?? false,
+        pointsRequired: j['pointsRequired'],
+        discountValue: (j['discountValue'] as num).toInt(),
+        minOrderAmount: (j['minOrderAmount'] as num?)?.toInt() ?? 0,
+        maxDiscountAmount: ((j['maxDiscountAmount'] as num?)?.toInt() ?? 0) > 0
+            ? (j['maxDiscountAmount'] as num).toInt()
+            : null,
+        usageLimit: j['usageLimit'],
+        usedCount: j['usedCount'] ?? 0,
         usages: [
-          VoucherUsageModel(
-            'ORD-DEMO-${100 + i}',
-            'Khách mẫu',
-            i == 1 ? 50000 : 30000,
-            now.subtract(const Duration(days: 1)),
-          ),
+          for (final u in (j['usages'] as List? ?? []))
+            VoucherUsageModel(
+              u['orderCode'],
+              u['buyer'] ?? '',
+              (u['discountAmount'] as num).toInt(),
+              DateTime.parse(u['usedAt']).toLocal(),
+              discountType: u['discountType'] ?? 'FIXED',
+              pointsRequired: u['pointsRequired'],
+              status: u['paymentStatus'] ?? '',
+            ),
         ],
-        history: [
-          CampaignHistoryModel(
-            'Tạo voucher',
-            'CSKH (mẫu)',
-            now.subtract(const Duration(days: 8)),
-          ),
-        ],
-      ),
-    for (var i = 0; i < 4; i++)
-      PromotionModel(
-        id: 10 + i,
-        name: [
-          'Ưu đãi áo sơ mi',
-          'Bộ sưu tập nữ',
-          'Chương trình đã tắt',
-          'Sale đã kết thúc',
-        ][i],
-        description: 'Tự động giảm giá cho các sản phẩm được chọn và tất cả biến thể của chúng.',
-        startsAt: now.add(Duration(days: i == 1 ? 5 : -5)),
-        endsAt: now.add(Duration(days: i == 3 ? -1 : 20)),
-        enabled: i != 2,
-        discountPercent: 15 + i * 5,
-        products: [catalog[i]],
-        history: [
-          CampaignHistoryModel(
-            'Tạo khuyến mãi',
-            'CSKH (mẫu)',
-            now.subtract(const Duration(days: 6)),
-          ),
-        ],
-      ),
-  ];
+      );
+    }
+    return PromotionModel(
+      id: -id,
+      name: j['name'],
+      description: j['description'] ?? '',
+      startsAt: start,
+      endsAt: end,
+      enabled: j['enabled'],
+      discountPercent: (j['discountPercent'] as num).toInt(),
+      targetMode: j['targetMode'] ?? 'SELECTED',
+      products: [
+        for (final p in (j['products'] as List? ?? []))
+          PromotionProductModel((p['id'] as num).toInt(), p['name']),
+      ],
+    );
+  }
 }

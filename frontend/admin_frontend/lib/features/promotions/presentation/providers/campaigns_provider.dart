@@ -10,9 +10,38 @@ class CampaignsProvider extends ChangeNotifier {
   }) : _repository = repository ?? CampaignRepository(),
        _clock = clock ?? DateTime.now;
   final CampaignRepository _repository;
+  bool loading = false;
+  String? error;
+  List<PromotionProductModel> get catalog => _repository.catalog;
+  Future<void> load() async {
+    if (loading) return;
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      await _repository.load();
+    } catch (e) {
+      error = e.toString();
+    }
+    loading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadDetail(int id) async {
+    await _repository.detail(detail(id));
+    notifyListeners();
+  }
+
   final DateTime Function() _clock;
   String query = '';
   CampaignStatus? filter;
+  bool rewardScope = false;
+  void setRewardScope(bool value) {
+    rewardScope = value;
+    currentPage = 0;
+    notifyListeners();
+  }
+
   int currentPage = 0;
   final int pageSize = 10;
   List<CampaignModel> items(CampaignKind kind) =>
@@ -21,6 +50,7 @@ class CampaignsProvider extends ChangeNotifier {
   List<CampaignModel> filtered(CampaignKind kind) => items(kind)
       .where(
         (r) =>
+            (r is! VoucherModel || r.redeemable == rewardScope) &&
             (filter == null || status(r) == filter) &&
             '${r.name} ${r.description} ${r is VoucherModel ? r.code : ''}'
                 .toLowerCase()
@@ -58,7 +88,7 @@ class CampaignsProvider extends ChangeNotifier {
   }
 
   int nextId() => _repository.nextId();
-  void save(CampaignModel item, {bool creating = false}) {
+  Future<void> save(CampaignModel item, {bool creating = false}) async {
     if (item.name.trim().isEmpty ||
         item.name.length > 200 ||
         item.description.length > 500) {
@@ -82,7 +112,7 @@ class CampaignsProvider extends ChangeNotifier {
           .any((v) => v.id != item.id && v.code.toUpperCase() == item.code)) {
         throw ArgumentError('Mã voucher đã tồn tại.');
       }
-      if (item.discountValue <= 0 ||
+      if ((item.discountType != DiscountType.gift && item.discountValue <= 0) ||
           (item.discountType == DiscountType.percent &&
               item.discountValue > 100) ||
           item.minOrderAmount < 0 ||
@@ -93,47 +123,37 @@ class CampaignsProvider extends ChangeNotifier {
           'Giá trị giảm hoặc giới hạn lượt sử dụng không hợp lệ.',
         );
       }
+      if (item.redeemable &&
+          (item.pointsRequired == null || item.pointsRequired! <= 0)) {
+        throw ArgumentError('Điểm cần đổi phải là số nguyên dương.');
+      }
     }
     if (item is PromotionModel &&
         (item.discountPercent < 1 ||
             item.discountPercent > 100 ||
-            item.products.isEmpty)) {
+            (item.targetMode == 'SELECTED' && item.products.isEmpty))) {
       throw ArgumentError(
         'Khuyến mãi cần giảm 1–100% và chọn ít nhất một sản phẩm.',
       );
     }
-    final existingHistory = creating
-        ? <CampaignHistoryModel>[]
-        : detail(item.id).history;
-    _repository.save(
-      item.withState(item.enabled, [
-        ...existingHistory,
-        CampaignHistoryModel(
-          creating ? 'Tạo chương trình' : 'Cập nhật chương trình',
-          '${item.name} • ${item.discountLabel} • CSKH (mẫu)',
-          _clock(),
-        ),
-      ]),
-    );
+    await _repository.save(item, creating: creating);
     setPage(item.kind, currentPage);
   }
 
-  void toggle(int id, String reason) {
-    if (reason.trim().isEmpty || reason.length > 500) {
-      throw ArgumentError('Cần lý do từ 1–500 ký tự.');
-    }
+  Future<void> toggle(int id) async {
     final item = detail(id);
-    _repository.save(
-      item.withState(!item.enabled, [
-        ...item.history,
-        CampaignHistoryModel(
-          item.enabled ? 'Tắt chương trình' : 'Bật chương trình',
-          '${reason.trim()} • CSKH (mẫu)',
-          _clock(),
-        ),
-      ]),
-    );
-    setPage(item.kind, currentPage);
+    await _repository.state(item, !item.enabled);
+    notifyListeners();
+  }
+
+  Future<void> toggleActiveBulk(List<int> ids, bool active) async {
+    try {
+      for (final id in ids) {
+        await _repository.state(detail(id), active);
+      }
+    } finally {
+      notifyListeners();
+    }
   }
 
   void refreshStatuses() => notifyListeners();

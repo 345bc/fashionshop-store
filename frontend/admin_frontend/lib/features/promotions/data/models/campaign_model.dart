@@ -21,7 +21,8 @@ enum CampaignStatus {
 
 enum DiscountType {
   percent('Phần trăm'),
-  fixed('Số tiền');
+  fixed('Số tiền'),
+  gift('Gói quà và thiệp');
 
   const DiscountType(this.label);
   final String label;
@@ -66,6 +67,9 @@ abstract class CampaignModel {
 }
 
 class VoucherUsageModel {
+  final String discountType;
+  final int? pointsRequired;
+  final String status;
   final String orderCode, buyer;
   final int discountAmount;
   final DateTime usedAt;
@@ -73,11 +77,16 @@ class VoucherUsageModel {
     this.orderCode,
     this.buyer,
     this.discountAmount,
-    this.usedAt,
-  );
+    this.usedAt, {
+    this.discountType = 'FIXED',
+    this.pointsRequired,
+    this.status = '',
+  });
 }
 
 class VoucherModel extends CampaignModel {
+  final bool redeemable;
+  final int? pointsRequired;
   final String code;
   final DiscountType discountType;
   final int discountValue, minOrderAmount, usedCount;
@@ -99,12 +108,16 @@ class VoucherModel extends CampaignModel {
     this.usageLimit,
     this.usedCount = 0,
     this.usages = const [],
+    this.redeemable = false,
+    this.pointsRequired,
   });
   @override
   CampaignKind get kind => CampaignKind.voucher;
   @override
   String get discountLabel => discountType == DiscountType.percent
       ? '$discountValue%'
+      : discountType == DiscountType.gift
+      ? 'Gói quà và thiệp'
       : money(discountValue);
   @override
   CampaignStatus statusAt(DateTime now) {
@@ -134,6 +147,8 @@ class VoucherModel extends CampaignModel {
         usageLimit: usageLimit,
         usedCount: usedCount,
         usages: usages,
+        redeemable: redeemable,
+        pointsRequired: pointsRequired,
       );
 }
 
@@ -144,6 +159,7 @@ class PromotionProductModel {
 }
 
 class PromotionModel extends CampaignModel {
+  final String targetMode;
   final int discountPercent;
   final List<PromotionProductModel> products;
   const PromotionModel({
@@ -156,6 +172,7 @@ class PromotionModel extends CampaignModel {
     super.history,
     required this.discountPercent,
     required this.products,
+    this.targetMode = 'SELECTED',
   });
   @override
   CampaignKind get kind => CampaignKind.promotion;
@@ -173,5 +190,6 @@ class PromotionModel extends CampaignModel {
         history: history,
         discountPercent: discountPercent,
         products: products,
+        targetMode: targetMode,
       );
 }

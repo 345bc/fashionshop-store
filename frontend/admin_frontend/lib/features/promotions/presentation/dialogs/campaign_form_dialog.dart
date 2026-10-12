@@ -1,10 +1,11 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../widgets/dialogs/zella_dialog.dart';
 import '../../data/models/campaign_model.dart';
-import '../../data/repositories/campaign_repository.dart';
+
 import '../providers/campaigns_provider.dart';
 
 class CampaignFormDialog extends StatefulWidget {
@@ -24,11 +25,15 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
       _min = TextEditingController(),
       _cap = TextEditingController();
   final _limit = TextEditingController();
+  final _points = TextEditingController();
+  bool _redeemable = false;
   late DateTime _start, _end;
   bool _enabled = true;
   DiscountType _type = DiscountType.percent;
   final Set<int> _products = {};
   String? _error;
+  bool _saving = false;
+  String _targetMode = 'SELECTED';
   bool get _voucher => widget.kind == CampaignKind.voucher;
 
   @override
@@ -40,7 +45,10 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
     _start = item?.startsAt ?? DateTime.now();
     _end = item?.endsAt ?? _start.add(const Duration(days: 30));
     _enabled = item?.enabled ?? true;
+    _redeemable = context.read<CampaignsProvider>().rewardScope;
     if (item is VoucherModel) {
+      _redeemable = item.redeemable;
+      _points.text = item.pointsRequired?.toString() ?? '';
       _code.text = item.code;
       _type = item.discountType;
       _value.text = '${item.discountValue}';
@@ -51,6 +59,7 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
       _value.text = item is PromotionModel ? '${item.discountPercent}' : '10';
       _min.text = '0';
       if (item is PromotionModel) {
+        _targetMode = item.targetMode;
         _products.addAll(item.products.map((p) => p.id));
       }
     }
@@ -66,14 +75,19 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
       _min,
       _cap,
       _limit,
+      _points,
     ]) {
       controller.dispose();
     }
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final p = context.read<CampaignsProvider>();
     try {
       final item = widget.item;
@@ -88,7 +102,11 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
               enabled: _enabled,
               code: _code.text.trim().toUpperCase(),
               discountType: _type,
-              discountValue: int.parse(_value.text),
+              discountValue: _type == DiscountType.gift
+                  ? 0
+                  : int.parse(_value.text),
+              redeemable: _redeemable,
+              pointsRequired: _redeemable ? int.tryParse(_points.text) : null,
               minOrderAmount: int.parse(_min.text),
               maxDiscountAmount: _type == DiscountType.percent
                   ? int.tryParse(_cap.text)
@@ -105,17 +123,22 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
               endsAt: _end,
               enabled: _enabled,
               discountPercent: int.parse(_value.text),
-              products: CampaignRepository.catalog
+              targetMode: _targetMode,
+              products: p.catalog
                   .where((product) => _products.contains(product.id))
                   .toList(),
             );
-      p.save(value, creating: item == null);
+      await p.save(value, creating: item == null);
+      if (!mounted) return;
       Navigator.pop(context, true);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Đã lưu chương trình mẫu')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Đã lưu chương trình')));
     } on ArgumentError catch (e) {
-      setState(() => _error = '${e.message}');
+      if (mounted) setState(() => _error = '${e.message}');
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -174,7 +197,7 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
               ),
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
+                icon: const Icon(Symbols.close),
               ),
             ],
           ),
@@ -187,7 +210,7 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
-                      'Dữ liệu mẫu • Chưa ảnh hưởng đến đơn hàng và giá bán thực tế.',
+                      'Thay đổi được lưu vào hệ thống. Voucher đã cấp cho khách giữ nguyên quyền lợi.',
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
@@ -225,6 +248,26 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
                       decoration: const InputDecoration(labelText: 'Mô tả'),
                     ),
                     const SizedBox(height: 20),
+                    if (_voucher) ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Voucher đổi điểm'),
+                        subtitle: const Text(
+                          'Khách dùng điểm thưởng để đổi mã riêng, sử dụng một lần trong 30 ngày.',
+                        ),
+                        value: _redeemable,
+                        onChanged: used || _saving
+                            ? null
+                            : (value) => setState(() {
+                                _redeemable = value;
+                                if (!value && _type == DiscountType.gift) {
+                                  _type = DiscountType.fixed;
+                                }
+                              }),
+                      ),
+                      if (_redeemable)
+                        _number(_points, 'Điểm cần đổi *', max: 2147483647),
+                    ],
                     _heading('Mức giảm'),
                     if (_voucher)
                       DropdownButtonFormField<DiscountType>(
@@ -233,7 +276,9 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
                           labelText: 'Loại giảm',
                         ),
                         items: [
-                          for (final type in DiscountType.values)
+                          for (final type in DiscountType.values.where(
+                            (t) => _redeemable || t != DiscountType.gift,
+                          ))
                             DropdownMenuItem(
                               value: type,
                               child: Text(type.label),
@@ -241,15 +286,16 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
                         ],
                         onChanged: (type) => setState(() => _type = type!),
                       ),
-                    _number(
-                      _value,
-                      !_voucher || _type == DiscountType.percent
-                          ? 'Giảm (%) *'
-                          : 'Giảm (VND) *',
-                      max: !_voucher || _type == DiscountType.percent
-                          ? 100
-                          : null,
-                    ),
+                    if (_type != DiscountType.gift)
+                      _number(
+                        _value,
+                        !_voucher || _type == DiscountType.percent
+                            ? 'Giảm (%) *'
+                            : 'Giảm (VND) *',
+                        max: !_voucher || _type == DiscountType.percent
+                            ? 100
+                            : null,
+                      ),
                     if (_voucher && _type == DiscountType.percent)
                       _number(_cap, 'Giảm tối đa (VND)', optional: true),
                     if (_voucher) ...[
@@ -262,26 +308,48 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
                         optional: true,
                         max: 2147483647,
                       ),
-                      const Text('Để trống tổng lượt dùng nếu không giới hạn.'),
+                      Text(
+                        _redeemable
+                            ? 'Giới hạn số lần đổi điểm. Mỗi mã cấp cho khách dùng một lần.'
+                            : 'Để trống tổng lượt dùng nếu không giới hạn.',
+                      ),
                     ] else ...[
                       const SizedBox(height: 20),
                       _heading('Sản phẩm áp dụng *'),
-                      const Text(
-                        'Danh sách sản phẩm mẫu; giảm cho tất cả biến thể của sản phẩm đã chọn.',
+                      DropdownButtonFormField<String>(
+                        initialValue: _targetMode,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'SELECTED',
+                            child: Text('Sản phẩm được chọn'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'NEW_PRODUCTS',
+                            child: Text('Sản phẩm mới trong 7 ngày'),
+                          ),
+                        ],
+                        onChanged: _saving
+                            ? null
+                            : (value) => setState(() => _targetMode = value!),
                       ),
-                      for (final product in CampaignRepository.catalog)
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(product.name),
-                          value: _products.contains(product.id),
-                          onChanged: (selected) => setState(() {
-                            if (selected == true) {
-                              _products.add(product.id);
-                            } else {
-                              _products.remove(product.id);
-                            }
-                          }),
-                        ),
+                      const Text(
+                        'Giảm cho tất cả biến thể. Sản phẩm mới tự ngừng hưởng giảm khi đủ 7 ngày.',
+                      ),
+                      if (_targetMode == 'SELECTED')
+                        for (final product
+                            in context.watch<CampaignsProvider>().catalog)
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(product.name),
+                            value: _products.contains(product.id),
+                            onChanged: (selected) => setState(() {
+                              if (selected == true) {
+                                _products.add(product.id);
+                              } else {
+                                _products.remove(product.id);
+                              }
+                            }),
+                          ),
                     ],
                     const SizedBox(height: 20),
                     _heading('Thời gian hiệu lực'),
@@ -291,12 +359,12 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
                       children: [
                         OutlinedButton.icon(
                           onPressed: () => _pickDate(true),
-                          icon: const Icon(Icons.calendar_today_outlined),
+                          icon: const Icon(Symbols.calendar_today),
                           label: Text('Bắt đầu: ${campaignDate(_start)}'),
                         ),
                         OutlinedButton.icon(
                           onPressed: () => _pickDate(false),
-                          icon: const Icon(Icons.event_outlined),
+                          icon: const Icon(Symbols.event),
                           label: Text('Kết thúc: ${campaignDate(_end)}'),
                         ),
                       ],
@@ -332,7 +400,10 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
                 child: const Text('Hủy'),
               ),
               const SizedBox(width: 12),
-              ElevatedButton(onPressed: _save, child: const Text('Lưu')),
+              ElevatedButton(
+                onPressed: _saving ? null : _save,
+                child: Text(_saving ? 'Đang lưu…' : 'Lưu'),
+              ),
             ],
           ),
         ],
