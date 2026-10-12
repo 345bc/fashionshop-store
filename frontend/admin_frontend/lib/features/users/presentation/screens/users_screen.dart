@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,9 @@ import '../../../../widgets/common/feature_toolbar.dart';
 import '../../../../widgets/common/status_badge.dart';
 import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/pagination_footer.dart';
+import '../../../../widgets/common/bulk_action_bar.dart';
+import '../../../../widgets/common/zella_checkbox.dart';
+import '../../../../widgets/common/zella_toast.dart';
 import '../../../../theme/app_theme.dart';
 
 import '../../data/models/user_response_model.dart';
@@ -26,6 +30,8 @@ class UsersScreen extends StatefulWidget {
 }
 
 class _UsersScreenState extends State<UsersScreen> {
+  Set<int> selectedIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -39,50 +45,102 @@ class _UsersScreenState extends State<UsersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            FeatureHeader(
-              title: 'Tài khoản hệ thống',
-              subtitle: 'Quản lý tài khoản và phân quyền truy cập',
-              actionLabel: 'Tạo tài khoản',
-              actionIcon: Icons.add,
-              onExportPressed: () {},
-              onActionPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => const UserEditDialog(),
-                );
-              },
-            ),
-            const SizedBox(height: 32),
-            FeatureToolbar(
-              searchHint: 'Tìm kiếm theo tên, email...',
-              onSearchChanged: (query) {
-                context.read<UsersProvider>().loadItems(query: query, page: 0);
-              },
-              initialSearchText: context.read<UsersProvider>().currentQuery,
-            ),
-            const SizedBox(height: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFF0F0F0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(5),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FeatureHeader(
+                  title: 'Tài khoản hệ thống',
+                  subtitle: 'Quản lý tài khoản và phân quyền truy cập',
+                  actionLabel: 'Tạo tài khoản',
+                  actionIcon: Symbols.add,
+                  onExportPressed: () {},
+                  onActionPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const UserEditDialog(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
+                FeatureToolbar(
+                  searchHint: 'Tìm kiếm theo tên tài khoản',
+                  onSearchChanged: (query) {
+                    context.read<UsersProvider>().loadItems(
+                      query: query,
+                      page: 0,
+                    );
+                  },
+                  initialSearchText: context.read<UsersProvider>().currentQuery,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFF0F0F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Column(children: [_buildTable()]),
+                  child: Column(children: [_buildTable()]),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          BulkActionBar(
+            selectedCount: selectedIds.length,
+            itemLabel: 'tài khoản',
+            onClear: () => setState(() => selectedIds.clear()),
+            actions: [
+              BulkActionButton(
+                icon: Symbols.lock,
+                tooltip: 'Khóa',
+                onPressed: () async {
+                  final ids = selectedIds.toList();
+                  await context.read<UsersProvider>().toggleActiveBulk(
+                    ids,
+                    false,
+                  );
+                  if (context.mounted) {
+                    ZellaToast.show(
+                      context,
+                      message: 'Đã khóa ${ids.length} tài khoản',
+                      type: ToastType.success,
+                    );
+                  }
+                  setState(() => selectedIds.clear());
+                },
+              ),
+              BulkActionButton(
+                icon: Symbols.lock_open,
+                tooltip: 'Mở khóa',
+                onPressed: () async {
+                  final ids = selectedIds.toList();
+                  await context.read<UsersProvider>().toggleActiveBulk(
+                    ids,
+                    true,
+                  );
+                  if (context.mounted) {
+                    ZellaToast.show(
+                      context,
+                      message: 'Đã mở khóa ${ids.length} tài khoản',
+                      type: ToastType.success,
+                    );
+                  }
+                  setState(() => selectedIds.clear());
+                },
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -135,6 +193,24 @@ class _UsersScreenState extends State<UsersScreen> {
                 ),
                 child: Row(
                   children: [
+                    Container(
+                      width: 48,
+                      alignment: Alignment.centerLeft,
+                      child: ZellaCheckbox(
+                        value:
+                            users.isNotEmpty &&
+                            selectedIds.length == users.length,
+                        onChanged: (v) {
+                          setState(() {
+                            if (v == true) {
+                              selectedIds.addAll(users.map((e) => e.id));
+                            } else {
+                              selectedIds.clear();
+                            }
+                          });
+                        },
+                      ),
+                    ),
                     Expanded(
                       flex: 3,
                       child: Text('Tài khoản', style: _headerStyle()),
@@ -226,6 +302,22 @@ class _UsersScreenState extends State<UsersScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Row(
             children: [
+              Container(
+                width: 48,
+                alignment: Alignment.centerLeft,
+                child: ZellaCheckbox(
+                  value: selectedIds.contains(user.id),
+                  onChanged: (v) {
+                    setState(() {
+                      if (v == true) {
+                        selectedIds.add(user.id);
+                      } else {
+                        selectedIds.remove(user.id);
+                      }
+                    });
+                  },
+                ),
+              ),
               Expanded(
                 flex: 3,
                 child: Row(
@@ -323,22 +415,22 @@ class _UsersScreenState extends State<UsersScreen> {
                     const ActionMenuItem(
                       value: 'view',
                       label: 'Xem chi tiết',
-                      icon: Icons.visibility_outlined,
+                      icon: Symbols.visibility,
                     ),
                     const ActionMenuItem(
                       value: 'edit',
                       label: 'Chỉnh sửa',
-                      icon: Icons.edit_outlined,
+                      icon: Symbols.edit,
                     ),
                     // const ActionMenuItem(
                     //   value: 'permission',
                     //   label: 'Phân quyền',
-                    //   icon: Icons.shield_outlined,
+                    //   icon: Symbols.shield,
                     // ),
                     // const ActionMenuItem(
                     //   value: 'reset_password',
                     //   label: 'Cấp lại mật khẩu',
-                    //   icon: Icons.lock_reset_outlined,
+                    //   icon: Symbols.lock_reset,
                     // ),
                     // ActionMenuItem.divider(),
                     // ActionMenuItem(
@@ -347,8 +439,8 @@ class _UsersScreenState extends State<UsersScreen> {
                     //       ? 'Khóa tài khoản'
                     //       : 'Mở khóa tài khoản',
                     //   icon: user.isActive
-                    //       ? Icons.lock_outline
-                    //       : Icons.lock_open_outlined,
+                    //       ? Symbols.lock
+                    //       : Symbols.lock_open,
                     //   color: user.isActive
                     //       ? AppTheme.warning
                     //       : AppTheme.success,
@@ -356,7 +448,7 @@ class _UsersScreenState extends State<UsersScreen> {
                     // ActionMenuItem(
                     //   value: 'delete',
                     //   label: 'Xóa tài khoản',
-                    //   icon: Icons.delete_outline,
+                    //   icon: Symbols.delete,
                     //   color: AppTheme.danger,
                     // ),
                   ],

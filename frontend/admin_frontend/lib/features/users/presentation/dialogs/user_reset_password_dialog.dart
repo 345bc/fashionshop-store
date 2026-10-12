@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 // GENERATED FROM TEMPLATE: templates/feature_dialog_confirm.dart.template
 import 'package:flutter/material.dart';
 import '../../../../theme/app_theme.dart';
@@ -24,7 +25,7 @@ class UserResetPasswordDialog extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.lock_reset,
+                Symbols.lock_reset,
                 color: AppTheme.warning,
                 size: 32,
               ),

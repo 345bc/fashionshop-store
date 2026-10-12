@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 // GENERATED FROM TEMPLATE: templates/feature_dialog_detail.dart.template
 import 'package:flutter/material.dart';
 
@@ -36,7 +37,7 @@ class UserDetailsDialog extends StatelessWidget {
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(
-                      Icons.close,
+                      Symbols.close,
                       color: AppTheme.textSecondary,
                     ),
                     splashRadius: 24,

@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import '../../../../theme/app_theme.dart';
 
@@ -33,21 +34,21 @@ class StaffHeader extends StatelessWidget {
         ),
         Row(
           children: [
-            OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.file_download_outlined, size: 18),
-              label: const Text('Xuất dữ liệu'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.text,
-                side: const BorderSide(color: AppTheme.borderLight),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-            const SizedBox(width: 12),
+            // OutlinedButton.icon(
+            //   onPressed: () {},
+            //   icon: const Icon(Symbols.file_download, size: 18),
+            //   label: const Text('Xuất dữ liệu'),
+            //   style: OutlinedButton.styleFrom(
+            //     foregroundColor: AppTheme.text,
+            //     side: const BorderSide(color: AppTheme.borderLight),
+            //     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            //   ),
+            // ),
+            // const SizedBox(width: 12),
             ElevatedButton.icon(
               onPressed: () {},
-              icon: const Icon(Icons.add, size: 18),
+              icon: const Icon(Symbols.add, size: 18),
               label: const Text('Thêm nhân viên'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.text,

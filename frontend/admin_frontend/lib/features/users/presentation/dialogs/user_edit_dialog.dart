@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../providers/users_provider.dart';
 
 class UserEditDialog extends StatefulWidget {
@@ -98,158 +99,158 @@ class _UserEditDialogState extends State<UserEditDialog> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isEditing = widget.user != null;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        width: 480, 
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Text(
-                isEditing ? 'Chỉnh sửa tài khoản' : 'Thêm mới tài khoản',
+  Widget _buildFieldRow(String label, Widget child) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 160,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                label,
                 style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                   color: AppTheme.text,
                 ),
               ),
-              const SizedBox(height: 24),
-              
-              // Form Fields
-              _buildTextField('Tên đăng nhập', 'Nhập tên đăng nhập...', _nameController),
-              const SizedBox(height: 16),
-              _buildTextField('Email', 'Nhập địa chỉ email...', _emailController),
-              const SizedBox(height: 16),
-              _buildTextField(
-                isEditing ? 'Mật khẩu (Để trống nếu không đổi)' : 'Mật khẩu', 
-                'Nhập mật khẩu...', 
-                _passwordController, 
-                obscureText: true,
-                required: !isEditing
-              ),
-              const SizedBox(height: 16),
-              
-              // Role Dropdown
-              const Text('Vai trò', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedRole,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.borderLight)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.borderLight)),
-                ),
-                items: _roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-                onChanged: (v) => setState(() => _selectedRole = v!),
-              ),
-              const SizedBox(height: 16),
-              
-              if (isEditing) ...[
-                Row(
-                  children: [
-                    Switch(
-                      value: _isActive, 
-                      onChanged: (v) => setState(() => _isActive = v),
-                      activeThumbColor: AppTheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(_isActive ? 'Hoạt động' : 'Đã khoá', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                const SizedBox(height: 24),
-              ],
-
-              // Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.textSecondary,
-                      side: const BorderSide(color: AppTheme.borderLight),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: const Text('Hủy'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _saveUser,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      elevation: 0,
-                    ),
-                    child: _isLoading 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text(isEditing ? 'Lưu thay đổi' : 'Tạo tài khoản'),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-        ),
+          Expanded(child: child),
+        ],
       ),
     );
   }
 
   Widget _buildTextField(String label, String hint, TextEditingController controller, {bool obscureText = false, bool required = true}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.text,
+    return _buildFieldRow(
+      label,
+      TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppTheme.borderLight),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppTheme.borderLight),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppTheme.primary),
+          ),
+          isDense: true,
+        ),
+        style: const TextStyle(fontSize: 14),
+        validator: required ? (value) {
+          if (value == null || value.isEmpty) {
+            return 'Vui lòng nhập trường này';
+          }
+          return null;
+        } : null,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEditing = widget.user != null;
+    final size = MediaQuery.sizeOf(context);
+
+    return ZellaFormDialog(
+      title: isEditing ? 'Chỉnh sửa tài khoản' : 'Thêm mới tài khoản',
+      subtitle: isEditing
+          ? 'Cập nhật thông tin tài khoản. Nhấn lưu khi hoàn tất.'
+          : 'Tạo tài khoản mới. Nhấn lưu khi hoàn tất.',
+      width: (size.width * 2 / 3).clamp(480.0, 700.0),
+      confirmText: isEditing ? 'Lưu thay đổi' : 'Tạo tài khoản',
+      isLoading: _isLoading,
+      onCancel: () => Navigator.of(context).pop(),
+      onConfirm: _saveUser,
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              
+              // Form Fields
+              _buildTextField('Tên đăng nhập', 'Nhập tên đăng nhập', _nameController),
+              _buildTextField('Email', 'Nhập địa chỉ email', _emailController),
+              _buildTextField(
+                isEditing ? 'Mật khẩu mới' : 'Mật khẩu', 
+                isEditing ? 'Để trống nếu không đổi' : 'Nhập mật khẩu', 
+                _passwordController, 
+                obscureText: true,
+                required: !isEditing
+              ),
+              
+              // Role Dropdown
+              _buildFieldRow(
+                'Vai trò',
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedRole,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8), 
+                      borderSide: const BorderSide(color: AppTheme.borderLight),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8), 
+                      borderSide: const BorderSide(color: AppTheme.borderLight),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8), 
+                      borderSide: const BorderSide(color: AppTheme.primary),
+                    ),
+                    isDense: true,
+                  ),
+                  style: const TextStyle(fontSize: 14, color: AppTheme.text),
+                  items: _roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                  onChanged: (v) => setState(() => _selectedRole = v!),
+                ),
+              ),
+              
+              if (isEditing) ...[
+                Row(
+                  children: [
+                    const SizedBox(
+                      width: 160,
+                      child: Text(
+                        'Trạng thái hoạt động',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.text,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: _isActive, 
+                      onChanged: (v) => setState(() => _isActive = v),
+                      activeThumbColor: AppTheme.primary,
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: obscureText,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppTheme.borderLight),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppTheme.borderLight),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppTheme.primary),
-            ),
-          ),
-          validator: required ? (value) {
-            if (value == null || value.isEmpty) {
-              return 'Vui lòng nhập trường này';
-            }
-            return null;
-          } : null,
-        ),
-      ],
+      ),
     );
   }
 }

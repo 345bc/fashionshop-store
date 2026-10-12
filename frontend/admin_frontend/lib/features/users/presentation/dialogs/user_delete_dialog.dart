@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../theme/app_theme.dart';
@@ -56,7 +57,7 @@ class _UserDeleteDialogState extends State<UserDeleteDialog> {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.delete_outline,
+                Symbols.delete,
                 color: AppTheme.error,
                 size: 32,
               ),

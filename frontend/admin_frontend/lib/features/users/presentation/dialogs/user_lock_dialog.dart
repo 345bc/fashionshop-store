@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -67,8 +68,8 @@ class _UserLockDialogState extends State<UserLockDialog> {
         ? AppTheme.warning
         : AppTheme.success;
     final IconData actionIcon = isCurrentlyActive
-        ? Icons.lock_outline
-        : Icons.lock_open_outlined;
+        ? Symbols.lock
+        : Symbols.lock_open;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
