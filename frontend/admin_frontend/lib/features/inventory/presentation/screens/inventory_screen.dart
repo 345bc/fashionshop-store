@@ -1,8 +1,11 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../widgets/common/feature_header.dart';
+import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
 import '../../../../widgets/common/warehouse_table.dart';
 import '../../data/models/inventory_response_model.dart';
 import '../providers/inventory_provider.dart';
@@ -35,7 +38,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             title: 'Tồn kho',
             subtitle: 'Quản lý tồn theo biến thể sản phẩm',
             actionLabel: 'Làm mới',
-            actionIcon: Icons.refresh,
+            actionIcon: Symbols.refresh,
             onActionPressed: p.loadItems,
           ),
           const SizedBox(height: 24),
@@ -57,24 +60,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
           const SizedBox(height: 24),
           FeatureToolbar(
-            searchHint: 'Tìm tên sản phẩm, SKU, size, màu hoặc danh mục...',
+            searchHint: 'Tìm theo SKU, tên SP, danh mục, kích cỡ hoặc màu sắc',
             initialSearchText: p.query,
             onSearchChanged: p.search,
-            filterWidget: DropdownButton<String>(
+            filterWidget: FilterDropdown<String>(
+              label: 'Trạng thái',
+              searchHint: 'Tìm trạng thái',
               value: p.status,
-              items: const [
-                DropdownMenuItem(value: 'all', child: Text('Tất cả')),
-                DropdownMenuItem(value: 'available', child: Text('Còn hàng')),
-                DropdownMenuItem(
-                  value: 'out',
-                  child: Text('Hết hàng khả dụng'),
-                ),
+              defaultValue: 'all',
+              options: const [
+                FilterOption(value: 'available', label: 'Còn hàng', icon: Symbols.check_circle, iconColor: AppTheme.success),
+                FilterOption(value: 'out', label: 'Hết hàng khả dụng', icon: Symbols.cancel),
               ],
-              onChanged: (v) => p.filter(v ?? 'all'),
+              onChanged: (v) => p.filter(v),
             ),
           ),
           const SizedBox(height: 24),
           WarehouseTable(
+            flexes: const [3, 2, 1, 1, 1, 1],
             headers: const [
               'SẢN PHẨM / SKU',
               'SIZE / MÀU',
@@ -108,42 +111,69 @@ class _InventoryScreenState extends State<InventoryScreen> {
         child: Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    i.productName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    i.sku,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(child: Text('${i.sizeName} / ${i.colorName}')),
-            Expanded(child: Text('${i.stockQuantity} / ${i.reservedQuantity}')),
-            Expanded(
-              child: Text(
-                '${i.availableQuantity}',
-                style: TextStyle(
-                  color: i.availableQuantity == 0 ? Colors.red : Colors.green,
-                  fontWeight: FontWeight.bold,
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      i.productName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      i.sku,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
                 ),
               ),
             ),
-            Expanded(child: Text(money(i.costPrice))),
             Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text('${i.sizeName} / ${i.colorName}'),
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text('${i.stockQuantity} / ${i.reservedQuantity}'),
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  '${i.availableQuantity}',
+                  style: TextStyle(
+                    color: i.availableQuantity == 0 ? Colors.red : Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(money(i.costPrice)),
+              ),
+            ),
+            Expanded(
+              flex: 1,
               child: Row(
                 children: [
                   IconButton(
                     tooltip: 'Lịch sử kho',
-                    icon: const Icon(Icons.history),
+                    icon: const Icon(Symbols.history),
                     onPressed: () => showDialog(
                       context: context,
                       builder: (_) => InventoryDetailDialog(item: i),
@@ -151,7 +181,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
                   IconButton(
                     tooltip: 'Điều chỉnh tồn',
-                    icon: const Icon(Icons.tune),
+                    icon: const Icon(Symbols.tune),
                     onPressed: () => showDialog(
                       context: context,
                       builder: (_) => InventoryAdjustmentDialog(item: i),

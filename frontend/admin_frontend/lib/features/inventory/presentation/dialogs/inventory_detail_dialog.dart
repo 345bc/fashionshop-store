@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import '../../../../widgets/common/pagination_footer.dart';
 
 import 'package:flutter/material.dart';
@@ -51,7 +52,7 @@ class _InventoryDetailDialogState extends State<InventoryDetailDialog> {
               ),
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
+                icon: const Icon(Symbols.close),
               ),
             ],
           ),
