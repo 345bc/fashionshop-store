@@ -1,0 +1,87 @@
+.cart-item{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:18px;padding:24px 0;border-bottom:1px solid #e9e9e9;position:relative}
+.cart-item:has(.cart-item-check){grid-template-columns:20px 96px minmax(0,1fr) auto}
+.cart-item-check{accent-color:#111;align-self:center}
+.cart-item-image{position:relative;aspect-ratio:3/4;background:#f5f5f3;border-radius:8px;overflow:hidden;display:grid;place-items:center;font-size:11px;color:#888}
+.cart-item-title{font-size:15px;font-weight:600;line-height:1.5}
+.cart-item-title:hover{text-decoration:underline}
+.cart-muted{color:#777;font-size:12px;line-height:1.6;margin:6px 0}
+.cart-line-total{font-size:14px;white-space:nowrap}
+.cart-item-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px}
+.cart-quantity{display:flex;height:34px;align-items:center;border:1px solid #ddd;border-radius:6px}
+.cart-quantity button{width:30px;height:100%}
+.cart-quantity span{min-width:28px;text-align:center;font-size:13px;font-weight:600}
+.cart-text-button{font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.cart-variant-editor{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
+.cart-variant-editor select{border:1px solid #ddd;padding:8px;font-size:12px;max-width:100%}
+.cart-error{color:#b42318;font-size:13px;margin-top:10px;line-height:1.5}
+.cart-primary{display:flex;justify-content:center;align-items:center;padding:14px 20px;background:#161616;color:white;border-radius:8px;font-weight:600;font-size:14px;text-align:center}
+.cart-primary:hover{background:#333}
+.cart-drawer button:disabled{cursor:not-allowed;opacity:.4}
+.cart-primary:disabled,.cart-quantity button:disabled{opacity:.4}
+.cart-total{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0;font-size:14px}
+.cart-total strong{font-size:22px}
+.cart-empty{text-align:center;padding:50px 12px}
+.cart-empty>span{font-size:44px;color:#aaa}
+.cart-empty h2{font-size:22px;font-weight:600;margin:12px}
+.cart-empty .cart-primary{margin:24px auto 0;max-width:260px}
+.cart-loading{padding:40px;text-align:center;color:#777}
+.cart-drawer-backdrop{position:fixed;inset:0;z-index:200;background:#0008;display:flex;justify-content:flex-end}
+.cart-drawer{width:min(100%,480px);height:100%;background:#fff;display:flex;flex-direction:column;outline:none;box-shadow:-8px 0 40px #0002}
+.cart-drawer-header{display:flex;align-items:center;justify-content:space-between;padding:22px 26px;border-bottom:1px solid #eee}
+.cart-drawer-header h2{font-size:22px;font-weight:650}
+.cart-close{display:grid;place-items:center;flex-shrink:0;width:42px;height:42px;padding:0;border:1px solid #e6e6e6;border-radius:50%;color:#232323;background:#fff;transition:background .2s,border-color .2s}
+.cart-close:hover{background:#f2f2f0;border-color:#bcbcb7}
+.cart-close .material-symbols-outlined{pointer-events:none}
+.cart-drawer-body{flex:1;min-height:0;overflow:auto;padding:0 24px}
+.cart-drawer-body .cart-item{grid-template-columns:18px 84px minmax(0,1fr);gap:14px}
+.cart-drawer-body .cart-item-check{grid-column:1;grid-row:1;align-self:start;margin-top:8px}
+.cart-drawer-body .cart-item-image{grid-column:2;grid-row:1}
+.cart-drawer-body .cart-item-info{grid-column:3;grid-row:1;min-width:0}
+.cart-drawer-body .cart-line-total{grid-column:3;margin-top:0;display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-top:4px}
+.cart-drawer-footer{padding:18px 26px 28px;border-top:1px solid #eee;background:#fafafa}
+.cart-drawer-footer .cart-primary{margin-top:18px}
+.cart-pending{max-width:650px;margin:30px auto;border:1px solid #e5e5e5;border-radius:16px;padding:32px}
+.cart-pending h2{font-size:23px;font-weight:650}
+.cart-countdown{font-size:38px;font-weight:700;margin:24px 0}
+.cart-pending .cart-primary{margin:22px 0}
+.cart-checkout-lines{max-height:440px;overflow:auto}
+.cart-checkout-line{display:flex;justify-content:space-between;gap:20px;padding:14px 0;border-bottom:1px solid #eee;font-size:14px}
+.cart-checkout-note{padding:14px;background:#f7f7f5;border-radius:8px;font-size:13px;line-height:1.7;margin:20px 0}
+
+@media(max-width:800px){.cart-item:has(.cart-item-check){grid-template-columns:18px 72px minmax(0,1fr);gap:12px}
+.cart-item:has(.cart-item-check) .cart-line-total{grid-column:3}
+.cart-line-total{font-size:13px}
+.cart-pending{padding:24px 18px}
+.cart-drawer-body{padding:0 18px}
+}
+
+
+
+.cart-drawer-header{flex-shrink:0}
+.cart-drawer-header h2{font-weight:700;color:#171717}
+.cart-item-title{display:block;font-size:15px;font-weight:600;color:#222}
+.cart-item-tags{display:flex;gap:12px;flex-wrap:wrap;margin:7px 0;font-size:12px;color:#777}
+.cart-item-tags strong{font-weight:500;color:#555}
+.cart-unit-price{font-size:12px;font-weight:500;color:#555}
+.cart-unit-price>span{font-weight:400;color:#888}
+.cart-item-actions{gap:12px}
+.cart-edit-button,.cart-remove-button,.cart-save-button,.cart-editor-cancel{padding:3px 0;background:transparent;border:0;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.cart-edit-button{font-weight:500;color:#444}
+.cart-remove-button,.cart-editor-cancel{font-weight:400;color:#888}
+.cart-save-button{font-weight:600;color:#222}
+.cart-edit-button:hover,.cart-remove-button:hover,.cart-save-button:hover,.cart-editor-cancel:hover{color:#111}
+.cart-variant-editor{align-items:center;gap:14px}
+.cart-variant-editor select{min-width:0;background:white;color:#444;font-weight:400}
+.cart-line-total>span{font-size:11px;font-weight:400;color:#888}
+.cart-line-total>strong{font-size:16px;font-weight:700;color:#222}
+.cart-clear{display:block;margin:18px 0;color:#888;font-weight:400}
+.cart-drawer-footer{flex-shrink:0}
+.cart-drawer-footer .cart-total>span{font-weight:400;color:#666}
+.cart-drawer-footer .cart-total strong{font-size:24px;font-weight:700;color:#111}
+.cart-drawer button:focus-visible,.cart-drawer a:focus-visible,.cart-drawer select:focus-visible,.cart-drawer input:focus-visible{outline:2px solid #555;outline-offset:3px}
+@media(max-width:420px){
+  .cart-drawer-header{padding:20px}
+  .cart-drawer-body{padding:0 16px}
+  .cart-drawer-body .cart-item{grid-template-columns:16px 64px minmax(0,1fr);gap:10px}
+  .cart-drawer-footer{padding:16px 20px 24px}
+}
