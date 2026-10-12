@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
@@ -286,7 +287,7 @@ class AnalyticsCards extends StatelessWidget {
                               Tooltip(
                                 message: card.help,
                                 child: const Icon(
-                                  Icons.info_outline,
+                                  Symbols.info,
                                   size: 16,
                                   color: AppTheme.textSecondary,
                                 ),

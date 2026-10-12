@@ -1,9 +1,11 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
 import '../../data/models/analytics_models.dart';
 import '../../data/repositories/analytics_repository.dart';
 import '../providers/dashboard_provider.dart';
@@ -81,7 +83,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     }
                   },
-                  icon: const Icon(Icons.copy_outlined, size: 18),
+                  icon: const Icon(Symbols.content_copy, size: 18),
                   label: const Text('Sao chép CSV'),
                 ),
               ],
@@ -150,7 +152,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 16),
               FeatureToolbar(
                 searchHint:
-                    'Tìm trong bảng ${p.section.label.toLowerCase()}...',
+                    'Tìm trong bảng ${p.section.label.toLowerCase()}',
                 initialSearchText: p.query,
                 onSearchChanged: p.setQuery,
                 filterWidget: _filter(p),
@@ -167,31 +169,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget? _filter(DashboardProvider p) {
     if (p.section == AnalyticsSection.products ||
         p.section == AnalyticsSection.inventory) {
-      return DropdownButton<String>(
+      return FilterDropdown<String?>(
+        label: 'Danh mục',
+        searchHint: 'Tìm danh mục',
         value: p.category,
-        hint: const Text('Tất cả danh mục'),
-        items: [
-          const DropdownMenuItem<String>(
-            value: null,
-            child: Text('Tất cả danh mục'),
-          ),
+        defaultValue: null,
+        options: [
           for (final category
               in AnalyticsRepository.products.map((r) => r.category).toSet())
-            DropdownMenuItem(value: category, child: Text(category)),
+            FilterOption(value: category, label: category),
         ],
         onChanged: p.setCategory,
       );
     }
     if (p.section == AnalyticsSection.orders ||
         p.section == AnalyticsSection.overview) {
-      return DropdownButton<String>(
+      return FilterDropdown<String?>(
+        label: 'Trạng thái',
+        searchHint: 'Tìm trạng thái',
         value: p.orderStatus,
-        hint: const Text('Tất cả trạng thái'),
-        items: [
-          const DropdownMenuItem<String>(
-            value: null,
-            child: Text('Tất cả trạng thái'),
-          ),
+        defaultValue: null,
+        options: [
           for (final status in [
             'PENDING',
             'CONFIRMED',
@@ -199,9 +197,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             'DELIVERED',
             'CANCELLED',
           ])
-            DropdownMenuItem(
+            FilterOption(
               value: status,
-              child: Text(orderStatusLabel(status)),
+              label: orderStatusLabel(status),
             ),
         ],
         onChanged: p.setOrderStatus,

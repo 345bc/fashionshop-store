@@ -1,7 +1,9 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/models/analytics_models.dart';
 import '../providers/dashboard_provider.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
 
 class AnalyticsFilters extends StatelessWidget {
   final DashboardProvider provider;
@@ -12,14 +14,16 @@ class AnalyticsFilters extends StatelessWidget {
     runSpacing: 12,
     crossAxisAlignment: WrapCrossAlignment.center,
     children: [
-      DropdownButton<AnalyticsPeriod>(
+      FilterDropdown<AnalyticsPeriod>(
+        label: 'Thời gian',
+        searchHint: 'Tìm khoảng thời gian',
         value: provider.period,
-        items: [
+        defaultValue: AnalyticsPeriod.today,
+        options: [
           for (final period in AnalyticsPeriod.values)
-            DropdownMenuItem(value: period, child: Text(period.label)),
+            FilterOption(value: period, label: period.label),
         ],
         onChanged: (period) {
-          if (period == null) return;
           if (period == AnalyticsPeriod.custom) {
             _pickRange(context);
           } else {
@@ -29,7 +33,7 @@ class AnalyticsFilters extends StatelessWidget {
       ),
       OutlinedButton.icon(
         onPressed: () => _pickRange(context),
-        icon: const Icon(Icons.date_range_outlined, size: 18),
+        icon: const Icon(Symbols.date_range, size: 18),
         label: Text(
           '${reportDate(provider.start)} – ${reportDate(provider.end)}',
         ),

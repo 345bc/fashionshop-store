@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
@@ -113,7 +114,7 @@ class AnalyticsTable extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
+                icon: const Icon(Symbols.close),
               ),
             ],
           ),
