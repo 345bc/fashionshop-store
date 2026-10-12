@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -192,7 +193,7 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                     return Text(
                       snapshot.hasError
                           ? 'Không tải được danh mục cha: ${snapshot.error}'
-                          : 'Đang tải danh mục cha...',
+                          : 'Đang tải danh mục cha',
                     );
                   }
                   final byId = {
@@ -267,7 +268,7 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                 children: [
                   OutlinedButton.icon(
                     onPressed: _saving ? null : _pickImage,
-                    icon: const Icon(Icons.upload_file_outlined),
+                    icon: const Icon(Symbols.upload_file),
                     label: const Text('Chọn ảnh từ máy'),
                   ),
                   if (_imageBytes != null || _imageUrl != null)
@@ -279,7 +280,7 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                               _imageName = null;
                               _imageUrl = null;
                             }),
-                      icon: const Icon(Icons.delete_outline),
+                      icon: const Icon(Symbols.delete),
                       label: const Text('Bỏ ảnh'),
                     ),
                 ],
