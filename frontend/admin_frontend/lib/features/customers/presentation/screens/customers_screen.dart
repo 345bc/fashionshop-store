@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:zella_admin_flutter/features/auth/presentation/provider/auth_provider.dart';
@@ -7,8 +8,12 @@ import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/feature_header.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
 import '../../../../widgets/common/pagination_footer.dart';
 import '../../../../widgets/common/status_badge.dart';
+import '../../../../widgets/common/bulk_action_bar.dart';
+import '../../../../widgets/common/zella_checkbox.dart';
+import '../../../../widgets/common/zella_toast.dart';
 import '../../data/models/customer_response_model.dart';
 import '../dialogs/customer_detail_dialog.dart';
 import '../dialogs/customer_form_dialog.dart';
@@ -22,6 +27,8 @@ class CustomersScreen extends StatefulWidget {
 
 class _CustomersScreenState extends State<CustomersScreen> {
   String _tier = 'all';
+  Set<int> selectedIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -35,23 +42,29 @@ class _CustomersScreenState extends State<CustomersScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.transparent,
-    body: SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    body: Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           FeatureHeader(
             title: 'Khách hàng',
             subtitle: 'Quản lý hồ sơ và tài khoản khách hàng',
             actionLabel: "",
-            actionIcon: Icons.add,
+            actionIcon: Symbols.add,
             onExportPressed:
                 context.watch<AuthProvider>().user?.roles.any(
                       (role) => role == 'ADMIN' || role == 'ROLE_ADMIN',
                     ) ==
                     true
                 ? () {
-                    // TODO: Xử lý xuất dữ liệu
+                    ZellaToast.show(
+                      context,
+                      message: 'Tính năng xuất dữ liệu đang phát triển',
+                      type: ToastType.info,
+                    );
                   }
                 : null,
             onActionPressed: () => showDialog(
@@ -62,20 +75,22 @@ class _CustomersScreenState extends State<CustomersScreen> {
           ),
           const SizedBox(height: 32),
           FeatureToolbar(
-            searchHint: 'Tìm theo tên, email hoặc số điện thoại...',
+            searchHint: 'Tìm theo tên, SĐT, email hoặc tài khoản',
             onSearchChanged: context.read<CustomersProvider>().setQuery,
-            filterWidget: DropdownButton<String>(
+            filterWidget: FilterDropdown<String>(
+              label: 'Hạng',
+              searchHint: 'Tìm kiếm hạng',
               value: _tier,
-              items: const [
-                DropdownMenuItem(value: 'all', child: Text('Tất cả hạng')),
-                DropdownMenuItem(value: 'STANDARD', child: Text('Thường')),
-                DropdownMenuItem(value: 'SILVER', child: Text('Bạc')),
-                DropdownMenuItem(value: 'GOLD', child: Text('Vàng')),
-                DropdownMenuItem(value: 'DIAMOND', child: Text('Kim cương')),
+              defaultValue: 'all',
+              options: const [
+                FilterOption(value: 'STANDARD', label: 'Thường'),
+                FilterOption(value: 'SILVER', label: 'Bạc'),
+                FilterOption(value: 'GOLD', label: 'Vàng'),
+                FilterOption(value: 'DIAMOND', label: 'Kim cương'),
               ],
               onChanged: (v) {
-                setState(() => _tier = v ?? 'all');
-                context.read<CustomersProvider>().setFilter(_tier);
+                setState(() => _tier = v);
+                context.read<CustomersProvider>().setFilter(v);
               },
             ),
           ),
@@ -109,6 +124,22 @@ class _CustomersScreenState extends State<CustomersScreen> {
                       ),
                       child: Row(
                         children: [
+                          Container(
+                            width: 48,
+                            alignment: Alignment.centerLeft,
+                            child: ZellaCheckbox(
+                              value: provider.pageItems.isNotEmpty && selectedIds.length == provider.pageItems.length,
+                              onChanged: (v) {
+                                setState(() {
+                                  if (v == true) {
+                                    selectedIds.addAll(provider.pageItems.map((e) => e.id));
+                                  } else {
+                                    selectedIds.clear();
+                                  }
+                                });
+                              },
+                            ),
+                          ),
                           Expanded(flex: 3, child: _header('KHÁCH HÀNG')),
                           Expanded(flex: 2, child: _header('LIÊN HỆ')),
                           Expanded(flex: 1, child: _header('HẠNG')),
@@ -150,6 +181,47 @@ class _CustomersScreenState extends State<CustomersScreen> {
         ],
       ),
     ),
+    BulkActionBar(
+      selectedCount: selectedIds.length,
+      itemLabel: 'khách hàng',
+      onClear: () => setState(() => selectedIds.clear()),
+      actions: [
+        BulkActionButton(
+          icon: Symbols.lock,
+          tooltip: 'Khóa',
+          onPressed: () async {
+            final ids = selectedIds.toList();
+            await context.read<CustomersProvider>().toggleActiveBulk(ids, false);
+            if (context.mounted) {
+              ZellaToast.show(
+                context,
+                message: 'Đã khóa ${ids.length} khách hàng',
+                type: ToastType.success,
+              );
+            }
+            setState(() => selectedIds.clear());
+          },
+        ),
+        BulkActionButton(
+          icon: Symbols.lock_open,
+          tooltip: 'Mở khóa',
+          onPressed: () async {
+            final ids = selectedIds.toList();
+            await context.read<CustomersProvider>().toggleActiveBulk(ids, true);
+            if (context.mounted) {
+              ZellaToast.show(
+                context,
+                message: 'Đã mở khóa ${ids.length} khách hàng',
+                type: ToastType.success,
+              );
+            }
+            setState(() => selectedIds.clear());
+          },
+        ),
+      ],
+    ),
+      ],
+    ),
   );
 
   Widget _header(String label) => Text(
@@ -171,6 +243,22 @@ class _CustomersScreenState extends State<CustomersScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Row(
           children: [
+            Container(
+              width: 48,
+              alignment: Alignment.centerLeft,
+              child: ZellaCheckbox(
+                value: selectedIds.contains(c.id),
+                onChanged: (v) {
+                  setState(() {
+                    if (v == true) {
+                      selectedIds.add(c.id);
+                    } else {
+                      selectedIds.remove(c.id);
+                    }
+                  });
+                },
+              ),
+            ),
             Expanded(
               flex: 3,
               child: Column(
@@ -225,12 +313,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   ActionMenuItem(
                     value: 'view',
                     label: 'Xem chi tiết',
-                    icon: Icons.visibility_outlined,
+                    icon: Symbols.visibility,
                   ),
                   ActionMenuItem(
                     value: 'edit',
                     label: 'Chỉnh sửa',
-                    icon: Icons.edit_outlined,
+                    icon: Symbols.edit,
                   ),
                 ],
                 onSelected: (value) {

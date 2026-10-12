@@ -90,4 +90,31 @@ class CustomersProvider extends ChangeNotifier {
     await _repository.update(id, data);
     await loadItems();
   }
+
+  Future<void> toggleActiveBulk(List<int> ids, bool isActive) async {
+    _loading = true;
+    notifyListeners();
+    try {
+      final futures = ids.map((id) {
+        final item = _items.firstWhere((e) => e.id == id);
+        final data = {
+          'id': item.id,
+          'userId': item.userId,
+          'email': item.email,
+          'username': item.username,
+          'fullName': item.fullName,
+          'phone': item.phone,
+          'address': item.address,
+          'membershipTier': item.membershipTier,
+          'rewardPoints': item.rewardPoints,
+          'totalSpending': item.totalSpending,
+          'isActive': isActive,
+        };
+        return _repository.update(id, data);
+      });
+      await Future.wait(futures);
+    } finally {
+      await loadItems();
+    }
+  }
 }
