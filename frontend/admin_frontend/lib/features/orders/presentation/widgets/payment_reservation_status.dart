@@ -47,7 +47,7 @@ class _PaymentReservationStatusState extends State<PaymentReservationStatus> {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Text(
         seconds == 0
-            ? 'Đã hết hạn thanh toán. Đang cập nhật trạng thái hủy...'
+            ? 'Đã hết hạn thanh toán. Đang cập nhật trạng thái hủy'
             : 'Chờ thanh toán online • Giữ hàng còn $remaining • Quá hạn sẽ tự hủy',
         style: TextStyle(
           color: seconds == 0 ? Colors.red : Colors.orange.shade800,

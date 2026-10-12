@@ -5,8 +5,29 @@ import 'package:dio/dio.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../inventory/data/api/inventory_repository.dart';
 import '../models/order_response_model.dart';
+import '../models/return_order_summary.dart';
 
 class OrderRepository {
+  Future<({List<ReturnOrderSummary> items, int total})> returnOrders({
+    int page = 0,
+    String query = '',
+    String status = 'ALL',
+  }) => warehouseRequest(() async {
+    final response = await _api.get(
+      '${ApiEndpoints.orderReturns}/management',
+      queryParameters: {'page': page, 'size': 10, 'q': query, 'status': status},
+    );
+    final data = Map<String, dynamic>.from(response.data['data'] as Map);
+    return (
+      items: (data['content'] as List)
+          .map(
+            (json) =>
+                ReturnOrderSummary(Map<String, dynamic>.from(json as Map)),
+          )
+          .toList(),
+      total: (data['totalElements'] as num).toInt(),
+    );
+  });
   Future<Map<String, dynamic>> getAll({
     int page = 0,
     int size = 15,
@@ -46,9 +67,6 @@ class OrderRepository {
   Future<OrderResponseModel> getById(int id) => warehouseRequest(() async {
     final r = await _api.get('${ApiEndpoints.orders}/$id');
     return OrderResponseModel(r.data['data'] as Map<String, dynamic>);
-  });
-  Future<void> create(Map<String, dynamic> data) => warehouseRequest(() async {
-    await _api.post(ApiEndpoints.orders, data: data);
   });
   Future<void> action(int id, String action, {Map<String, dynamic>? data}) =>
       warehouseRequest(() async {

@@ -1,10 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../customers/data/api/customer_repository.dart';
-import '../../../inventory/data/api/inventory_repository.dart';
-import '../../../inventory/data/models/inventory_response_model.dart';
 import '../../data/api/order_repository.dart';
 import '../../data/models/order_response_model.dart';
+import '../../data/models/return_order_summary.dart';
 
 class OrdersProvider extends ChangeNotifier {
   final _repository = OrderRepository();
@@ -80,28 +78,6 @@ class OrdersProvider extends ChangeNotifier {
   }
 
   // END TEMP_ORDER_PAYMENT_SIMULATION
-  Future<
-    ({
-      List<Map<String, dynamic>> customers,
-      List<InventoryResponseModel> variants,
-    })
-  >
-  options() async {
-    final customers = (await CustomerRepository().getOptions())
-        .cast<Map<String, dynamic>>()
-        .where((c) => c['isActive'] == true)
-        .toList();
-    final variants = (await InventoryRepository().getOptions())
-        .where((v) => v.isActive && v.availableQuantity > 0)
-        .toList();
-    return (customers: customers, variants: variants);
-  }
-
-  Future<void> create(Map<String, dynamic> data) async {
-    await _repository.create(data);
-    await loadItems();
-  }
-
   Future<void> action(
     int id,
     String action, {
@@ -113,6 +89,11 @@ class OrdersProvider extends ChangeNotifier {
 
   Future<List<ReturnResponseModel>> returns(int orderId) =>
       _repository.returns(orderId);
+  Future<({List<ReturnOrderSummary> items, int total})> returnOrders({
+    int page = 0,
+    String query = '',
+    String status = 'ALL',
+  }) => _repository.returnOrders(page: page, query: query, status: status);
   Future<void> createReturn(Map<String, dynamic> data) async {
     await _repository.createReturn(data);
     await loadItems();

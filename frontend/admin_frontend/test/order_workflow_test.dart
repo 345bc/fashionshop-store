@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:zella_admin_flutter/features/inventory/data/models/inventory_response_model.dart';
 import 'package:zella_admin_flutter/features/inventory/presentation/providers/inventory_provider.dart';
 import 'package:zella_admin_flutter/features/orders/data/models/order_response_model.dart';
+import 'package:zella_admin_flutter/features/orders/data/models/return_order_summary.dart';
+import 'package:zella_admin_flutter/features/orders/presentation/dialogs/return_management_dialog.dart';
+import 'package:zella_admin_flutter/features/orders/presentation/screens/orders_screen.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/dialogs/order_detail_dialog.dart';
-import 'package:zella_admin_flutter/features/orders/presentation/dialogs/order_form_dialog.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/dialogs/receive_return_dialog.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/providers/orders_provider.dart';
 
@@ -16,6 +17,40 @@ class FakeInventory extends InventoryProvider {
 }
 
 class FakeOrders extends OrdersProvider {
+  int requestedPage = 0;
+  String requestedQuery = '', requestedStatus = 'ALL';
+  bool queueFails = false;
+  @override
+  Future<void> loadItems() async {}
+  @override
+  Future<({List<ReturnOrderSummary> items, int total})> returnOrders({
+    int page = 0,
+    String query = '',
+    String status = 'ALL',
+  }) async {
+    requestedPage = page;
+    requestedQuery = query;
+    requestedStatus = status;
+    if (queueFails) throw Exception('Không tải được yêu cầu');
+    if (query == 'none') return (items: <ReturnOrderSummary>[], total: 0);
+    return (
+      items: [
+        ReturnOrderSummary({
+          'orderId': 10 + page,
+          'orderCode': 'ORD-RETURN-${10 + page}',
+          'recipientName': 'Khách trả hàng',
+          'recipientPhone': '0900000000',
+          'totalAmount': 600000,
+          'latestRequestAt': '2026-10-10T08:00:00Z',
+          'totalRequests': 2,
+          'pendingRequests': 1,
+          'statuses': ['PENDING', 'APPROVED'],
+        }),
+      ],
+      total: 11,
+    );
+  }
+
   Map<String, dynamic>? submitted;
   String? lastAction;
   bool pending = false;
@@ -27,22 +62,6 @@ class FakeOrders extends OrdersProvider {
     lastAction = 'simulate-payment';
   }
 
-  final variant = InventoryResponseModel({
-    'variantId': 1,
-    'supplierId': 1,
-    'stockQuantity': 5,
-    'reservedQuantity': 0,
-    'availableQuantity': 5,
-    'sku': 'SKU-1',
-    'productName': 'Áo nữ',
-    'categoryName': 'Áo',
-    'supplierName': 'NCC',
-    'sizeName': 'M',
-    'colorName': 'Trắng',
-    'costPrice': 100000,
-    'price': 300000,
-    'isActive': true,
-  });
   OrderResponseModel get order => OrderResponseModel({
     'id': 10,
     'customerUserId': 20,
@@ -77,30 +96,6 @@ class FakeOrders extends OrdersProvider {
     ],
     'histories': <Map<String, dynamic>>[],
   });
-  @override
-  Future<
-    ({
-      List<Map<String, dynamic>> customers,
-      List<InventoryResponseModel> variants,
-    })
-  >
-  options() async => (
-    customers: [
-      {
-        'userId': 20,
-        'fullName': 'Khách thử',
-        'email': 'test@example.com',
-        'phone': '0900000000',
-        'address': 'Hồ Chí Minh',
-      },
-    ],
-    variants: [variant],
-  );
-  @override
-  Future<void> create(Map<String, dynamic> data) async {
-    submitted = data;
-  }
-
   @override
   Future<OrderResponseModel> loadDetail(int id) async => order;
   @override
@@ -166,32 +161,76 @@ void main() {
     ),
   );
   testWidgets(
-    'Creating an order sends customer and quantities but no client price or stock',
+    'Orders replaces creation with return management and opens invoice detail',
     (tester) async {
       final provider = FakeOrders();
-      await openDialog(tester, provider, const OrderFormDialog());
-      await tester.tap(find.byType(DropdownButtonFormField<int>).first);
+      tester.view.physicalSize = const Size(1600, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<OrdersProvider>.value(value: provider),
+            ChangeNotifierProvider<InventoryProvider>(
+              create: (_) => FakeInventory(),
+            ),
+          ],
+          child: const MaterialApp(home: Scaffold(body: OrdersScreen())),
+        ),
+      );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Khách thử — test@example.com').last);
+      expect(find.text('Tạo đơn hàng'), findsNothing);
+      await tester.tap(find.text('Quản lý hoàn hàng'));
       await tester.pumpAndSettle();
-      final skuDropdown = find.byType(DropdownButtonFormField<int>).last;
-      await tester.ensureVisible(skuDropdown);
-      await tester.tap(skuDropdown);
+      expect(find.byType(ReturnManagementDialog), findsOneWidget);
+      expect(find.text('ORD-RETURN-10'), findsOneWidget);
+      expect(find.textContaining('2 yêu cầu ·'), findsOneWidget);
+      await tester.tap(find.text('ORD-RETURN-10'));
       await tester.pumpAndSettle();
-      await tester.tap(find.textContaining('SKU-1').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Tạo đơn và giữ hàng'));
-      await tester.pumpAndSettle();
-      expect(provider.submitted?['customerUserId'], 20);
-      expect(provider.submitted?['items'], [
-        {'variantId': 1, 'quantity': 1},
-      ]);
-      expect(provider.submitted?.containsKey('price'), false);
+      expect(find.byType(OrderDetailDialog), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       provider.dispose();
     },
   );
+
+  testWidgets('Return management filters, pages and shows empty results', (
+    tester,
+  ) async {
+    final provider = FakeOrders();
+    await openDialog(tester, provider, const ReturnManagementDialog());
+    await tester.tap(find.byTooltip('Trang sau'));
+    await tester.pumpAndSettle();
+    expect(provider.requestedPage, 1);
+    expect(find.text('ORD-RETURN-11'), findsOneWidget);
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chờ duyệt').last);
+    await tester.pumpAndSettle();
+    expect(provider.requestedStatus, 'PENDING');
+    expect(provider.requestedPage, 0);
+    await tester.enterText(find.byType(TextField), 'none');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(provider.requestedQuery, 'none');
+    expect(find.text('Chưa có đơn hàng có yêu cầu phù hợp.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+  });
+
+  testWidgets('Return management retries loading errors', (tester) async {
+    final provider = FakeOrders()..queueFails = true;
+    await openDialog(tester, provider, const ReturnManagementDialog());
+    expect(find.textContaining('Không tải được yêu cầu'), findsOneWidget);
+    provider.queueFails = false;
+    await tester.tap(find.text('Thử lại'));
+    await tester.pumpAndSettle();
+    expect(find.text('ORD-RETURN-10'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    provider.dispose();
+  });
   testWidgets('Shipping requires confirmation before the API action', (
     tester,
   ) async {
@@ -243,30 +282,6 @@ void main() {
     expect(provider.submitted?['items'], [
       {'returnItemId': 41, 'condition': 'DAMAGED'},
     ]);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-    provider.dispose();
-  });
-  testWidgets('Guest order sends no customer account and only ONLINE payment', (
-    tester,
-  ) async {
-    final provider = FakeOrders();
-    await openDialog(tester, provider, const OrderFormDialog());
-    expect(find.text('Khách vãng lai — không cần tài khoản'), findsOneWidget);
-    final fields = find.byType(TextFormField);
-    await tester.enterText(fields.at(0), 'Khách không đăng ký');
-    await tester.enterText(fields.at(1), '0900000000');
-    await tester.enterText(fields.at(2), 'TP.HCM');
-    final sku = find.byType(DropdownButtonFormField<int>).last;
-    await tester.ensureVisible(sku);
-    await tester.tap(sku);
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('SKU-1').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Tạo đơn và giữ hàng'));
-    await tester.pumpAndSettle();
-    expect(provider.submitted?['customerUserId'], isNull);
-    expect(provider.submitted?['paymentMethod'], 'ONLINE');
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     provider.dispose();
