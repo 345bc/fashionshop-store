@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -63,6 +65,12 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiError> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED",
                 "Bạn chưa đăng nhập", request, List.of());
+    }
+
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    ResponseEntity<ApiError> handleNotFound(Exception ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "ENDPOINT_NOT_FOUND",
+                "Không tìm thấy API yêu cầu", request, List.of());
     }
 
     @ExceptionHandler(Exception.class)
