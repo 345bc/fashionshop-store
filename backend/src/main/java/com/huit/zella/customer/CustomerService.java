@@ -41,6 +41,15 @@ class CustomerService {
     }
 
     @Transactional
+    public CustomerResponse updateByUserId(Long userId, UpdateCustomerRequest request) {
+        Customer customer = requireFeature(userId);
+        if (request.isActive() != null) {
+             throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "Cannot update active status");
+        }
+        return update(customer.getId(), request);
+    }
+
+    @Transactional
     public CustomerResponse update(Long id, UpdateCustomerRequest request) {
         Customer customer = customerRepository.findById(id).orElseThrow(() ->
                 new BusinessException(HttpStatus.NOT_FOUND, "CUSTOMER_NOT_FOUND", "Customer not found"));

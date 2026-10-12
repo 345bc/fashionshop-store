@@ -9,6 +9,10 @@ export function getIdByUserId(userId) {
   return apiRequest(`/customers/user/${userId}`);
 }
 
+export function updateProfile(userId, payload) {
+  return apiRequest(`/customers/user/${userId}`, { method: "PUT", body: payload });
+}
+
 // export function createOutgoingDocument(payload) {
 //   return apiRequest("/outgoing-documents", { method: "POST", body: payload });
 // }

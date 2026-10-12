@@ -33,7 +33,7 @@ public class UserController {
     }
 
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<UserResponse>> create(
             @Valid @RequestBody CreateUserRequest request
@@ -50,7 +50,7 @@ public class UserController {
 
 
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ApiResponse<UserResponse> update(
             @PathVariable Long id,
@@ -59,7 +59,7 @@ public class UserController {
         return ApiResponse.success(userService.update(id, update));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);

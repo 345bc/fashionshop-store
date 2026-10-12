@@ -21,7 +21,7 @@ public record CreateCustomerRequest(
         @Size(max = 100, message = "Full name must not exceed 100 characters")
         String fullName,
 
-        @Size(max = 20, message = "Phone must not exceed 20 characters")
+        @jakarta.validation.constraints.Pattern(regexp = "0[0-9]{9}", message = "Số điện thoại phải có 10 chữ số và bắt đầu bằng 0")
         String phone,
 
         String address

@@ -62,4 +62,12 @@ public class CustomerController {
         return ApiResponse.success(customerService.get(id));
     }
 
+    @PutMapping("/user/{id}")
+    public ApiResponse<CustomerResponse> updateCustomerByUserId(@PathVariable Long id, @Valid @RequestBody UpdateCustomerRequest request, Authentication authentication) {
+        if (!(authentication.getPrincipal() instanceof CurrentUser current)
+                || (!current.id().equals(id) && !current.hasRole("ADMIN") && !current.hasRole("EMPLOYEE"))) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "CUSTOMER_ACCESS_DENIED", "Cannot update this customer");
+        }
+        return ApiResponse.success(customerService.updateByUserId(id, request));
+    }
 }

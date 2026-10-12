@@ -12,6 +12,9 @@ import java.util.Optional;
 
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Customer c where c.user.id=:id")
+    Optional<Customer> lockByUserId(@Param("id") Long userId);
     Optional<Customer> findByUserId(Long userId);
 
     @Query("""
