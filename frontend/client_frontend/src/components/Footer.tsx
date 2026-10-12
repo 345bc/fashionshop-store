@@ -1,3 +1,4 @@
+import GoogleSymbol from "@/components/ui/GoogleSymbol";
 import Link from "next/link";
 import styles from "./Footer.module.css";
 
@@ -12,10 +13,10 @@ const linkGroups = [
   {
     title: "Chăm sóc khách hàng",
     links: [
-      { label: "Theo dõi đơn hàng", href: "/orders" },
+      { label: "Tra cứu đơn hàng", href: "/order-tracking" },
       { label: "Tư vấn trực tuyến", href: "/support-chat" },
       { label: "Điểm thưởng", href: "/loyalty" },
-      { label: "Lịch sử mua hàng", href: "/purchase-history" },
+      { label: "Đơn hàng của tôi", href: "/orders" },
     ],
   },
   {
@@ -42,7 +43,7 @@ export default function Footer() {
           <div className={styles.intro}>
             <p>Đơn giản trong lựa chọn.<br /><strong>Tinh tế trong từng ngày.</strong></p>
             <Link href="/products" className={styles.explore}>
-              Khám phá Zella <span aria-hidden="true">↗</span>
+              Khám phá Zella <span aria-hidden="true"><GoogleSymbol name="north_east" size={18} /></span>
             </Link>
           </div>
         </div>
@@ -66,14 +67,12 @@ export default function Footer() {
             <a href="tel:19006868" className={styles.phone}>
               1900 6868
               <span className={styles.phoneIcon} aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M8 3H5a2 2 0 0 0-2 2c0 8.8 7.2 16 16 16a2 2 0 0 0 2-2v-3l-5-2-2 2a13 13 0 0 1-6-6l2-2-2-5Z" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <GoogleSymbol name="call" size={17} />
               </span>
             </a>
             <p className={styles.hours}>Hỗ trợ mỗi ngày, 08:00 – 22:00</p>
             <a href="mailto:hello@zellastudio.vn" className={styles.email}>
-              hello@zellastudio.vn <span aria-hidden="true">↗</span>
+              hello@zellastudio.vn <span aria-hidden="true"><GoogleSymbol name="north_east" size={18} /></span>
             </a>
           </div>
         </div>
@@ -82,21 +81,14 @@ export default function Footer() {
           <p>© {new Date().getFullYear()} Zella Studio<span className={styles.copyrightNote}>. Thời trang cho nhịp sống hiện đại.</span></p>
           <div className={styles.social}>
             <span className={styles.socialLabel}>Kết nối cùng Zella</span>
-            <a href="https://facebook.com/zellastudio" target="_blank" rel="noopener noreferrer" aria-label="Facebook Zella Studio (mở tab mới)">
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                <path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5H17V3.9c-.3 0-1.4-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3V10H7.5v3h2.8v8h3.2Z" />
-              </svg>
+            <a href="https://facebook.com/zellastudio" target="_blank" rel="noopener noreferrer" title="Facebook" aria-label="Facebook Zella Studio (mở tab mới)">
+              <GoogleSymbol name="public" size={16} />
             </a>
-            <a href="https://instagram.com/zellastudio" target="_blank" rel="noopener noreferrer" aria-label="Instagram Zella Studio (mở tab mới)">
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6">
-                <rect x="3.5" y="3.5" width="17" height="17" rx="5" /><circle cx="12" cy="12" r="4" />
-                <circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none" />
-              </svg>
+            <a href="https://instagram.com/zellastudio" target="_blank" rel="noopener noreferrer" title="Instagram" aria-label="Instagram Zella Studio (mở tab mới)">
+              <GoogleSymbol name="photo_camera" size={16} />
             </a>
-            <a href="https://tiktok.com/@zellastudio" target="_blank" rel="noopener noreferrer" aria-label="TikTok Zella Studio (mở tab mới)">
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 3v12a4 4 0 1 1-4-4M14 3c.5 3 2.5 5 6 5" />
-              </svg>
+            <a href="https://tiktok.com/@zellastudio" target="_blank" rel="noopener noreferrer" title="TikTok" aria-label="TikTok Zella Studio (mở tab mới)">
+              <GoogleSymbol name="music_note" size={16} />
             </a>
           </div>
         </div>

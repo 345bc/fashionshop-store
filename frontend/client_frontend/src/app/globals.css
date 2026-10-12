@@ -3130,12 +3130,14 @@
   }
   .material-symbols-outlined {
     font-variation-settings:
-      "FILL" 0,
+      "FILL" var(--symbol-fill, 0),
       "wght" 300,
       "GRAD" 0,
       "opsz" 24;
     display: inline-flex;
     vertical-align: middle;
+    flex-shrink: 0;
+    line-height: 1;
   }
 
   /* ========================================================================== 
@@ -8082,4 +8084,13 @@ body {
   .lifewear-main {
     font-size: 20px;
   }
+}
+
+/* --- TITLE AND CONTENT --- */
+.normal-title {
+  @apply text-[22px] font-normal text-gray-900 mb-6;
+}
+
+.normal-caption {
+  @apply text-[14px] font-normal text-gray-600;
 }

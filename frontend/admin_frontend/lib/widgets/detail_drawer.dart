@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -43,7 +44,7 @@ class DetailDrawer extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Symbols.close),
                   onPressed: () {
                     if (onClose != null) {
                       onClose!();

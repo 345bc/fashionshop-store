@@ -128,7 +128,7 @@
   transition: background .2s ease, color .2s ease, border-color .2s ease;
 }
 
-.phoneIcon svg { width: 17px; height: 17px; }
+.phoneIcon :global(.material-symbols-outlined) { font-size: 17px; }
 .phone:hover .phoneIcon { border-color: #25251f; background: #25251f; color: #fff; }
 .hours { margin-top: 6px; color: #72726a; font-size: 12px; }
 
@@ -171,7 +171,7 @@
 }
 
 .social a:hover { border-color: #25251f; background: #25251f; color: #fff; }
-.social svg { width: 16px; height: 16px; }
+.social :global(.material-symbols-outlined) { font-size: 16px; }
 
 .footer a:focus-visible { outline: 2px solid #826445; outline-offset: 5px; border-radius: 3px; }
 

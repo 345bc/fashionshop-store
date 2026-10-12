@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -36,7 +37,7 @@ class PaginationFooter extends StatelessWidget {
           Row(
             children: [
               _buildPageButton(
-                Icons.chevron_left,
+                Symbols.chevron_left,
                 onPressed: currentPage > 0
                     ? () => onPageChanged(currentPage - 1)
                     : null,
@@ -45,7 +46,7 @@ class PaginationFooter extends StatelessWidget {
               ..._buildPageNumbers(),
               const SizedBox(width: 8),
               _buildPageButton(
-                Icons.chevron_right,
+                Symbols.chevron_right,
                 onPressed: currentPage < totalPages - 1
                     ? () => onPageChanged(currentPage + 1)
                     : null,
@@ -73,7 +74,7 @@ class PaginationFooter extends StatelessWidget {
       if (currentPage > 2) {
         items.add(const Padding(
           padding: EdgeInsets.symmetric(horizontal: 4.0),
-          child: Text('...', style: TextStyle(color: AppTheme.textSecondary)),
+          child: Text('', style: TextStyle(color: AppTheme.textSecondary)),
         ));
         items.add(const SizedBox(width: 4));
       }
@@ -89,7 +90,7 @@ class PaginationFooter extends StatelessWidget {
       if (currentPage < totalPages - 3) {
         items.add(const Padding(
           padding: EdgeInsets.symmetric(horizontal: 4.0),
-          child: Text('...', style: TextStyle(color: AppTheme.textSecondary)),
+          child: Text('', style: TextStyle(color: AppTheme.textSecondary)),
         ));
         items.add(const SizedBox(width: 4));
       }

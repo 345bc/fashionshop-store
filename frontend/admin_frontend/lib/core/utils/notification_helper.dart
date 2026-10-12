@@ -1,14 +1,15 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../theme/app_theme.dart';
 
 class NotificationHelper {
   static void showSuccessSnackbar(BuildContext context, String message) {
-    _showSnackbar(context, message, AppTheme.success, Icons.check_circle_outline);
+    _showSnackbar(context, message, AppTheme.success, Symbols.check_circle);
   }
 
   static void showErrorSnackbar(BuildContext context, String message) {
-    _showSnackbar(context, message, AppTheme.danger, Icons.error_outline);
+    _showSnackbar(context, message, AppTheme.danger, Symbols.error);
   }
 
   static void _showSnackbar(BuildContext context, String message, Color color, IconData icon) {

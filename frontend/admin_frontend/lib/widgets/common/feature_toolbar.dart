@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
+
 import 'dart:async';
+
 import '../../theme/app_theme.dart';
 
 class FeatureToolbar extends StatefulWidget {
@@ -33,7 +36,7 @@ class _FeatureToolbarState extends State<FeatureToolbar> {
   @override
   void didUpdateWidget(covariant FeatureToolbar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialSearchText != oldWidget.initialSearchText && 
+    if (widget.initialSearchText != oldWidget.initialSearchText &&
         widget.initialSearchText != _searchController.text) {
       _searchController.text = widget.initialSearchText ?? '';
     }
@@ -55,56 +58,63 @@ class _FeatureToolbarState extends State<FeatureToolbar> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.borderLight),
-      ),
-      child: Row(
+    return LayoutBuilder(
+      builder: (context, constraints) => Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Expanded(
-            flex: 2,
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                hintText: widget.searchHint,
-                hintStyle: const TextStyle(
-                  color: AppTheme.textMuted,
-                  fontSize: 14,
+          SizedBox(
+            width: constraints.maxWidth < 320 ? constraints.maxWidth : 300,
+            child: SizedBox(
+              height: 38,
+              child: Tooltip(
+                message: widget.searchHint,
+                preferBelow: true,
+                waitDuration: const Duration(milliseconds: 600),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  style: const TextStyle(fontSize: 13, color: AppTheme.text),
+                  textAlignVertical: TextAlignVertical.center,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: widget.searchHint,
+                    hintStyle: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 13,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppTheme.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppTheme.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppTheme.primary),
+                    ),
+                    // Ô tìm kiếm
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 13,
+                    ),
+                    prefixIcon: const Icon(
+                      Symbols.search,
+                      size: 18,
+                      color: AppTheme.textSecondary,
+                    ),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 36),
+                    fillColor: Colors.white,
+                    filled: true,
+                  ),
                 ),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: AppTheme.textSecondary,
-                  size: 20,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppTheme.borderLight),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppTheme.borderLight),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppTheme.primary),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 0,
-                  horizontal: 12,
-                ),
-                fillColor: Colors.white,
-                filled: true,
               ),
             ),
           ),
-          if (widget.filterWidget != null) ...[
-            const SizedBox(width: 16),
-            widget.filterWidget!,
-          ],
+          if (widget.filterWidget != null) widget.filterWidget!,
         ],
       ),
     );

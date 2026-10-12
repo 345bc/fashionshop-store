@@ -22,7 +22,9 @@ class WarehouseTable extends StatelessWidget {
     required this.pageSize,
     required this.onPage,
     required this.onRetry,
+    this.flexes,
   });
+  final List<int>? flexes;
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
@@ -52,13 +54,19 @@ class WarehouseTable extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              for (final label in headers)
+              for (var i = 0; i < headers.length; i++)
                 Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary,
+                  flex: flexes?[i] ?? 1,
+                  child: Padding(
+                    padding: i == headers.length - 1
+                        ? EdgeInsets.zero
+                        : const EdgeInsets.only(right: 16.0),
+                    child: Text(
+                      headers[i],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                 ),

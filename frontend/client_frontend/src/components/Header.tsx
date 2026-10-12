@@ -1,10 +1,14 @@
 "use client";
+import GoogleSymbol from "@/components/ui/GoogleSymbol";
+
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../auth/AuthContext";
+import { useCart } from "../cart/CartContext";
 import { getCategories, getCategoriesParent } from "../service/categoriesApi";
 
 
@@ -21,8 +25,9 @@ export default function Header() {
   const router = useRouter();
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [cartQuantity, setCartQuantity] = useState(1);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const cart = useCart();
   const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<number | null>(null);
   const [query, setQuery] = useState("");
@@ -70,7 +75,6 @@ export default function Header() {
       if (event.key === "Escape") {
         setCatalogOpen(false);
         setMobileOpen(false);
-        setCartOpen(false);
       }
     };
 
@@ -79,6 +83,25 @@ export default function Header() {
   }, []);
 
 
+
+  useEffect(() => {
+    if (!accountOpen) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!accountRef.current?.contains(event.target as Node)) setAccountOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setAccountOpen(false);
+        accountRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [accountOpen]);
 
   const handleSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -90,33 +113,35 @@ export default function Header() {
   };
 
   const openSearch = () => {
-    if (window.matchMedia("(min-width: 1024px)").matches) {
-      setCatalogOpen(true);
-      requestAnimationFrame(() => searchRef.current?.focus());
-      return;
-    }
-
-    setMobileOpen(true);
-    requestAnimationFrame(() => mobileSearchRef.current?.focus());
+    const desktop = window.matchMedia("(min-width: 1024px)").matches;
+    // Apply the open state before focusing an input that was hidden.
+    flushSync(() => {
+      setAccountOpen(false);
+      setCatalogOpen(desktop);
+      setMobileOpen(!desktop);
+    });
+    const input = desktop ? searchRef.current : mobileSearchRef.current;
+    input?.focus({ preventScroll: true });
   };
 
   const closeNavigation = () => {
+    setAccountOpen(false);
     setCatalogOpen(false);
     setMobileOpen(false);
   };
 
   const openCart = () => {
+    setAccountOpen(false);
     setCatalogOpen(false);
     setMobileOpen(false);
-    setCartOpen(true);
+    cart.openCart();
   };
 
-  const cartSubtotal = 679000 * cartQuantity;
 
   return (
     <>
       <div className="flex h-9 items-center justify-center gap-4 bg-black px-4 text-[10px] font-bold tracking-[0.2em] text-white uppercase sm:text-[11px]">
-        <span>Miễn phí giao hàng từ 1.500.000₫</span>
+        <span>Miễn phí giao hàng từ 600.000 VND</span>
         <span aria-hidden="true" className="text-white/30">•</span>
         <span className="hidden sm:inline">Đổi trả trong 14 ngày</span>
       </div>
@@ -164,8 +189,8 @@ export default function Header() {
             <button type="button" className="grid size-10 place-items-center rounded-full text-black transition-colors hover:bg-black/5" aria-label="Tìm kiếm" onClick={openSearch}>
               <span className="material-symbols-outlined" style={{ fontSize: 22 }}>search</span>
             </button>
-            <div className="group relative hidden lg:block">
-              <Link href="/profile" className="grid size-10 place-items-center rounded-full text-black transition-colors hover:bg-black/5" aria-label="Tài khoản">
+            <div ref={accountRef} className="relative">
+              <button type="button" onClick={() => { setCatalogOpen(false); setMobileOpen(false); setAccountOpen(open => !open); }} aria-expanded={accountOpen} aria-controls="account-menu" className="grid size-10 place-items-center rounded-full text-black transition-colors hover:bg-black/5" aria-label="Mở menu tài khoản">
                 {auth.user && (auth.user.avatar || auth.user.picture || auth.user.photoUrl || auth.user.imageUrl) ? (
                   <Image unoptimized width={28} height={28} src={(auth.user.avatar || auth.user.picture || auth.user.photoUrl || auth.user.imageUrl) as string} alt="Avatar" className="size-7 rounded-full object-cover border border-black/10" />
                 ) : auth.user ? (
@@ -175,9 +200,9 @@ export default function Header() {
                 ) : (
                   <span className="material-symbols-outlined" style={{ fontSize: 22 }}>person</span>
                 )}
-              </Link>
+              </button>
               {/* Profile Dropdown */}
-              <div className="invisible absolute left-0 top-full mt-2 w-48 origin-top-left rounded-xl border border-black/10 bg-white p-1.5 opacity-0 shadow-lg transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 translate-y-2">
+              <div id="account-menu" hidden={!accountOpen} className="absolute right-0 top-full mt-2 w-48 rounded-xl border border-black/10 bg-white p-1.5 shadow-lg">
                 {auth.user ? (
                   <div className="flex flex-col">
                     <div className="mb-1.5 flex items-center gap-2 border-b border-black/10 px-2 pb-2 pt-1">
@@ -195,21 +220,17 @@ export default function Header() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <Link href="/profile" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-black/80 transition-colors hover:bg-black/5 hover:text-black">
+                      <Link href="/profile" onClick={closeNavigation} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-black/80 transition-colors hover:bg-black/5 hover:text-black">
                         <span className="material-symbols-outlined text-[16px]">account_circle</span>
                         Hồ sơ
                       </Link>
-                      <Link href="/orders" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-black/80 transition-colors hover:bg-black/5 hover:text-black">
+                      <Link href="/orders" onClick={closeNavigation} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-black/80 transition-colors hover:bg-black/5 hover:text-black">
                         <span className="material-symbols-outlined text-[16px]">local_mall</span>
                         Đơn hàng
-                      </Link>s
-                      <Link href="/wishlist" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-medium text-black/80 transition-colors hover:bg-black/5 hover:text-black">
-                        <span className="material-symbols-outlined text-[16px]">favorite</span>
-                        Yêu thích
                       </Link>
                     </div>
                     <div className="mt-1.5 border-t border-black/10 pt-1.5">
-                      <button type="button" onClick={() => auth.logout()} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] font-medium text-red-600 transition-colors hover:bg-red-50">
+                      <button type="button" onClick={() => { closeNavigation(); void auth.logout().then(() => router.push("/")).catch(console.error); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] font-medium text-red-600 transition-colors hover:bg-red-50">
                         <span className="material-symbols-outlined text-[16px]">logout</span>
                         Đăng xuất
                       </button>
@@ -217,16 +238,13 @@ export default function Header() {
                   </div>
                 ) : (
                   <div className="p-2 text-center">
-                    <div className="mx-auto mb-2 flex size-8 items-center justify-center rounded-full bg-black/5 text-black">
-                      <span className="material-symbols-outlined text-[16px]">loyalty</span>
-                    </div>
-                    <h4 className="mb-0.5 text-[12px] font-bold text-black">Zella Studio</h4>
-                    <p className="mb-3 text-[11px] leading-relaxed text-black/60">Đăng nhập để nhận đặc quyền.</p>
+                    <h4 className="mb-1 text-[12px] font-semibold text-black">Tài khoản</h4>
+                    <p className="mb-3 text-[11px] leading-relaxed text-black/60">Đăng nhập để xem đơn hàng và thông tin cá nhân.</p>
                     <div className="flex flex-col gap-1.5">
-                      <Link href="/login" className="flex w-full items-center justify-center rounded-lg bg-black px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-black/80">
+                      <Link href="/login" onClick={closeNavigation} className="flex w-full items-center justify-center rounded-lg bg-black px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-black/80">
                         ĐĂNG NHẬP
                       </Link>
-                      <Link href="/register" className="flex w-full items-center justify-center rounded-lg border border-black/20 bg-white px-3 py-2 text-[11px] font-bold text-black transition-colors hover:bg-black/5">
+                      <Link href="/register" onClick={closeNavigation} className="flex w-full items-center justify-center rounded-lg border border-black/20 bg-white px-3 py-2 text-[11px] font-bold text-black transition-colors hover:bg-black/5">
                         TẠO TÀI KHOẢN
                       </Link>
                     </div>
@@ -234,9 +252,9 @@ export default function Header() {
                 )}
               </div>
             </div>
-            <button type="button" onClick={openCart} className="relative grid size-10 place-items-center rounded-full border-0 bg-transparent text-black transition-colors hover:bg-black/5" aria-label="Mở giỏ hàng, 1 sản phẩm" aria-expanded={cartOpen}>
+            <button type="button" onClick={openCart} className="relative grid size-10 place-items-center rounded-full border-0 bg-transparent text-black transition-colors hover:bg-black/5" aria-label={`Mở giỏ hàng, ${cart.totalQuantity} sản phẩm`} aria-expanded={cart.drawerOpen}>
               <span className="material-symbols-outlined" style={{ fontSize: 22 }}>shopping_bag</span>
-              <span className="absolute top-1.5 right-1.5 grid size-3.75 place-items-center rounded-full bg-black text-[8px] font-bold text-white shadow-sm">1</span>
+              <span className="absolute top-1.5 right-1.5 grid size-3.75 place-items-center rounded-full bg-black text-[8px] font-bold text-white shadow-sm">{cart.totalQuantity}</span>
             </button>
           </div>
         </div>
@@ -272,8 +290,9 @@ export default function Header() {
             </div>
 
             <form onSubmit={handleSearch} className="my-6 grid h-12 grid-cols-[22px_1fr_auto] items-center gap-3 rounded-full border border-black/15 bg-white px-5 transition-shadow focus-within:border-black/30 focus-within:shadow-[0_0_0_3px_rgba(29,33,28,0.05)]">
-              <span className={`material-symbols-outlined ${"text-[#777a72]"}`} style={{ fontSize: 19 }}>search</span>
+              <button type="button" aria-label="Nhập từ khóa tìm kiếm" onClick={() => searchRef.current?.focus()} className="grid place-items-center text-[#777a72]"><span className="material-symbols-outlined" style={{ fontSize: 19 }}>search</span></button>
               <input
+                ref={searchRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="min-w-0 border-0 bg-transparent text-[14px] text-[#1d211c] outline-none placeholder:text-[#96988f]"
@@ -293,7 +312,7 @@ export default function Header() {
                   </div>
                   <div className="mt-2.5 flex items-center justify-between gap-2">
                     <span className="truncate text-[12px] font-medium text-[#2b2e29] transition-colors group-hover:text-black">{item.name}</span>
-                    <span aria-hidden="true" className="translate-x-0 text-[13px] text-[#9a9c95] transition-all group-hover:translate-x-0.5 group-hover:text-black">→</span>
+                    <span aria-hidden="true" className="translate-x-0 text-[13px] text-[#9a9c95] transition-all group-hover:translate-x-0.5 group-hover:text-black"><GoogleSymbol name="arrow_forward" size={16} /></span>
                   </div>
                 </Link>
               ))}
@@ -303,7 +322,7 @@ export default function Header() {
               <p>Thiết kế có chủ đích · Chất liệu được tuyển chọn</p>
               <div className="flex items-center gap-5 font-medium text-[#3d403a]">
                 <Link href="/products?cat=new" onClick={closeNavigation} className="hover:text-black">Hàng mới về</Link>
-                <Link href="/products" onClick={closeNavigation} className="hover:text-black">Tất cả sản phẩm →</Link>
+                <Link href="/products" onClick={closeNavigation} className="hover:text-black">Tất cả sản phẩm <GoogleSymbol name="arrow_forward" size={16} /></Link>
               </div>
             </div>
           </div>
@@ -315,73 +334,6 @@ export default function Header() {
       )
       }
 
-      <button
-        type="button"
-        aria-label="Đóng giỏ hàng"
-        onClick={() => setCartOpen(false)}
-        className={`fixed inset-0 z-60 cursor-default bg-black/60 transition-opacity duration-300 ${cartOpen ? "visible opacity-100" : "invisible pointer-events-none opacity-0"}`}
-      />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label="Giỏ hàng"
-        aria-hidden={!cartOpen}
-        className={`fixed top-0 right-0 bottom-0 z-70 flex w-full max-w-95 flex-col bg-white shadow-[-10px_0_40px_rgba(0,0,0,0.15)] transition-transform duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${cartOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="flex h-19 shrink-0 items-center justify-between border-b border-[#e5e5e5] px-6 sm:px-7">
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-[18px] font-bold tracking-[-0.03em] text-[#111]">Giỏ hàng</h2>
-            <span className="text-[11px] font-medium text-[#777] uppercase tracking-wider">1 sản phẩm</span>
-          </div>
-          <button type="button" onClick={() => setCartOpen(false)} className="grid size-9 place-items-center rounded-full border border-[#e5e5e5] bg-transparent text-[#111] transition-colors hover:border-[#111] hover:bg-[#111] hover:text-white" aria-label="Đóng giỏ hàng">
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
-          </button>
-        </div>
-
-        <div className="flex flex-1 flex-col overflow-y-auto px-6 py-6 sm:px-7">
-          <article className="grid w-full grid-cols-[88px_minmax(0,1fr)] gap-5 rounded-none border-b border-[#e5e5e5] pb-6">
-            <Link href="/product/3" onClick={() => setCartOpen(false)} className="relative aspect-3/4 overflow-hidden rounded-md bg-[#f4f4f4]">
-              <Image src="/assets/images/v7_2020.png" alt="Váy midi Sage Flow" fill sizes="88px" className="object-cover" />
-            </Link>
-            <div className="flex flex-col min-w-0 pt-1">
-              <div className="flex justify-between items-start gap-2">
-                <div className="pr-2">
-                  <span className="text-[9px] font-bold tracking-[0.15em] text-[#888] uppercase">Dress</span>
-                  <Link href="/product/3" onClick={() => setCartOpen(false)} className="mt-1 block text-[14px] font-bold leading-snug text-[#111] hover:underline">Váy midi Sage Flow</Link>
-                </div>
-                <strong className="text-[14px] font-bold text-[#111]">{cartSubtotal.toLocaleString("vi-VN")}₫</strong>
-              </div>
-              <span className="mt-1.5 block text-[11px] font-medium text-[#666]">Màu: Sage</span>
-              <div className="mt-auto pt-3 flex flex-wrap items-center justify-between gap-3">
-                <label className="flex items-center gap-1.5 text-[11px] font-medium text-[#666]">
-                  Size:
-                  <select defaultValue="M" className="border-0 bg-transparent font-bold text-[#111] outline-none cursor-pointer">
-                    <option>S</option><option>M</option><option>L</option>
-                  </select>
-                </label>
-                <div className="grid h-8 grid-cols-[26px_24px_26px] items-center rounded-sm border border-[#d5d5d5] bg-white" aria-label="Số lượng">
-                  <button type="button" className="grid h-full place-items-center text-[#111] hover:bg-[#f5f5f5]" onClick={() => setCartQuantity((quantity) => Math.max(1, quantity - 1))} aria-label="Giảm số lượng"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>remove</span></button>
-                  <span className="text-center text-[11px] font-bold text-[#111]">{cartQuantity}</span>
-                  <button type="button" className="grid h-full place-items-center text-[#111] hover:bg-[#f5f5f5]" onClick={() => setCartQuantity((quantity) => quantity + 1)} aria-label="Tăng số lượng"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span></button>
-                </div>
-              </div>
-            </div>
-          </article>
-        </div>
-
-        <div className="shrink-0 border-t border-[#eee] bg-[#fafafa] px-6 pt-6 pb-8 sm:px-7">
-          <div className="flex items-end justify-between gap-5 mb-2">
-            <span className="text-[13px] font-medium text-[#666]">Tổng cộng</span>
-            <strong className="text-[22px] font-bold tracking-[-0.03em] text-[#111]">{cartSubtotal.toLocaleString("vi-VN")}₫</strong>
-          </div>
-          <p className="text-[11px] text-[#888] mb-6">Phí vận chuyển và thuế được tính ở bước thanh toán.</p>
-          <Link href="/checkout" onClick={() => setCartOpen(false)} className="group relative flex h-13 w-full items-center justify-center overflow-hidden rounded-full bg-[#111] text-[13px] font-bold tracking-[0.04em] text-white transition-transform hover:scale-[1.02]">
-            <span className="relative z-10">Thanh toán an toàn</span>
-            <div className="absolute inset-0 -translate-x-full bg-white/20 transition-transform duration-400 ease-out group-hover:translate-x-0" />
-          </Link>
-        </div>
-      </aside>
-
       <div className={`fixed inset-0 z-60 bg-[#171914]/35 transition-opacity duration-200 lg:hidden ${mobileOpen ? "visible opacity-100" : "invisible pointer-events-none opacity-0"}`} onClick={() => setMobileOpen(false)} />
       <aside className={`fixed top-0 bottom-0 left-0 z-70 w-[min(390px,90vw)] overflow-y-auto bg-(--z-bg) px-5 py-5 shadow-2xl transition-transform duration-300 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`} aria-hidden={!mobileOpen}>
         <div className="flex items-center justify-between border-b border-black/10 pb-4">
@@ -390,7 +342,7 @@ export default function Header() {
         </div>
 
         <form onSubmit={handleSearch} className="my-5 grid h-11 grid-cols-[20px_1fr] items-center gap-2 rounded-full border border-black/15 bg-white px-4">
-          <span className={`material-symbols-outlined ${"text-[#777a72]"}`} style={{ fontSize: 17 }}>search</span>
+          <button type="button" aria-label="Nhập từ khóa tìm kiếm" onClick={() => mobileSearchRef.current?.focus()} className="grid place-items-center text-[#777a72]"><span className="material-symbols-outlined" style={{ fontSize: 17 }}>search</span></button>
           <input ref={mobileSearchRef} value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 border-0 bg-transparent text-[13px] outline-none placeholder:text-[#9a9c95]" placeholder="Tìm kiếm sản phẩm" aria-label="Từ khóa tìm kiếm" />
         </form>
 
@@ -403,12 +355,12 @@ export default function Header() {
           <Link href="/products?cat=nu" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Thời trang nữ</Link>
           <Link href="/products?cat=nam" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Thời trang nam</Link>
           <Link href="/blog" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Journal</Link>
-          <Link href="/orders" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Theo dõi đơn hàng</Link>
+
           <Link href="/loyalty" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Điểm thưởng</Link>
         </nav>
 
         <div className="mt-6">
-          <Link href="/profile" onClick={closeNavigation} className="flex items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-3 py-3 text-[11px] font-medium"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>person</span> Tài khoản</Link>
+          <Link href={auth.user ? "/profile" : "/login"} onClick={closeNavigation} className="flex items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-3 py-3 text-[11px] font-medium"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>person</span> Tài khoản</Link>
         </div>
       </aside>
     </>

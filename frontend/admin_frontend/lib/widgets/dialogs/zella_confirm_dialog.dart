@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'zella_dialog.dart';
@@ -17,7 +18,7 @@ class ZellaConfirmDialog extends StatelessWidget {
     super.key,
     required this.title,
     required this.content,
-    this.icon = Icons.warning_amber_rounded,
+    this.icon = Symbols.warning,
     this.iconColor = AppTheme.error,
     this.cancelText = 'Hủy',
     this.confirmText = 'Xác nhận',
@@ -29,31 +30,18 @@ class ZellaConfirmDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ZellaDialog(
-      width: 400,
+      width: 460,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: iconColor.withAlpha(25),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 32,
-            ),
-          ),
-          const SizedBox(height: 24),
           Text(
             title,
             style: const TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: AppTheme.text,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
           DefaultTextStyle(
@@ -62,43 +50,52 @@ class ZellaConfirmDialog extends StatelessWidget {
               color: AppTheme.textSecondary,
               height: 1.5,
             ),
-            textAlign: TextAlign.center,
             child: content,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: isLoading ? null : onCancel,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textSecondary,
-                    side: const BorderSide(color: AppTheme.borderLight),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              OutlinedButton(
+                onPressed: isLoading ? null : onCancel,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.text,
+                  side: const BorderSide(color: AppTheme.borderLight),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(cancelText),
+                ),
+                child: Text(
+                  cancelText,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : onConfirm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: iconColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    elevation: 0,
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: isLoading ? null : onConfirm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: iconColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : Text(confirmText),
+                  elevation: 0,
                 ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        confirmText,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
               ),
             ],
           ),
