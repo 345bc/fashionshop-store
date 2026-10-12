@@ -80,13 +80,56 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
     int maxLength = 100,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
-  }) => TextFormField(
-    controller: _fields[key],
-    maxLength: maxLength,
-    keyboardType: keyboardType,
-    decoration: InputDecoration(labelText: label),
-    validator: validator,
-  );
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 160,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.text,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: TextFormField(
+              controller: _fields[key],
+              maxLength: maxLength,
+              keyboardType: keyboardType,
+              decoration: InputDecoration(
+                counterText: '',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppTheme.borderLight),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppTheme.borderLight),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppTheme.primary),
+                ),
+                isDense: true,
+              ),
+              style: const TextStyle(fontSize: 14),
+              validator: validator,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +138,10 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
       title: widget.supplier == null
           ? 'Thêm nhà cung cấp'
           : 'Chỉnh sửa nhà cung cấp',
-      width: (size.width * 2 / 3).clamp(480.0, 1100.0),
+      subtitle: widget.supplier == null
+          ? 'Tạo nhà cung cấp mới. Nhấn lưu khi hoàn tất.'
+          : 'Cập nhật thông tin nhà cung cấp. Nhấn lưu khi hoàn tất.',
+      width: (size.width * 2 / 3).clamp(480.0, 700.0),
       height: size.height * 2 / 3,
       confirmText: widget.supplier == null
           ? 'Thêm nhà cung cấp'
@@ -109,11 +155,7 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Thông tin nhà cung cấp',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               _field(
                 'name',
                 'Tên nhà cung cấp *',
@@ -137,16 +179,35 @@ class _SupplierFormDialogState extends State<SupplierFormDialog> {
               _field(
                 'phone',
                 'Số điện thoại',
-                maxLength: 20,
+                maxLength: 10,
                 keyboardType: TextInputType.phone,
+                validator: (v) {
+                  if (v != null && v.isNotEmpty && !RegExp(r'^0[0-9]{9}$').hasMatch(v)) {
+                    return 'SĐT phải gồm 10 chữ số và bắt đầu bằng 0';
+                  }
+                  return null;
+                },
               ),
               _field('address', 'Địa chỉ', maxLength: 255),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Trạng thái hoạt động'),
-                value: _active,
-                activeThumbColor: AppTheme.primary,
-                onChanged: (v) => setState(() => _active = v),
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 160,
+                    child: Text(
+                      'Trạng thái hoạt động',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.text,
+                      ),
+                    ),
+                  ),
+                  Switch(
+                    value: _active,
+                    activeThumbColor: AppTheme.primary,
+                    onChanged: (v) => setState(() => _active = v),
+                  ),
+                ],
               ),
             ],
           ),

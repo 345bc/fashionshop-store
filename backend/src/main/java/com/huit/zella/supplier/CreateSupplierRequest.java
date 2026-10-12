@@ -13,7 +13,7 @@ public record CreateSupplierRequest(
         @Size(max = 100, message = "Contact email must not exceed 100 characters")
         String contactEmail,
 
-        @Size(max = 10, message = "Phone must not exceed 10 characters")
+        @jakarta.validation.constraints.Pattern(regexp = "0[0-9]{9}", message = "Số điện thoại phải có 10 chữ số và bắt đầu bằng 0")
         String phone,
 
         String address,

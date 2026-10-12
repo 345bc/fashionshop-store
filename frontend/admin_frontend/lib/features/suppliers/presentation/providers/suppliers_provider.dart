@@ -111,6 +111,22 @@ class SuppliersProvider extends ChangeNotifier {
     await loadItems();
   }
 
+  Future<void> toggleActiveBulk(List<int> ids, bool isActive) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final futures = ids.map((id) {
+        final item = _items.firstWhere((e) => e.id == id);
+        final data = item.toJson();
+        data['isActive'] = isActive;
+        return _repository.update(id, data);
+      });
+      await Future.wait(futures);
+    } finally {
+      await loadItems();
+    }
+  }
+
   Future<void> deleteItem(int id) async {
     await _repository.delete(id);
     await loadItems();
