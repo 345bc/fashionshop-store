@@ -20,9 +20,26 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ReturnService {
     private final ReturnRepository returnRepository;
+    private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final UserRepository userRepository;
     private final InventoryService inventoryService;
+    private final com.huit.zella.loyalty.LoyaltyService loyalty;
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<ReturnOrderSummaryResponse> management(String query, String status,
+            org.springframework.data.domain.Pageable pageable) {
+        ReturnStatus filter = null;
+        if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+            try { filter = ReturnStatus.valueOf(status.trim().toUpperCase(Locale.ROOT)); }
+            catch (IllegalArgumentException exception) { throw error("INVALID_RETURN_STATUS", "Trạng thái hoàn hàng không hợp lệ"); }
+        }
+        var page = orderRepository.searchReturnOrders(query == null ? "" : query.trim(), filter, pageable);
+        if (page.isEmpty()) return page.map(order -> null);
+        var requests = returnRepository.findByOrderIdInOrderByIdDesc(page.getContent().stream().map(Order::getId).toList())
+                .stream().collect(java.util.stream.Collectors.groupingBy(r -> r.getOrder().getId()));
+        return page.map(order -> ReturnOrderSummaryResponse.from(order, requests.get(order.getId())));
+    }
 
     @Transactional(readOnly = true)
     public List<ReturnResponse> list(Long orderId) {
@@ -34,6 +51,16 @@ public class ReturnService {
         Order order = orderService.lock(request.orderId());
         if (order.getStatus() != OrderStatus.SHIPPED && order.getStatus() != OrderStatus.DELIVERED)
             throw error("ORDER_NOT_SHIPPED", "Chỉ lập phiếu trả cho đơn đã xuất kho");
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            order.getHistories().stream()
+                .filter(h -> "DELIVERED".equals(h.getNewStatus()))
+                .max(Comparator.comparing(OrderHistory::getCreatedAt))
+                .ifPresent(h -> {
+                    if (h.getCreatedAt().plusDays(14).isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
+                        throw error("RETURN_EXPIRED", "Đã quá 14 ngày kể từ khi nhận hàng, không thể yêu cầu trả hàng");
+                    }
+                });
+        }
         ReturnRequest document = new ReturnRequest();
         document.setCode("RET-" + UUID.randomUUID().toString().replace("-", "").substring(0, 28).toUpperCase(Locale.ROOT));
         document.setOrder(order); document.setCustomer(order.getCustomer()); document.setNote(request.reason().trim());
@@ -119,16 +146,27 @@ public class ReturnService {
         }
         // Failed delivery returns the full parcel and refunds shipping too; delivered merchandise returns exclude shipping.
         if (document.getOrder().getStatus() == OrderStatus.SHIPPED) refund = document.getOrder().getTotalAmount();
+        else if(document.getOrder().getDiscountAmount().signum()>0) {
+            Order sold=document.getOrder();
+            BigDecimal net=sold.getSubtotal().subtract(sold.getDiscountAmount());
+            // The last return absorbs rounding so the cumulative merchandise refund equals the amount paid.
+            refund=returnRepository.receivedValue(sold.getId()).add(refund).compareTo(sold.getSubtotal())>=0
+                    ? net.subtract(returnRepository.receivedRefund(sold.getId())).max(BigDecimal.ZERO)
+                    : refund.multiply(net).divide(sold.getSubtotal(),0,RoundingMode.DOWN);
+        }
         document.setRefundAmount("PAID".equals(document.getOrder().getPaymentStatus()) ? refund : BigDecimal.ZERO);
         transition(document, ReturnStatus.RECEIVED, "Đã nhận và kiểm tra hàng trả", actorId);
         document.setReceivedAt(LocalDateTime.now(ZoneOffset.UTC));
+        loyalty.reverse(document.getOrder(),document.getId(),document.getRefundAmount());
         Order order = document.getOrder();
-        if (order.getStatus() == OrderStatus.SHIPPED) {
+        boolean fullReturn=order.getItems().stream().allMatch(item -> returnRepository.receivedQuantity(item.getId()) >= item.getQuantity());
+        if (order.getStatus() == OrderStatus.SHIPPED || fullReturn) {
             OrderHistory entry = new OrderHistory();
             entry.setOrder(order); entry.setOldStatus(order.getStatus().name()); entry.setNewStatus("RETURNED");
-            entry.setNote("Đã nhận lại kiện hàng giao không thành công: " + document.getCode());
+            entry.setNote("Đã nhận lại toàn bộ hàng của đơn: " + document.getCode());
             entry.setCreatedBy(actor);
             order.getHistories().add(entry); order.setStatus(OrderStatus.RETURNED); order.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
+            if("PAID".equals(order.getPaymentStatus())) order.setPaymentStatus("REFUND_PENDING");
         }
         return ReturnResponse.from(document);
     }
@@ -145,7 +183,8 @@ public class ReturnService {
         document.setAdminNote(request.note());
         transition(document, ReturnStatus.COMPLETED, "Đã xử lý hoàn tiền: " + request.note(), actorId);
         document.setCompletedAt(LocalDateTime.now(ZoneOffset.UTC));
-        if (document.getOrder().getStatus() == OrderStatus.RETURNED && document.getRefundAmount().signum() > 0)
+        if (document.getOrder().getStatus() == OrderStatus.RETURNED && document.getRefundAmount().signum() > 0
+                && returnRepository.pendingRefundCount(document.getOrder().getId())==0)
             document.getOrder().setPaymentStatus("REFUNDED");
         return ReturnResponse.from(document);
     }

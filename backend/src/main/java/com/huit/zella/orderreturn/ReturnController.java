@@ -18,6 +18,15 @@ import java.util.List;
 public class ReturnController {
     private final ReturnService returnService;
 
+    @GetMapping("/management")
+    public ApiResponse<com.huit.zella.common.api.PageResponse<ReturnOrderSummaryResponse>> management(
+            @RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "ALL") String status,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success(com.huit.zella.common.api.PageResponse.from(returnService.management(q, status,
+                org.springframework.data.domain.PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 50),
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id")))));
+    }
+
     @GetMapping
     public ApiResponse<List<ReturnResponse>> list(@RequestParam Long orderId) {
         return ApiResponse.success(returnService.list(orderId));

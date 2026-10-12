@@ -1,0 +1,35 @@
+.dialog {
+  width: min(660px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  color: #171717;
+  background: #fff;
+  overflow: auto;
+}
+.dialog::backdrop { background: rgb(0 0 0 / 42%); }
+:global(body):has(.dialog[open]) { overflow: hidden; }
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 28px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
+}
+.header h2 { margin: 0; font-size: 20px; font-weight: 600; }
+.close { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border: 0; background: transparent; cursor: pointer; }
+.close:hover { background: #f5f5f5; }
+.close:focus-visible { outline: 2px solid #171717; outline-offset: 2px; }
+.close:disabled { cursor: default; opacity: .4; }
+.content { padding: 24px 28px 28px; }
+@media (max-width: 600px) {
+  .header { padding: 18px 20px; }
+  .content { padding: 20px; }
+}

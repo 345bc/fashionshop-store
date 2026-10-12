@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.huit.zella.auth.User;
 import com.huit.zella.auth.UserRepository;
+import com.huit.zella.cart.CartService;
 import com.huit.zella.common.exception.BusinessException;
 import com.huit.zella.inventory.InventoryService;
 import com.huit.zella.orderreturn.ReturnRepository;
@@ -30,6 +31,10 @@ public class OrderService {
     private final InventoryService inventoryService;
     private final ReturnRepository returnRepository;
     private final Clock orderClock;
+    private final com.huit.zella.promotion.PromotionPricingService promotionPricing;
+    private final CartService cartService;
+    private final com.huit.zella.loyalty.LoyaltyService loyalty;
+    private final com.huit.zella.voucher.VoucherService voucherService;
     private static final BigDecimal MAX_AMOUNT = new BigDecimal("9999999999999999.99");
 
     private OrderStatus parseListStatus(String value) {
@@ -79,21 +84,26 @@ public class OrderService {
             if (quantity > Integer.MAX_VALUE) throw error("QUANTITY_OVERFLOW", "Số lượng vượt giới hạn");
             quantities.put(line.variantId(), (int) quantity);
         }
+        var promotionOffers = promotionPricing.offers(cartService.productsForPricing(new ArrayList<>(quantities.keySet())));
         for (Map.Entry<Long, Integer> line : quantities.entrySet()) {
             ProductVariant variant = inventoryService.lockVariant(line.getKey());
-            if (!variant.isActive() || !variant.getProduct().isActive())
+            if (!variant.isActive() || !variant.getProduct().isActive() || !Boolean.TRUE.equals(variant.getProduct().getCategory().getIsActive()))
                 throw error("VARIANT_INACTIVE", "Biến thể đã ngừng bán");
             if (variant.getStockQuantity() - variant.getReservedQuantity() < line.getValue())
                 throw error("INSUFFICIENT_STOCK", "Không đủ tồn khả dụng cho SKU " + variant.getSku());
             OrderItem item = new OrderItem();
             item.setOrder(order); item.setVariant(variant); item.setProduct(variant.getProduct());
             item.setProductName(variant.getProduct().getName()); item.setSku(variant.getSku());
-            item.setUnitPrice(variant.getPrice()); item.setQuantity(line.getValue());
+            item.setOriginalUnitPrice(variant.getPrice());
+            item.setUnitPrice(promotionPricing.price(variant.getProduct(),variant.getPrice(),promotionOffers)); item.setQuantity(line.getValue());
+            order.setOriginalSubtotal(order.getOriginalSubtotal().add(variant.getPrice().multiply(BigDecimal.valueOf(line.getValue()))));
             order.getItems().add(item);
             order.setSubtotal(order.getSubtotal().add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))));
         }
         order.setTotalAmount(order.getSubtotal().add(order.getShippingFee()));
         if (order.getTotalAmount().compareTo(MAX_AMOUNT) > 0) throw error("AMOUNT_OVERFLOW", "Tổng tiền vượt giới hạn");
+        if (order.getTotalAmount().signum() <= 0 || order.getTotalAmount().stripTrailingZeros().scale() > 0)
+            throw error("INVALID_PAYMENT_AMOUNT", "Thanh toán VND cần tổng tiền là số nguyên dương");
         history(order, null, OrderStatus.PENDING, "Tạo đơn và giữ hàng 5 phút chờ thanh toán online", actor);
         orderRepository.save(order);
         for (OrderItem item : order.getItems()) {
@@ -106,14 +116,43 @@ public class OrderService {
 
     @Transactional
     public CheckoutOrderResponse createCheckout(CreateCheckoutOrderRequest request, Long actorId) {
+        // Consistent lock order: user/cart first, then inventory variants.
+        cartService.prepareCheckout(actorId);
+        if (request.checkoutKey() != null) {
+            Optional<Order> existing = orderRepository.findByCheckoutTokenHash(hashToken(request.checkoutKey()));
+            if (existing.isPresent()) {
+                Order previous = existing.get();
+                Long owner = previous.getCustomer() == null ? null : previous.getCustomer().getId();
+                if (!Objects.equals(owner, actorId)) throw error("CHECKOUT_OWNER_CHANGED", "Phiên mua hàng đã thay đổi");
+                return checkoutResponse(previous, request.checkoutKey());
+            }
+        }
         // Customer identity comes from authentication, never from a user id in the public request.
-        BigDecimal fee = new BigDecimal("EXPRESS".equals(request.shippingMethod()) ? "45000" : "30000");
+        BigDecimal fee = BigDecimal.ZERO;
         OrderResponse created = create(new CreateOrderRequest(actorId, request.recipientName(), request.recipientPhone(),
             request.address(), request.note(), fee, "ONLINE", request.items()), actorId);
         Order order = orderRepository.findById(created.id()).orElseThrow();
-        String token = UUID.randomUUID().toString() + UUID.randomUUID();
+        voucherService.prepare(order,actorId,request.shippingMethod());
+        voucherService.apply(order,actorId,request.voucherCode());
+        String token = request.checkoutKey() == null ? UUID.randomUUID().toString() + UUID.randomUUID() : request.checkoutKey();
         order.setCheckoutTokenHash(hashToken(token));
+        cartService.consume(actorId, request.items());
+        orderRepository.flush();
         return checkoutResponse(order, token);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderLookupResponse lookup(OrderLookupRequest request) {
+        Order order = orderRepository.findByCode(request.code().trim().toUpperCase(Locale.ROOT)).orElse(null);
+        if (order == null || order.getRecipientPhone() == null || !MessageDigest.isEqual(
+                order.getRecipientPhone().trim().getBytes(StandardCharsets.UTF_8),
+                request.phone().trim().getBytes(StandardCharsets.UTF_8))) {
+            throw new BusinessException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Không tìm thấy đơn hàng phù hợp với mã đơn và số điện thoại");
+        }
+        return new OrderLookupResponse(order.getCode(), order.getStatus().name(), order.getPaymentStatus(),
+                order.getCreatedAt().atOffset(ZoneOffset.UTC), order.getTotalAmount(),
+                order.getItems().stream().map(item -> new OrderLookupResponse.Item(item.getProductName(),
+                        item.getSku(), item.getQuantity(), item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))).toList());
     }
 
     @Transactional(readOnly = true)
@@ -126,9 +165,21 @@ public class OrderService {
         return checkoutResponse(order, null);
     }
 
+    @Transactional
+    public CheckoutOrderResponse cancelCheckout(String code, String token) {
+        checkoutStatus(code, token);
+        Order order = orderRepository.findByCode(code).orElseThrow();
+        order = lock(order.getId());
+        if (order.getStatus() == OrderStatus.CANCELLED) return checkoutResponse(order, null);
+        if (order.getStatus() != OrderStatus.PENDING || !"PENDING".equals(order.getPaymentStatus()))
+            throw error("INVALID_ORDER_STATUS", "Chỉ hủy đơn đang chờ thanh toán");
+        cancelOrder(order, "Khách hàng hủy để chỉnh sửa giỏ hàng", null);
+        return checkoutResponse(order, null);
+    }
+
     /**
      * Internal integration point for a verified gateway callback.
-     * No production gateway callback endpoint is exposed until a provider is integrated.
+     * Called by the signature-verified VNPay IPN and the explicitly enabled local test helper.
      */
     @Transactional
     public OrderResponse recordOnlinePayment(Long id, BigDecimal amount, String transactionId) {
@@ -196,6 +247,7 @@ public class OrderService {
         if (order.getItems().stream().anyMatch(i -> returnRepository.committedQuantity(i.getId()) > 0))
             throw error("ORDER_HAS_RETURN", "Đơn đang xử lý hàng giao không thành công, không thể xác nhận giao");
         transition(order, OrderStatus.DELIVERED, "Xác nhận giao thành công", actorId);
+        loyalty.earned(order);
         return response(order);
     }
 
@@ -217,6 +269,7 @@ public class OrderService {
             inventoryService.changeStockAndReservation(variant, variant.getStockQuantity(),
                 variant.getReservedQuantity() - item.getQuantity(), "ORDER_RELEASE", order.getCode(), reason, actor);
         }
+        voucherService.release(order);
         if ("PAID".equals(order.getPaymentStatus())) order.setPaymentStatus("REFUND_PENDING");
         transition(order, OrderStatus.CANCELLED, reason, actorId);
     }
@@ -281,7 +334,11 @@ public class OrderService {
     private CheckoutOrderResponse checkoutResponse(Order order, String token) {
         return new CheckoutOrderResponse(order.getId(), order.getCode(), order.getStatus().name(),
             order.getPaymentStatus(), order.getTotalAmount(),
-            order.getPaymentExpiresAt() == null ? null : order.getPaymentExpiresAt().atOffset(ZoneOffset.UTC), token);
+            order.getPaymentExpiresAt() == null ? null : order.getPaymentExpiresAt().atOffset(ZoneOffset.UTC), token,
+            order.getItems().stream().map(item -> new CheckoutOrderResponse.Item(item.getVariant().getId(),
+                item.getProductName(), item.getSku(), item.getQuantity(), item.getUnitPrice(),
+                item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))).toList(),
+            order.getSubtotal(), order.getShippingFee(), order.getDiscountAmount(),voucherService.snapshot(order));
     }
 
     private String hashToken(String token) {

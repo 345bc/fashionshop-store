@@ -30,6 +30,8 @@ public abstract class WarehouseFixture {
 
     @BeforeEach
     protected void fixture() {
+        // Keep workflow fixtures independent of live campaign configuration; transaction rolls back.
+        em.createQuery("update Promotion p set p.active=false").executeUpdate();
         String token = UUID.randomUUID().toString().substring(0, 8);
         actor = new User(); actor.setUserName("test-" + token);
         actor.setEmail(token + "@warehouse.test"); actor.setPasswordHash("test-only");

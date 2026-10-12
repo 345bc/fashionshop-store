@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 public class OrderItem {
+    @Column(name="original_unit_price",precision=18,scale=2,nullable=false) private BigDecimal originalUnitPrice=BigDecimal.ZERO;
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "order_id") private Order order;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "variant_id") private ProductVariant variant;
