@@ -1,3 +1,4 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -215,7 +216,7 @@ class _GoodsReceiptFormDialogState extends State<GoodsReceiptFormDialog> {
                                       _lines.remove(line);
                                       line.dispose();
                                     }),
-                              icon: const Icon(Icons.close),
+                              icon: const Icon(Symbols.close),
                             ),
                           ],
                         ),
@@ -263,7 +264,7 @@ class _GoodsReceiptFormDialogState extends State<GoodsReceiptFormDialog> {
                     onPressed: _saving || !supplierValid
                         ? null
                         : () => setState(() => _lines.add(_DraftLine())),
-                    icon: const Icon(Icons.add),
+                    icon: const Icon(Symbols.add),
                     label: const Text('Thêm dòng hàng'),
                   ),
                 ),

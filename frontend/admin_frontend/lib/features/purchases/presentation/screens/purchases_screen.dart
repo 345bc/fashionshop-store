@@ -1,9 +1,11 @@
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../widgets/common/feature_header.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
 import '../../../../widgets/common/warehouse_table.dart';
 import '../../../inventory/data/models/inventory_response_model.dart';
 import '../../data/models/goods_receipt_response_model.dart';
@@ -37,7 +39,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
             title: 'Nhập hàng',
             subtitle: 'Phiếu nhập và thanh toán nhà cung cấp',
             actionLabel: 'Tạo phiếu nhập',
-            actionIcon: Icons.add,
+            actionIcon: Symbols.add,
             onActionPressed: () => showDialog(
               context: context,
               builder: (_) => const GoodsReceiptFormDialog(),
@@ -49,35 +51,33 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
           ),
           const SizedBox(height: 24),
           FeatureToolbar(
-            searchHint: 'Tìm mã phiếu hoặc nhà cung cấp...',
+            searchHint: 'Tìm theo mã phiếu hoặc tên nhà cung cấp',
             initialSearchText: p.query,
             onSearchChanged: p.search,
             filterWidget: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButton<String>(
+                FilterDropdown<String>(
+                  label: 'Trạng thái',
+                  searchHint: 'Tìm trạng thái',
                   value: p.status,
-                  items: [
-                    const DropdownMenuItem(
-                      value: 'all',
-                      child: Text('Tất cả trạng thái'),
-                    ),
-                    ...receiptStatuses.entries.map(
-                      (e) =>
-                          DropdownMenuItem(value: e.key, child: Text(e.value)),
-                    ),
-                  ],
-                  onChanged: (v) => p.filter(v ?? 'all'),
+                  defaultValue: 'all',
+                  options: receiptStatuses.entries
+                      .map((e) => FilterOption(value: e.key, label: e.value))
+                      .toList(),
+                  onChanged: (v) => p.filter(v),
                 ),
                 IconButton(
                   tooltip: 'Làm mới',
                   onPressed: p.loadItems,
-                  icon: const Icon(Icons.refresh),
+                  icon: const Icon(Symbols.refresh),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
           WarehouseTable(
+            flexes: const [2, 2, 1, 1, 1, 1],
             headers: const [
               'PHIẾU NHẬP',
               'NHÀ CUNG CẤP',
@@ -111,37 +111,62 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
         child: Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    r.code,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    DateFormat('dd/MM/yyyy HH:mm').format(r.createdAt),
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ],
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      r.code,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      DateFormat('dd/MM/yyyy HH:mm').format(r.createdAt),
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
             ),
             Expanded(
-              child: Text(
-                r.supplierName,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  r.supplierName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
-            Expanded(child: Text(money(r.totalAmount))),
             Expanded(
-              child: Text(
-                r.status == 'POSTED' ? money(r.remainingAmount) : '—',
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(money(r.totalAmount)),
               ),
             ),
-            Expanded(child: Text(receiptStatuses[r.status] ?? r.status)),
             Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  r.status == 'POSTED' ? money(r.remainingAmount) : '—',
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(receiptStatuses[r.status] ?? r.status),
+              ),
+            ),
+            Expanded(
+              flex: 1,
               child: Text(
                 r.status == 'CANCELLED'
                     ? '—'
