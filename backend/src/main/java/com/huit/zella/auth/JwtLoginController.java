@@ -2,6 +2,7 @@ package com.huit.zella.auth;
 
 import com.huit.zella.common.api.ApiResponse;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -19,23 +20,28 @@ import com.huit.zella.common.api.ApiResponse;
 public class JwtLoginController {
     private final UserService appUserService;
     private final PasswordEncoder passwordEncoder;
-    private final JwtAccessTokenService tokenService;
+    private final RefreshTokenService refreshTokens;
 
     JwtLoginController(
             UserService appUserService,
             PasswordEncoder passwordEncoder,
-            JwtAccessTokenService tokenService
+            RefreshTokenService refreshTokens
     ) {
         this.appUserService = appUserService;
         this.passwordEncoder = passwordEncoder;
-        this.tokenService = tokenService;
+        this.refreshTokens = refreshTokens;
     }
 
     @PostMapping("/login")
-    ApiResponse<CurrentUser> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+    ApiResponse<CurrentUser> login(@Valid @RequestBody LoginRequest request, HttpServletRequest servletRequest, HttpServletResponse response) {
         CurrentUser user = appUserService.authenticate(request.email(), request.password(), passwordEncoder);
-        tokenService.writeLoginCookie(response, user);
+        refreshTokens.issue(user, servletRequest, response);
         return ApiResponse.success(user, "Đăng nhập thành công");
+    }
+
+    @PostMapping("/refresh")
+    ApiResponse<CurrentUser> refresh(HttpServletRequest request, HttpServletResponse response) {
+        return ApiResponse.success(refreshTokens.refresh(request, response));
     }
 
     @PostMapping("/register")

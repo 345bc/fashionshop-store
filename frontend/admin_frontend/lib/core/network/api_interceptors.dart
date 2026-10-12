@@ -9,10 +9,13 @@ class AuthInterceptor extends Interceptor {
   ) async {
     final prefs = await SharedPreferences.getInstance();
     final String? token = prefs.getString('access_token');
+    final String? refresh = prefs.getString('refresh_token');
 
-    if (token != null && token.isNotEmpty) {
-      options.headers['Cookie'] = 'ACCESS_TOKEN=$token';
-    }
+    final cookies = [
+      if (token != null && token.isNotEmpty) 'ACCESS_TOKEN=$token',
+      if (refresh != null && refresh.isNotEmpty) 'REFRESH_TOKEN=$refresh',
+    ];
+    if (cookies.isNotEmpty) options.headers['Cookie'] = cookies.join('; ');
 
     super.onRequest(options, handler);
   }

@@ -21,7 +21,7 @@ import java.util.Set;
 
 public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
     private static final Set<String> SKIPPED_API_PATHS = Set.of(
-            "/api/health", "/api/project-info", "/api/v1/auth/csrf", "/api/v1/auth/login"
+            "/api/health", "/api/project-info", "/api/v1/auth/csrf", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout"
     );
 
     private final JwtAccessTokenService tokenService;
@@ -55,7 +55,9 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            CurrentUser user = appUserService.requireByEmail(tokenService.decode(token.get()).getSubject());
+            var jwt = tokenService.decode(token.get());
+            Number userId = jwt.getClaim("uid");
+            CurrentUser user = userId == null ? appUserService.requireByEmail(jwt.getSubject()) : appUserService.requireById(userId.longValue());
             var authorities = user.roles().stream()
                     .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                     .toList();

@@ -8,6 +8,42 @@ const API_BASE_URL = trimTrailingSlash(
 );
 
 let csrf = null;
+let refreshInFlight = null;
+let loggingOut = false;
+
+async function refreshSession() {
+  if (loggingOut) return false;
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const token = await getCsrf();
+        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST", credentials: "include", cache: "no-store",
+          headers: { Accept: "application/json", [token.headerName]: token.token },
+        });
+        if (response.ok) return true;
+        if (response.status === 401) { clearCsrfToken(); return false; }
+        if (response.status === 403 && attempt === 0) { clearCsrfToken(); continue; }
+        const payload = await response.json().catch(() => null);
+        throw new ApiClientError(payload?.message ?? "Không thể gia hạn phiên đăng nhập", response.status, payload?.code ?? "REFRESH_FAILED");
+      }
+      return false;
+    })().finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+async function fetchWithRefresh(path, options) {
+  const excluded = ["/auth/login", "/auth/register", "/auth/logout", "/auth/refresh", "/auth/csrf"];
+  const response = await fetch(`${API_BASE_URL}${path}`, options);
+  if (response.status !== 401 || excluded.includes(path.split("?")[0]) || loggingOut) return response;
+  if (!await refreshSession()) return response;
+  const headers = new Headers(options.headers);
+  if (isUnsafeMethod((options.method ?? "GET").toUpperCase())) {
+    const token = await getCsrf(); headers.set(token.headerName, token.token);
+  }
+  return fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+}
 
 export class ApiClientError extends Error {
   constructor(message, status, code, details = []) {
@@ -61,6 +97,17 @@ export function clearCsrfToken() {
 }
 
 export async function apiRequest(path, options = {}) {
+  if (path === "/auth/logout") {
+    loggingOut = true;
+    try {
+      if (refreshInFlight) await refreshInFlight.catch(() => {});
+      return await requestOnce(path, options);
+    } finally { loggingOut = false; }
+  }
+  return requestOnce(path, options);
+}
+
+async function requestOnce(path, options) {
   const method = (options.method ?? "GET").toUpperCase();
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
@@ -73,7 +120,7 @@ export async function apiRequest(path, options = {}) {
     headers.set(token.headerName, token.token);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetchWithRefresh(path, {
     ...options,
     method,
     credentials: "include",
@@ -114,7 +161,7 @@ export async function apiRequest(path, options = {}) {
 }
 
 export async function apiDownload(path) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetchWithRefresh(path, {
     credentials: "include",
   });
   if (!response.ok) {

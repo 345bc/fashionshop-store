@@ -31,7 +31,7 @@ public class SecurityConfig {
             "/api/health", "/api/project-info", "/api/v1/auth/csrf",
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
             "/api/v1/product/**", "/api/v1/product-image/files/*",
-            "/api/v1/category/**", "/api/v1/checkout/orders/*",
+            "/api/v1/category/**", "/api/v1/checkout/orders/*", "/api/v1/payment/vnpay/ipn",
             "/api/v1/size/**","/api/v1/color/**",
     };
 
@@ -92,8 +92,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register",
-                                "/api/v1/checkout/orders").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout",
+                                "/api/v1/checkout/orders", "/api/v1/checkout/orders/lookup", "/api/v1/checkout/orders/voucher", "/api/v1/checkout/orders/quote", "/api/v1/checkout/orders/*/cancel", "/api/v1/cart/quote",
+                                "/api/v1/checkout/orders/*/payment", "/api/v1/checkout/orders/*/payment/verify").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(apiSecurityErrorHandler)
@@ -162,7 +163,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(allowedOrigin));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Checkout-Token"));
         config.setExposedHeaders(List.of("Content-Disposition"));
         config.setAllowCredentials(true);
 
