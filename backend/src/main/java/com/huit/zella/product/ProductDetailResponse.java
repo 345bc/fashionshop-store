@@ -14,6 +14,8 @@ public record ProductDetailResponse(
         String style,
         String occasion,
         BigDecimal basePrice,
+        BigDecimal salePrice,
+        Integer discountPercent,
         String categoryName,
         String sizeGuideUrl,
         List<ColorItem> colors,
@@ -47,6 +49,7 @@ public record ProductDetailResponse(
             Integer colorId,
             Integer sizeId,
             BigDecimal price,
+            BigDecimal salePrice,
             Integer stockQuantity,
             List<ImageItem> images
     ) {}

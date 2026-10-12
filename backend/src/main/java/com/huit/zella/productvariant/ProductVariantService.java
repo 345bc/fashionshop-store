@@ -66,10 +66,6 @@ public class ProductVariantService {
             throw new BusinessException(HttpStatus.CONFLICT, "INVENTORY_MANAGED_SEPARATELY",
                     "Tồn kho chỉ được thay đổi qua nhập hàng hoặc điều chỉnh kho");
         }
-        if (variant.getStockQuantity() > 0 && request.costPrice().compareTo(variant.getCostPrice()) != 0) {
-            throw new BusinessException(HttpStatus.CONFLICT, "COST_MANAGED_SEPARATELY",
-                    "Giá vốn khi có tồn kho được cập nhật qua nhập hàng");
-        }
         Product product = productRepository.findById(request.productId()).orElseThrow(() ->
                 new BusinessException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found"));
         Size size = sizeRepository.findById(request.sizeId()).orElseThrow(() ->
@@ -93,7 +89,6 @@ public class ProductVariantService {
         variant.setSize(size);
         variant.setColor(color);
         variant.setPrice(request.price());
-        variant.setCostPrice(request.costPrice());
         variant.setStockQuantity(request.stockQuantity());
         variant.setReservedQuantity(request.reservedQuantity());
         variant.setActive(request.isActive() == null || request.isActive());

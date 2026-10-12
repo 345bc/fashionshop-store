@@ -3,8 +3,12 @@ export type ProductCardData = {
   name: string;
   slug: string;
   basePrice: number;
+  salePrice: number | null;
+  discountPercent: number | null;
   imageUrl: string | null;
   badge?: string | null;
+  averageRating?: number;
+  reviewsCount?: number;
   colors: {
     id: number;
     name: string;

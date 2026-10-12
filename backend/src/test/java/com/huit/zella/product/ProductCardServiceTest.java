@@ -25,8 +25,9 @@ class ProductCardServiceTest {
     private final ProductImageRepository images = mock(ProductImageRepository.class);
     private final ProductVariantRepository variants = mock(ProductVariantRepository.class);
     private final VariantImageRepository variantImages = mock(VariantImageRepository.class);
-    private final ProductService service = new ProductService(products, mock(CategoryRepository.class),
-            mock(SupplierRepository.class), mock(SizeGuideRepository.class), images, variants, variantImages);
+    private final ProductService service = new ProductService(new com.huit.zella.promotion.PromotionPricingService(org.mockito.Mockito.mock(com.huit.zella.promotion.PromotionRepository.class), java.time.Clock.systemUTC()), products, mock(CategoryRepository.class),
+            mock(SupplierRepository.class), mock(SizeGuideRepository.class), images, variants, variantImages,
+            mock(com.huit.zella.review.ProductReviewRepository.class));
 
     @Test
     void sharesColorImageAcrossSizesWithoutMixingProducts() {

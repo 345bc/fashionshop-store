@@ -23,8 +23,8 @@ class ProductServiceTest {
     private final CategoryRepository categories = mock(CategoryRepository.class);
     private final SupplierRepository suppliers = mock(SupplierRepository.class);
     private final SizeGuideRepository guides = mock(SizeGuideRepository.class);
-    private final ProductService service = new ProductService(products, categories, suppliers, guides,
-            mock(ProductImageRepository.class), mock(ProductVariantRepository.class), mock(VariantImageRepository.class));
+    private final ProductService service = new ProductService(new com.huit.zella.promotion.PromotionPricingService(org.mockito.Mockito.mock(com.huit.zella.promotion.PromotionRepository.class), java.time.Clock.systemUTC()), products, categories, suppliers, guides,
+            mock(ProductImageRepository.class), mock(ProductVariantRepository.class), mock(VariantImageRepository.class), mock(com.huit.zella.review.ProductReviewRepository.class));
 
     @Test
     void createAcceptsOptionalTextAndDefaultsToActive() {

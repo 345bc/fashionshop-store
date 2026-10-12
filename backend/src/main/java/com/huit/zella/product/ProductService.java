@@ -36,6 +36,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ProductService {
+    com.huit.zella.promotion.PromotionPricingService promotionPricing;
     ProductRepository productRepository;
     CategoryRepository categoryRepository;
     SupplierRepository supplierRepository;
@@ -43,6 +44,18 @@ public class ProductService {
     ProductImageRepository productImageRepository;
     ProductVariantRepository productVariantRepository;
     VariantImageRepository variantImageRepository;
+    com.huit.zella.review.ProductReviewRepository reviewRepository;
+
+    @Transactional(readOnly=true)
+    public Page<ProductDetailResponse.ReviewItem> listReviews(Long productId,Pageable pageable) {
+        Product product=productRepository.findById(productId).orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND,"PRODUCT_NOT_FOUND","Không tìm thấy sản phẩm"));
+        if(!product.isActive() || !Boolean.TRUE.equals(product.getCategory().getIsActive())) throw new BusinessException(HttpStatus.NOT_FOUND,"PRODUCT_NOT_FOUND","Không tìm thấy sản phẩm");
+        return reviewRepository.findByProductIdAndHiddenFalse(productId,pageable).map(this::toReview);
+    }
+    private ProductDetailResponse.ReviewItem toReview(com.huit.zella.review.ProductReview review) {
+        return new ProductDetailResponse.ReviewItem(review.getId(),review.getCustomer().getFullName(),review.getRating(),review.getComment(),
+                review.getOrderItem().getVariant().getColor().getName(),review.getOrderItem().getVariant().getSize().getName(),review.getCreatedAt(),review.getAdminReply(),review.getRepliedAt());
+    }
 
     @Transactional(readOnly = true)
     public Page<ProductCardResponse> listCards(
@@ -154,11 +167,31 @@ public class ProductService {
 
         Instant badgeNow = Instant.now();
         Instant newProductFrom = badgeNow.minus(7, ChronoUnit.DAYS);
-        return page.map(product -> new ProductCardResponse(
+        var offers = promotionPricing.offers(page.getContent());
+
+        Map<Long, java.math.BigDecimal> avgRatings = new HashMap<>();
+        Map<Long, Long> reviewsCounts = new HashMap<>();
+        if (!ids.isEmpty()) {
+            for (Object[] row : reviewRepository.getStatsByProductIds(ids)) {
+                Long pId = ((Number) row[0]).longValue();
+                Double avg = row[1] != null ? ((Number) row[1]).doubleValue() : null;
+                Long count = ((Number) row[2]).longValue();
+                avgRatings.put(pId, avg == null ? null : java.math.BigDecimal.valueOf(avg).setScale(1, java.math.RoundingMode.HALF_UP));
+                reviewsCounts.put(pId, count);
+            }
+        }
+
+        return page.map(product -> {
+            var offer = offers.get(product.getId());
+            java.math.BigDecimal salePrice = offer != null ? offer.price(product.getBasePrice()) : null;
+            Integer discountPercent = offer != null ? offer.percent().intValue() : null;
+            return new ProductCardResponse(
                 product.getId(),
                 product.getName(),
                 product.getSlug(),
                 product.getBasePrice(),
+                salePrice,
+                discountPercent,
                 images.get(product.getId()),
                 new ArrayList<>(
                         colors.getOrDefault(product.getId(), Map.of()).values()
@@ -169,8 +202,11 @@ public class ProductService {
                         && !product.getCreatedAt().isBefore(newProductFrom)
                         && !product.getCreatedAt().isAfter(badgeNow)
                           ? BadgeEnum.New.name()
-                          : null
-        ));
+                          : null,
+                avgRatings.get(product.getId()),
+                reviewsCounts.get(product.getId())
+            );
+        });
 
     }
 
@@ -179,6 +215,7 @@ public class ProductService {
         Product product = productRepository.findBySlugWithDetails(slug)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Product not found"));
 
+        var offers = promotionPricing.offers(List.of(product));
         List<ProductImage> images = productImageRepository.findByProductIdOrderByDisplayOrderAscIdAsc(product.getId());
         List<ProductVariant> variants = productVariantRepository.findDetailVariants(product.getId());
 
@@ -214,21 +251,30 @@ public class ProductService {
         }
 
         List<ProductDetailResponse.VariantItem> variantItems = variants.stream()
-                .map(v -> new ProductDetailResponse.VariantItem(
+                .map(v -> {
+                    BigDecimal variantSale = promotionPricing.price(product, v.getPrice(), offers);
+                    return new ProductDetailResponse.VariantItem(
                         v.getId(),
                         v.getSku(),
                         v.getColor().getId(),
                         v.getSize().getId(),
                         v.getPrice(),
+                        variantSale.compareTo(v.getPrice()) != 0 ? variantSale : null,
                         v.getStockQuantity() - v.getReservedQuantity(),
                         variantImagesListMap.getOrDefault(v.getId(), List.of())
-                ))
+                );})
                 .toList();
 
-        // Stub out reviews for now
-        BigDecimal averageRating = BigDecimal.ZERO;
-        long reviewsCount = 0;
-        PageResponse<ProductDetailResponse.ReviewItem> reviews = null;
+        Double average = reviewRepository.average(product.getId());
+        BigDecimal averageRating = average == null ? BigDecimal.ZERO : BigDecimal.valueOf(average).setScale(1,java.math.RoundingMode.HALF_UP);
+        long reviewsCount = reviewRepository.countByProductIdAndHiddenFalse(product.getId());
+        PageResponse<ProductDetailResponse.ReviewItem> reviews = PageResponse.from(reviewRepository.findByProductIdAndHiddenFalse(product.getId(),
+                org.springframework.data.domain.PageRequest.of(0,20,org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,"id")))
+                .map(this::toReview));
+
+        var offer = offers.get(product.getId());
+        BigDecimal salePrice = offer != null ? offer.price(product.getBasePrice()) : null;
+        Integer discountPercent = offer != null ? offer.percent().intValue() : null;
 
         return new ProductDetailResponse(
                 product.getId(),
@@ -238,6 +284,8 @@ public class ProductService {
                 product.getStyle(),
                 product.getOccasion(),
                 product.getBasePrice(),
+                salePrice,
+                discountPercent,
                 product.getCategory() != null ? product.getCategory().getName() : null,
                 product.getSizeGuide() != null ? product.getSizeGuide().getGuideImageUrl() : null,
                 colorItems,

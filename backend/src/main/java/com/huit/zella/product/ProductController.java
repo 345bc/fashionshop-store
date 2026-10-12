@@ -23,6 +23,13 @@ import java.util.List;
 public class ProductController {
     ProductService productService;
 
+    @GetMapping("/{id}/reviews")
+    public ApiResponse<PageResponse<ProductDetailResponse.ReviewItem>> reviews(@PathVariable Long id,
+            @RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size) {
+        return ApiResponse.success(PageResponse.from(productService.listReviews(id,
+                PageRequest.of(Math.max(0,page),Math.clamp(size,1,50),Sort.by(Sort.Direction.DESC,"id")))));
+    }
+
     @GetMapping("/cards")
     public ApiResponse<PageResponse<ProductCardResponse>> listCards(
             @RequestParam(required = false) String q,

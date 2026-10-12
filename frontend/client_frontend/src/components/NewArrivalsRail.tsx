@@ -54,9 +54,15 @@ export default function NewArrivalsRail() {
     id: String(product.id),
     slug: product.slug,
     name: product.name,
-    price: `${product.basePrice.toLocaleString("vi-VN")}₫`,
+    price: `${(product.salePrice ?? product.basePrice).toLocaleString("vi-VN")} VND`,
+    originalPrice: product.salePrice ? `${product.basePrice.toLocaleString("vi-VN")} VND` : undefined,
+    discountPercent: product.discountPercent,
     image: product.imageUrl ?? "",
     colors: product.colors,
     badge: product.badge ?? "Mới",
+    rating: product.averageRating,
+    reviewsCount: product.reviewsCount,
   }))} />;
 }
+
+

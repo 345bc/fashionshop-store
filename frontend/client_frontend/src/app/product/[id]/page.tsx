@@ -1,9 +1,14 @@
 "use client";
+
+import GoogleSymbol from "@/components/ui/GoogleSymbol";
+
+import ProductReviews from "@/components/product/ProductReviews";
 import { useState, useEffect, use } from "react";
 import Header from "@/components/Header";
+import { useCart } from "@/cart/CartContext";
+import { money } from "@/cart/types";
 import Footer from "@/components/Footer";
 import Image from "next/image";
-import Link from "next/link";
 import ProductAccordion from "@/components/ProductAccordion";
 import ProductRail from "@/components/ProductRail";
 import ProductSimilar from "@/components/ui/ProductSimilar";
@@ -23,10 +28,6 @@ interface Review {
   repliedAt: string | null;
 }
 
-const ratingStars = (rating: number) => {
-  const stars = Math.max(0, Math.min(5, Math.round(rating)));
-  return "★".repeat(stars) + "☆".repeat(5 - stars);
-};
 
 interface Product {
   id: number;
@@ -36,6 +37,8 @@ interface Product {
   style: string;
   occasion: string;
   basePrice: number;
+  salePrice: number | null;
+  discountPercent: number | null;
   categoryName: string;
   sizeGuideUrl: string;
   colors: { id: number; name: string; hexCode: string }[];
@@ -46,6 +49,7 @@ interface Product {
     colorId: number;
     sizeId: number;
     price: number;
+    salePrice: number | null;
     stockQuantity: number;
     images: { id: number; imageUrl: string; isPrimary: boolean; displayOrder: number }[];
   }[];
@@ -56,6 +60,10 @@ interface Product {
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const cart = useCart();
+  const [quantity, setQuantity] = useState(1);
+  const [adding, setAdding] = useState(false);
+  const [cartError, setCartError] = useState("");
   const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
   const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
@@ -114,8 +122,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const activeImage = galleryImages.find(image => image.id === selectedImageId) ?? galleryImages[0];
   const displayImage = activeImage?.imageUrl;
 
-  const displayPrice = selectedVariant?.price || product.basePrice || 0;
-  const formattedPrice = `${displayPrice.toLocaleString("vi-VN")} VNĐ`;
+  const currentPrice = selectedVariant?.price ?? product.basePrice ?? 0;
+  const currentSalePrice = selectedVariant?.salePrice ?? product.salePrice ?? null;
+  const displayPrice = currentSalePrice ?? currentPrice;
+  const originalPrice = currentSalePrice ? currentPrice : null;
+
+  const formattedPrice = `${displayPrice.toLocaleString("vi-VN")} VND`;
+  const formattedOriginalPrice = originalPrice ? `${originalPrice.toLocaleString("vi-VN")} VND` : null;
+  const discountBadge = product.discountPercent ? `-${product.discountPercent}%` : null;
+
   const selectedColorObj = product.colors?.find(c => c.id === selectedColorId);
   const selectedSizeObj = product.sizes?.find(s => s.id === selectedSizeId);
   const canAddToCart = !!selectedVariant && selectedVariant.stockQuantity > 0;
@@ -129,6 +144,19 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     setSelectedColorId(nextVariant.colorId);
     setSelectedSizeId(nextVariant.sizeId);
     setSelectedImageId(null);
+    setQuantity(1);
+  };
+
+  const activeIndex = galleryImages.findIndex(img => img.id === activeImage?.id);
+  const handlePrevImage = () => {
+    if (galleryImages.length <= 1) return;
+    const newIdx = activeIndex > 0 ? activeIndex - 1 : galleryImages.length - 1;
+    setSelectedImageId(galleryImages[newIdx].id);
+  };
+  const handleNextImage = () => {
+    if (galleryImages.length <= 1) return;
+    const newIdx = activeIndex < galleryImages.length - 1 ? activeIndex + 1 : 0;
+    setSelectedImageId(galleryImages[newIdx].id);
   };
 
   return (
@@ -160,15 +188,29 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 ))}
               </div>
 
-              <div className="gallery-main" style={{ aspectRatio: "4 / 5", alignSelf: "flex-start", minWidth: 0 }}>
-                {displayImage ? <Image
-                  src={displayImage}
-                  alt={product.name}
-                  width={700}
-                  height={875}
-                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                  priority
-                /> : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "var(--ink-secondary)" }}>Biến thể chưa có ảnh</div>}
+              <div className="gallery-main" style={{ aspectRatio: "4 / 5", alignSelf: "flex-start", minWidth: 0, position: "relative" }}>
+                {displayImage ? (
+                  <>
+                    <Image
+                      src={displayImage}
+                      alt={product.name}
+                      width={700}
+                      height={875}
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      priority
+                    />
+                    {galleryImages.length > 1 && (
+                      <>
+                        <button type="button" onClick={handlePrevImage} aria-label="Ảnh trước" style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.8)", border: "none", display: "grid", placeItems: "center", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.1)" }}>
+                          <span className="material-symbols-outlined">chevron_left</span>
+                        </button>
+                        <button type="button" onClick={handleNextImage} aria-label="Ảnh tiếp theo" style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.8)", border: "none", display: "grid", placeItems: "center", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.1)" }}>
+                          <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                      </>
+                    )}
+                  </>
+                ) : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "var(--ink-secondary)" }}>Biến thể chưa có ảnh</div>}
               </div>
             </div>
 
@@ -192,7 +234,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   <p>- Không sử dụng thuốc tẩy.</p>
                 </ProductAccordion>
                 <ProductAccordion title="Giao Hàng / Đổi / Trả Hàng">
-                  <p>- Miễn phí giao hàng cho đơn từ 1.500.000 VNĐ.</p>
+                  <p>- Miễn phí giao hàng cho đơn từ 600.000 VND.</p>
                   <p>- Thời gian giao hàng: 2–4 ngày làm việc.</p>
                   <p>- Đổi trả linh hoạt trong vòng 14 ngày.</p>
                 </ProductAccordion>
@@ -203,45 +245,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </section>
 
             {/* ── REVIEWS – vertical list ── */}
-            {hasReviews && <section id="reviews" className="reviews-section">
-              <div className="reviews-section-header">
-                <div>
-                  <p className="subtext">Phản hồi thực tế</p>
-                  <h2>Đánh giá từ khách hàng</h2>
-                </div>
-                <div className="reviews-rating-summary">
-                  <div className="rating-num">{product.averageRating.toFixed(1)}</div>
-                  <div className="rating-stars">{ratingStars(product.averageRating)}</div>
-                  <div className="rating-count">{product.reviewsCount} đánh giá</div>
-                </div>
-              </div>
-
-              <div className="reviews-list">
-                {reviews.map((r) => (
-                  <div key={r.id} className="review-item">
-                    <div className="review-header">
-                      <div className="review-avatar">{r.customerName.charAt(0)}</div>
-                      <div>
-                        <div className="review-name">{r.customerName}</div>
-                        <div className="review-meta">{[
-                          r.createdAt ? new Date(r.createdAt).toLocaleDateString("vi-VN") : null,
-                          r.sizeName ? `Size ${r.sizeName}` : null,
-                          r.colorName,
-                        ].filter(Boolean).join(" · ")}</div>
-                      </div>
-                      <div className="review-stars">
-                        {ratingStars(r.rating)}
-                      </div>
-                    </div>
-                    {r.comment && <p className="review-text">{r.comment}</p>}
-                    {r.adminReply && <div className="review-text" style={{ marginTop: 12 }}>
-                      <strong>Phản hồi từ ZELLA</strong>
-                      <p>{r.adminReply}</p>
-                    </div>}
-                  </div>
-                ))}
-              </div>
-            </section>}
+            {hasReviews && product.reviews && <ProductReviews key={product.id} productId={product.id} initial={product.reviews} average={product.averageRating} count={product.reviewsCount} />}
           </div>
 
           {/* RIGHT COL – 2/5: sticky info panel */}
@@ -290,7 +294,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         aria-pressed={selectedSizeId === sz.id}
                         title={disabled ? `${sz.name}: không có cho màu đang chọn` : sz.name}
                         style={{ opacity: disabled ? 0.3 : 1, cursor: disabled ? "not-allowed" : "pointer", textDecoration: disabled ? "line-through" : "none" }}
-                        onClick={() => { if (!disabled) { setSelectedSizeId(sz.id); setSelectedImageId(null); } }}
+                        onClick={() => { if (!disabled) { setSelectedSizeId(sz.id); setSelectedImageId(null); setQuantity(1); } }}
                       >
                         {sz.name}
                       </button>
@@ -307,27 +311,37 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
               {/* Price + Rating */}
               <div className="detail-price-row">
-                <div className="detail-price">{formattedPrice}</div>
-                {hasReviews && <div className="detail-rating-inline">
-                  <span style={{ color: "#e8a000", letterSpacing: "2px" }}>{ratingStars(product.averageRating)}</span>
-                  <span style={{ fontWeight: 600 }}>{product.averageRating.toFixed(1)}</span>
-                  <Link href="#reviews" style={{ color: "var(--ink-secondary)", textDecoration: "none" }}>({product.reviewsCount})</Link>
-                </div>}
+                <div className="detail-price" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ color: formattedOriginalPrice ? 'red' : 'inherit' }}>{formattedPrice}</span>
+                  {formattedOriginalPrice && (
+                    <span style={{ textDecoration: 'line-through', color: '#888', fontWeight: 'normal', fontSize: '0.65em' }}>{formattedOriginalPrice}</span>
+                  )}
+                  {discountBadge && (
+                    <span style={{ background: '#e00', color: 'white', fontSize: '0.55em', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>{discountBadge}</span>
+                  )}
+                </div>
               </div>
 
               {/* Cart */}
               <div className="detail-cart-row">
                 <div className="qty-control">
-                  <button type="button" className="qty-btn" style={{ color: "var(--ink-secondary)" }}>−</button>
-                  <input type="text" defaultValue="1" readOnly className="qty-input" />
-                  <button type="button" className="qty-btn" style={{ color: "var(--ink-primary)" }}>+</button>
+                  <button type="button" className="qty-btn" aria-label="Giảm số lượng" disabled={adding || quantity <= 1} onClick={() => setQuantity(q => Math.max(1, q - 1))} style={{ color: "var(--ink-secondary)" }}><GoogleSymbol name="remove" size={16} /></button>
+                  <input type="text" value={Math.min(quantity, selectedVariant?.stockQuantity || 1)} readOnly aria-label="Số lượng" className="qty-input" />
+                  <button type="button" className="qty-btn" aria-label="Tăng số lượng" disabled={adding || quantity >= Math.min(999, selectedVariant?.stockQuantity || 0)} onClick={() => setQuantity(q => Math.min(999, selectedVariant?.stockQuantity || 1, q + 1))} style={{ color: "var(--ink-primary)" }}><GoogleSymbol name="add" size={16} /></button>
                 </div>
-                <button type="button" disabled={!canAddToCart} onClick={() => { if (canAddToCart) setShowCartPopup(true); }} className="add-to-cart-btn"
+                <button type="button" disabled={!canAddToCart || adding || cart.loading || cart.busy} onClick={async () => {
+                  if (!selectedVariant) return;
+                  setAdding(true); setCartError("");
+                  try { await cart.add(selectedVariant.id, Math.min(quantity, selectedVariant.stockQuantity)); setShowCartPopup(true); }
+                  catch (error) { setCartError(error instanceof Error ? error.message : "Không thêm được sản phẩm"); }
+                  finally { setAdding(false); }
+                }} className="add-to-cart-btn"
                   style={{ opacity: canAddToCart ? 1 : 0.4, cursor: canAddToCart ? "pointer" : "not-allowed" }}>
-                  THÊM VÀO GIỎ HÀNG
+                  {adding ? "ĐANG THÊM..." : "THÊM VÀO GIỎ HÀNG"}
                 </button>
               </div>
 
+              {cartError && <p className="cart-error" role="alert">{cartError}</p>}
               <div className="detail-stock-note">
                 {selectedVariant && selectedVariant.stockQuantity > 0
                   ? `Còn hàng (${selectedVariant.stockQuantity})`
@@ -348,10 +362,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         </div>
         <ProductRail
           products={[
-            { id: "6", name: "Quần Jogger Cotton", price: "399.000₫", image: "/assets/images/v7_1916.png", rating: 4.7, reviewsCount: 52 },
-            { id: "7", name: "Áo Thun Unisex", price: "279.000₫", image: "/assets/images/v7_1923.png", badge: "Mới", rating: 4.5, reviewsCount: 19 },
-            { id: "8", name: "Áo Khoác Gió Nhẹ", price: "499.000₫", image: "/assets/images/v7_1930.png", rating: 4.8, reviewsCount: 67 },
-            { id: "9", name: "Quần Short Thể Thao", price: "329.000₫", image: "/assets/images/v7_1909.png", rating: 4.4, reviewsCount: 33 },
+            { id: "6", name: "Quần Jogger Cotton", price: "399.000 VND", image: "/assets/images/v7_1916.png", rating: 4.7, reviewsCount: 52 },
+            { id: "7", name: "Áo Thun Unisex", price: "279.000 VND", image: "/assets/images/v7_1923.png", badge: "Mới", rating: 4.5, reviewsCount: 19 },
+            { id: "8", name: "Áo Khoác Gió Nhẹ", price: "499.000 VND", image: "/assets/images/v7_1930.png", rating: 4.8, reviewsCount: 67 },
+            { id: "9", name: "Quần Short Thể Thao", price: "329.000 VND", image: "/assets/images/v7_1909.png", rating: 4.4, reviewsCount: 33 },
           ]}
         />
       </div>
@@ -396,8 +410,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </button>
             <h2 style={{ fontSize: "1.2rem", fontWeight: 300, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>Thêm vào giỏ hàng thành công</h2>
 
-            <p style={{ fontWeight: 400, fontSize: "1rem", color: "#333", marginBottom: "4px" }}>Tổng số tiền (1 sản phẩm): <span style={{ fontWeight: 500 }}>{formattedPrice}</span></p>
-            <p style={{ fontSize: "0.85rem", color: "#777", marginBottom: "32px", fontWeight: 300 }}>Đơn hàng của bạn đủ điều kiện áp dụng miễn phí vận chuyển.</p>
+            <p style={{ fontWeight: 400, fontSize: "1rem", color: "#333", marginBottom: "4px" }}>Tổng số tiền ({Math.min(quantity, selectedVariant?.stockQuantity || 1)} sản phẩm): <span style={{ fontWeight: 500 }}>{money(displayPrice * Math.min(quantity, selectedVariant?.stockQuantity || 1))}</span></p>
+            <p style={{ fontSize: "0.85rem", color: "#777", marginBottom: "32px", fontWeight: 300 }}>Phí giao hàng sẽ được tính tại bước đặt hàng.</p>
 
             {/* Added Product Info */}
             <div style={{ borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea", padding: "32px 0", display: "flex", gap: "32px", marginBottom: "40px" }}>
@@ -409,7 +423,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <div style={{ fontSize: "0.95rem", color: "#555", fontWeight: 300, display: "flex", flexDirection: "column", gap: "6px" }}>
                   <p><span style={{ color: "#999", display: "inline-block", width: "80px" }}>Màu sắc:</span> {selectedColorObj?.name}</p>
                   <p><span style={{ color: "#999", display: "inline-block", width: "80px" }}>Kích cỡ:</span> {selectedSizeObj?.name}</p>
-                  <p><span style={{ color: "#999", display: "inline-block", width: "80px" }}>Số lượng:</span> 1</p>
+                  <p><span style={{ color: "#999", display: "inline-block", width: "80px" }}>Số lượng:</span> {Math.min(quantity, selectedVariant?.stockQuantity || 1)}</p>
                 </div>
                 <p style={{ fontSize: "1.2rem", fontWeight: 500, marginTop: "24px" }}>{formattedPrice}</p>
               </div>
@@ -417,9 +431,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
             {/* Actions */}
             <div style={{ display: "flex", gap: "20px" }}>
-              <Link href="/cart" style={{ flex: 1, padding: "16px", backgroundColor: "#000", color: "#fff", border: "1px solid #000", fontWeight: 400, fontSize: "0.9rem", letterSpacing: "1px", textTransform: "uppercase", cursor: "pointer", transition: "all 0.3s", display: "flex", justifyContent: "center", alignItems: "center", textDecoration: "none" }}>
+              <button type="button" onClick={() => { setShowCartPopup(false); cart.openCart(); }} style={{ flex: 1, padding: "16px", backgroundColor: "#000", color: "#fff", border: "1px solid #000", fontWeight: 400, fontSize: "0.9rem", letterSpacing: "1px", textTransform: "uppercase", cursor: "pointer", transition: "all 0.3s", display: "flex", justifyContent: "center", alignItems: "center", textDecoration: "none" }}>
                 Xem giỏ hàng
-              </Link>
+              </button>
               <button style={{ flex: 1, padding: "16px", backgroundColor: "#fff", color: "#000", border: "1px solid #ccc", fontWeight: 400, fontSize: "0.9rem", letterSpacing: "1px", textTransform: "uppercase", cursor: "pointer", transition: "all 0.3s" }} onClick={() => setShowCartPopup(false)}>
                 Tiếp tục mua sắm
               </button>
@@ -430,3 +444,4 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     </>
   );
 }
+

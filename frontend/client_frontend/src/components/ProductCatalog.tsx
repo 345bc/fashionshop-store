@@ -14,7 +14,7 @@ type ProductCardsResponse =
 
 type FilterState = { types: string[]; sizes: string[]; price: string };
 
-const formatPrice = (price: number) => `${price.toLocaleString("vi-VN")}₫`;
+const formatPrice = (price: number) => `${Math.round(price).toLocaleString("vi-VN")} VND`;
 
 const sortOptions = [
   { value: "featured", label: "Mới nhất" },
@@ -298,15 +298,19 @@ export default function ProductCatalog({
                   id={String(product.id)}
                   slug={product.slug}
                   name={product.name}
-                  price={formatPrice(product.basePrice)}
+                  price={formatPrice(product.salePrice ?? product.basePrice)}
+                  originalPrice={product.salePrice ? formatPrice(product.basePrice) : undefined}
+                  discountPercent={product.discountPercent}
                   image={product.imageUrl ?? ""}
-                  colors={product.colors}
                   badge={product.badge || undefined}
+                  rating={product.averageRating}
+                  reviewsCount={product.reviewsCount}
+                  colors={product.colors}
                 />
               ))}
             </div>
 
-            {totalPages > 1  && (
+            {totalPages > 1 && (
               <div className="mt-14 flex items-center justify-center gap-6">
                 <button
                   disabled={currentPage === 1}
@@ -401,3 +405,4 @@ export default function ProductCatalog({
     </>
   );
 }
+
