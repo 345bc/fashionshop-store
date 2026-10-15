@@ -1,4 +1,5 @@
 import 'package:material_symbols_icons/symbols.dart';
+
 import '../../../../widgets/common/pagination_footer.dart';
 
 import 'package:flutter/material.dart';
@@ -7,16 +8,9 @@ import 'package:provider/provider.dart';
 import '../../../../main.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../theme/app_theme.dart';
-import '../../../auth/presentation/provider/auth_provider.dart';
-import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
-import '../../../../widgets/common/bulk_action_bar.dart';
-import '../../../../widgets/common/zella_checkbox.dart';
-import '../../../../widgets/common/zella_toast.dart';
-import '../../../sizeguides/presentation/providers/size_guides_provider.dart';
 import '../../data/attribute_kind.dart';
 import '../dialogs/attribute_form_dialog.dart';
-import '../dialogs/attribute_detail_dialog.dart';
 import '../providers/attribute_provider.dart';
 
 class AttributeManagementScreen extends StatefulWidget {
@@ -30,7 +24,6 @@ class AttributeManagementScreen extends StatefulWidget {
 
 class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
   late AttributeProvider _provider;
-  Set<int> selectedIds = {};
 
   @override
   void initState() {
@@ -53,56 +46,12 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
     super.dispose();
   }
 
-  Future<void> _delete(Map<String, dynamic> item) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Xóa ${widget.kind.singular}'),
-        content: Text(
-          'Xóa "${item['name']}"? Mục đang được sử dụng sẽ không thể xóa.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Xóa'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    try {
-      await _provider.delete((item['id'] as num).toInt());
-      if (!mounted) return;
-      if (widget.kind == AttributeKind.sizeGuide) {
-        context.read<SizeGuidesProvider>().loadItems();
-      }
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Xóa thành công')));
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Không thể xóa: $error'),
-            backgroundColor: AppTheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  void _showDetail(Map<String, dynamic> item) {
+  void _showEdit(Map<String, dynamic> item) {
     showDialog(
       context: context,
       builder: (_) => ChangeNotifierProvider<AttributeProvider>.value(
         value: _provider,
-        child: AttributeDetailDialog(
-          kind: widget.kind,
-          id: (item['id'] as num).toInt(),
-        ),
+        child: AttributeFormDialog(kind: widget.kind, item: item),
       ),
     );
   }
@@ -162,11 +111,6 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canDelete =
-        context.watch<AuthProvider>().user?.roles.any(
-          (role) => role == 'ADMIN' || role == 'ROLE_ADMIN',
-        ) ??
-        false;
     return ChangeNotifierProvider<AttributeProvider>.value(
       value: _provider,
       child: Stack(
@@ -177,358 +121,255 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
-              children: [
-                IconButton(
-                  tooltip: 'Về thuộc tính sản phẩm',
-                  onPressed: () =>
-                      MainScreen.of(context).navigate('/product-attributes'),
-                  icon: const Icon(Symbols.arrow_back),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Quản lý ${widget.kind.title}',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  children: [
+                    IconButton(
+                      tooltip: 'Về sản phẩm',
+                      onPressed: () =>
+                          MainScreen.of(context).navigate('/products'),
+                      icon: const Icon(Symbols.arrow_back),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Quản lý ${widget.kind.title}',
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Thuộc tính dùng cho sản phẩm và biến thể',
+                            style: TextStyle(color: AppTheme.textSecondary),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Thuộc tính dùng cho sản phẩm và biến thể',
-                        style: TextStyle(color: AppTheme.textSecondary),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (_) =>
+                            ChangeNotifierProvider<AttributeProvider>.value(
+                              value: _provider,
+                              child: AttributeFormDialog(kind: widget.kind),
+                            ),
                       ),
-                    ],
-                  ),
+                      icon: const Icon(Symbols.add),
+                      label: Text('Thêm ${widget.kind.singular}'),
+                    ),
+                  ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (_) =>
-                        ChangeNotifierProvider<AttributeProvider>.value(
-                          value: _provider,
-                          child: AttributeFormDialog(kind: widget.kind),
-                        ),
+                const SizedBox(height: 28),
+                FeatureToolbar(
+                  key: ValueKey(widget.kind),
+                  searchHint: widget.kind == AttributeKind.color
+                      ? 'Tìm màu sắc theo tên, mã màu hoặc mã hex'
+                      : 'Tìm theo kích cỡ hoặc mô tả',
+                  onSearchChanged: _provider.search,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: AppTheme.borderLight),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  icon: const Icon(Symbols.add),
-                  label: Text('Thêm ${widget.kind.singular}'),
+                  child: Consumer<AttributeProvider>(
+                    builder: (context, provider, _) {
+                      if (provider.loading) {
+                        return const Padding(
+                          padding: EdgeInsets.all(48),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      if (provider.error != null) {
+                        return Padding(
+                          padding: const EdgeInsets.all(48),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Không tải được dữ liệu: ${provider.error}',
+                                ),
+                                TextButton(
+                                  onPressed: provider.load,
+                                  child: const Text('Thử lại'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    widget.kind.title.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                if (widget.kind == AttributeKind.sizeGuide)
+                                  const SizedBox(
+                                    width: 100,
+                                    child: Text(
+                                      'TRẠNG THÁI',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                const SizedBox(width: 48),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          if (provider.items.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(48),
+                              child: Text('Chưa có dữ liệu'),
+                            )
+                          else
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: provider.items.length,
+                              separatorBuilder: (_, _) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final item = provider.items[index];
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    hoverColor: AppTheme.surface,
+                                    onTap: () => _showEdit(item),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 14,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          if (widget.kind ==
+                                              AttributeKind.sizeGuide) ...[
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child:
+                                                  (item['guideImageUrl']
+                                                              ?.toString() ??
+                                                          '')
+                                                      .isNotEmpty
+                                                  ? Image.network(
+                                                      _imageUrl(
+                                                        item['guideImageUrl']
+                                                            as String,
+                                                      ),
+                                                      width: 48,
+                                                      height: 48,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (_, _, _) =>
+                                                          const SizedBox(
+                                                            width: 48,
+                                                            height: 48,
+                                                            child: Icon(
+                                                              Symbols
+                                                                  .broken_image,
+                                                            ),
+                                                          ),
+                                                    )
+                                                  : const SizedBox(
+                                                      width: 48,
+                                                      height: 48,
+                                                      child: Icon(
+                                                        Symbols.image,
+                                                      ),
+                                                    ),
+                                            ),
+                                            const SizedBox(width: 14),
+                                          ],
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item['name']?.toString() ??
+                                                      '—',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 5),
+                                                _secondary(item),
+                                              ],
+                                            ),
+                                          ),
+                                          if (widget.kind ==
+                                              AttributeKind.sizeGuide)
+                                            SizedBox(
+                                              width: 100,
+                                              child: Text(
+                                                item['isActive'] == false
+                                                    ? 'Đã ẩn'
+                                                    : 'Hoạt động',
+                                                style: TextStyle(
+                                                  color:
+                                                      item['isActive'] == false
+                                                      ? AppTheme.danger
+                                                      : AppTheme.success,
+                                                ),
+                                              ),
+                                            ),
+                                          IconButton(
+                                            tooltip: 'Chỉnh sửa',
+                                            icon: const Icon(
+                                              Symbols.edit,
+                                              size: 18,
+                                            ),
+                                            onPressed: () => _showEdit(item),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          if (widget.kind != AttributeKind.size)
+                            PaginationFooter(
+                              currentPage: provider.currentPage,
+                              totalPages: provider.totalElements == 0
+                                  ? 1
+                                  : (provider.totalElements / provider.pageSize)
+                                        .ceil(),
+                              totalElements: provider.totalElements,
+                              pageSize: provider.pageSize,
+                              onPageChanged: provider.setPage,
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 28),
-            FeatureToolbar(
-              key: ValueKey(widget.kind),
-              searchHint: widget.kind == AttributeKind.color ? 'Tìm màu sắc theo tên, mã màu hoặc mã hex' : 'Tìm theo kích cỡ hoặc mô tả',
-              onSearchChanged: _provider.search,
-            ),
-            const SizedBox(height: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppTheme.borderLight),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Consumer<AttributeProvider>(
-                builder: (context, provider, _) {
-                  if (provider.loading) {
-                    return const Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  if (provider.error != null) {
-                    return Padding(
-                      padding: const EdgeInsets.all(48),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Không tải được dữ liệu: ${provider.error}'),
-                            TextButton(
-                              onPressed: provider.load,
-                              child: const Text('Thử lại'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              alignment: Alignment.centerLeft,
-                              child: ZellaCheckbox(
-                                value: provider.items.isNotEmpty && selectedIds.length == provider.items.length,
-                                onChanged: (v) {
-                                  setState(() {
-                                    if (v == true) {
-                                      selectedIds.addAll(provider.items.map((e) => (e['id'] as num).toInt()));
-                                    } else {
-                                      selectedIds.clear();
-                                    }
-                                  });
-                                },
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                widget.kind.title.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            if (widget.kind == AttributeKind.sizeGuide)
-                              const SizedBox(
-                                width: 100,
-                                child: Text(
-                                  'TRẠNG THÁI',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(width: 48),
-                          ],
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      if (provider.items.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(48),
-                          child: Text('Chưa có dữ liệu'),
-                        )
-                      else
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: provider.items.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final item = provider.items[index];
-                            return Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                hoverColor: AppTheme.surface,
-                                onTap: () => _showDetail(item),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 14,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 48,
-                                        alignment: Alignment.centerLeft,
-                                        child: ZellaCheckbox(
-                                          value: selectedIds.contains((item['id'] as num).toInt()),
-                                          onChanged: (v) {
-                                            setState(() {
-                                              if (v == true) {
-                                                selectedIds.add((item['id'] as num).toInt());
-                                              } else {
-                                                selectedIds.remove((item['id'] as num).toInt());
-                                              }
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                      if (widget.kind ==
-                                          AttributeKind.sizeGuide) ...[
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          child:
-                                              (item['guideImageUrl']
-                                                          ?.toString() ??
-                                                      '')
-                                                  .isNotEmpty
-                                              ? Image.network(
-                                                  _imageUrl(
-                                                    item['guideImageUrl']
-                                                        as String,
-                                                  ),
-                                                  width: 48,
-                                                  height: 48,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, _, _) =>
-                                                      const SizedBox(
-                                                        width: 48,
-                                                        height: 48,
-                                                        child: Icon(
-                                                          Icons
-                                                              .broken_image_outlined,
-                                                        ),
-                                                      ),
-                                                )
-                                              : const SizedBox(
-                                                  width: 48,
-                                                  height: 48,
-                                                  child: Icon(
-                                                    Symbols.image,
-                                                  ),
-                                                ),
-                                        ),
-                                        const SizedBox(width: 14),
-                                      ],
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item['name']?.toString() ?? '—',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 5),
-                                            _secondary(item),
-                                          ],
-                                        ),
-                                      ),
-                                      if (widget.kind ==
-                                          AttributeKind.sizeGuide)
-                                        SizedBox(
-                                          width: 100,
-                                          child: Text(
-                                            item['isActive'] == false
-                                                ? 'Đã ẩn'
-                                                : 'Hoạt động',
-                                            style: TextStyle(
-                                              color: item['isActive'] == false
-                                                  ? AppTheme.danger
-                                                  : AppTheme.success,
-                                            ),
-                                          ),
-                                        ),
-                                      SizedBox(
-                                        width: 48,
-                                        child: ActionMenu(
-                                          items: [
-                                            const ActionMenuItem(
-                                              value: 'view',
-                                              label: 'Xem chi tiết',
-                                              icon: Symbols.visibility,
-                                            ),
-                                            const ActionMenuItem(
-                                              value: 'edit',
-                                              label: 'Chỉnh sửa',
-                                              icon: Symbols.edit,
-                                            ),
-                                            if (canDelete)
-                                              const ActionMenuItem(
-                                                value: 'delete',
-                                                label: 'Xóa',
-                                                icon: Symbols.delete,
-                                                color: AppTheme.danger,
-                                              ),
-                                          ],
-                                          onSelected: (value) {
-                                            if (value == 'view') {
-                                              _showDetail(item);
-                                            } else if (value == 'edit') {
-                                              showDialog(
-                                                context: context,
-                                                builder: (_) =>
-                                                    ChangeNotifierProvider<
-                                                      AttributeProvider
-                                                    >.value(
-                                                      value: _provider,
-                                                      child:
-                                                          AttributeFormDialog(
-                                                            kind: widget.kind,
-                                                            item: item,
-                                                          ),
-                                                    ),
-                                              );
-                                            } else if (value == 'delete') {
-                                              _delete(item);
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      if (widget.kind != AttributeKind.size)
-                        PaginationFooter(
-                          currentPage: provider.currentPage,
-                          totalPages: provider.totalElements == 0
-                              ? 1
-                              : (provider.totalElements / provider.pageSize)
-                                    .ceil(),
-                          totalElements: provider.totalElements,
-                          pageSize: provider.pageSize,
-                          onPageChanged: provider.setPage,
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      BulkActionBar(
-        selectedCount: selectedIds.length,
-        itemLabel: widget.kind.singular.toLowerCase(),
-        onClear: () => setState(() => selectedIds.clear()),
-      actions: [
-        BulkActionButton(
-          icon: Symbols.visibility_off,
-          tooltip: 'Ẩn',
-          onPressed: () async {
-            final ids = selectedIds.toList();
-            await context.read<AttributeProvider>().toggleActiveBulk(ids, false);
-            if (context.mounted) {
-              ZellaToast.show(
-                context,
-                message: 'Đã ẩn ${ids.length} ${widget.kind.singular.toLowerCase()}',
-                type: ToastType.success,
-              );
-            }
-            setState(() => selectedIds.clear());
-          },
-        ),
-        BulkActionButton(
-          icon: Symbols.visibility,
-          tooltip: 'Hoạt động',
-          onPressed: () async {
-            final ids = selectedIds.toList();
-            await context.read<AttributeProvider>().toggleActiveBulk(ids, true);
-            if (context.mounted) {
-              ZellaToast.show(
-                context,
-                message: 'Đã hiện ${ids.length} ${widget.kind.singular.toLowerCase()}',
-                type: ToastType.success,
-              );
-            }
-            setState(() => selectedIds.clear());
-          },
-        ),
-      ],
-      ),
+          ),
         ],
       ),
     );

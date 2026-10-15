@@ -35,27 +35,16 @@ public class ColorController {
         )));
     }
 
-    @GetMapping("/{id}")
-    public ApiResponse<ColorResponse> get(@PathVariable Integer id) {
-        return ApiResponse.success(colorService.get(id));
-    }
-
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<ColorResponse>> create(@Valid @RequestBody CreateColorRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(colorService.create(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/{id}")
     public ApiResponse<ColorResponse> update(@PathVariable Integer id, @Valid @RequestBody CreateColorRequest request) {
         return ApiResponse.success(colorService.update(id, request));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Integer id) {
-        colorService.delete(id);
-        return ApiResponse.success(null);
-    }
 }

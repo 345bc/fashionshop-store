@@ -21,6 +21,12 @@ import java.util.List;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ProductController {
+    @PreAuthorize("hasAnyRole('ADMIN','MARKETING')")
+    @PatchMapping("/{id}/content")
+    public ApiResponse<ProductResponse> updateContent(@PathVariable Long id,
+            @Valid @RequestBody ProductContentRequest request) {
+        return ApiResponse.success(productService.updateContent(id, request));
+    }
     ProductService productService;
 
     @GetMapping("/{id}/reviews")
@@ -129,7 +135,7 @@ public class ProductController {
         )));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<ProductResponse>> create(
             @Valid @RequestBody CreateProductRequest request
@@ -138,13 +144,13 @@ public class ProductController {
                 .body(ApiResponse.success(productService.create(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES','WAREHOUSE','MARKETING')")
     @GetMapping("/{id}")
     public ApiResponse<ProductResponse> get(@PathVariable Long id) {
         return ApiResponse.success(productService.get(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ApiResponse<ProductResponse> update(
             @PathVariable Long id,

@@ -46,19 +46,6 @@ class SizeGuideRepository {
     }
   }
 
-  Future<Map<String, dynamic>> getById(int id) async {
-    try {
-      final response = await _apiClient.get('${ApiEndpoints.sizeGuides}/$id');
-      if (response.statusCode == 200) {
-        return response.data['data'];
-      }
-      throw Exception(response.data['message'] ?? 'Fetch failed');
-    } catch (e) {
-      _handleError(e);
-      rethrow;
-    }
-  }
-
   Future<Map<String, dynamic>> create(Map<String, dynamic> data) async {
     try {
       final response = await _apiClient.post(

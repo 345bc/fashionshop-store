@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductVariantController {
     ProductVariantService productVariantService;
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES','WAREHOUSE','MARKETING')")
     @GetMapping
     public ApiResponse<PageResponse<ProductVariantResponse>> list(
             @RequestParam(required = false) String q,
@@ -36,13 +36,13 @@ public class ProductVariantController {
         )));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES','WAREHOUSE','MARKETING')")
     @GetMapping("/{id}")
     public ApiResponse<ProductVariantResponse> get(@PathVariable Long id) {
         return ApiResponse.success(productVariantService.get(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE')")
     @PostMapping
     public ResponseEntity<ApiResponse<ProductVariantResponse>> create(
             @Valid @RequestBody CreateProductVariantRequest request
@@ -51,7 +51,7 @@ public class ProductVariantController {
                 .body(ApiResponse.success(productVariantService.create(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE')")
     @PutMapping("/{id}")
     public ApiResponse<ProductVariantResponse> update(
             @PathVariable Long id,

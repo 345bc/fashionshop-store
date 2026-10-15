@@ -31,13 +31,13 @@ public class ProductImageController {
         return ApiResponse.success(imageService.get(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','MARKETING')")
     @PostMapping
     public ResponseEntity<ApiResponse<ProductImageResponse>> create(@Valid @RequestBody CreateProductImageRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(imageService.create(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','MARKETING')")
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<ProductImageResponse>> upload(
             @RequestParam("productId") Long productId,
@@ -49,7 +49,7 @@ public class ProductImageController {
                 .body(ApiResponse.success(uploadService.upload(productId, file, isPrimary, displayOrder)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','MARKETING')")
     @PutMapping("/{id}")
     public ApiResponse<ProductImageResponse> update(@PathVariable Long id, @Valid @RequestBody CreateProductImageRequest request) {
         return ApiResponse.success(imageService.update(id, request));

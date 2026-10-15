@@ -332,6 +332,23 @@ public class ProductService {
         return ProductResponse.from(productRepository.save(product));
     }
 
+    @Transactional
+    public ProductResponse updateContent(Long id, ProductContentRequest request) {
+        Product product = requireProduct(id);
+        String name = request.name().trim();
+        if (productRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
+            throw new BusinessException(HttpStatus.CONFLICT, "NAME_ALREADY_EXISTS", "Product name already exists");
+        }
+        String slug = slugFromName(name);
+        if (slug.isEmpty()) throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_PRODUCT_SLUG", "Product name cannot form a slug");
+        if (productRepository.existsBySlugIgnoreCaseAndIdNot(slug, id)) slug += "-" + product.getId();
+        product.setName(name); product.setSlug(slug);
+        product.setDescription(normalizeOptional(request.description()));
+        product.setStyle(normalizeOptional(request.style()));
+        product.setOccasion(normalizeOptional(request.occasion()));
+        return ProductResponse.from(productRepository.save(product));
+    }
+
     private void apply(Product product, CreateProductRequest request) {
         Category category = categoryRepository.findByIdAndIsActiveTrue(request.categoryId())
                 .orElseThrow(() -> new BusinessException(HttpStatus.CONFLICT,

@@ -24,27 +24,16 @@ public class SizeController {
         return ApiResponse.success(sizeService.list());
     }
 
-    @GetMapping("/{id}")
-    public ApiResponse<SizeResponse> get(@PathVariable Integer id) {
-        return ApiResponse.success(sizeService.get(id));
-    }
-
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<SizeResponse>> create(@Valid @RequestBody CreateSizeRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(sizeService.create(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/{id}")
     public ApiResponse<SizeResponse> update(@PathVariable Integer id, @Valid @RequestBody CreateSizeRequest request) {
         return ApiResponse.success(sizeService.update(id, request));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Integer id) {
-        sizeService.delete(id);
-        return ApiResponse.success(null);
-    }
 }
