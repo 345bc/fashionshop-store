@@ -55,10 +55,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
             actionLabel: "",
             actionIcon: Symbols.add,
             onExportPressed:
-                context.watch<AuthProvider>().user?.roles.any(
-                      (role) => role == 'ADMIN' || role == 'ROLE_ADMIN',
-                    ) ==
-                    true
+                context.watch<AuthProvider>().hasRole('ADMIN')
                 ? () {
                     ZellaToast.show(
                       context,
@@ -181,7 +178,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
         ],
       ),
     ),
-    BulkActionBar(
+    if (context.watch<AuthProvider>().hasRole('ADMIN')) BulkActionBar(
       selectedCount: selectedIds.length,
       itemLabel: 'khách hàng',
       onClear: () => setState(() => selectedIds.clear()),
@@ -309,13 +306,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
             SizedBox(
               width: 48,
               child: ActionMenu(
-                items: const [
+                items: [
                   ActionMenuItem(
                     value: 'view',
                     label: 'Xem chi tiết',
                     icon: Symbols.visibility,
                   ),
-                  ActionMenuItem(
+                  if (context.watch<AuthProvider>().hasRole('ADMIN')) const ActionMenuItem(
                     value: 'edit',
                     label: 'Chỉnh sửa',
                     icon: Symbols.edit,

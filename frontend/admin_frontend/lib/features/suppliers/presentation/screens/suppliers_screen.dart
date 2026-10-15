@@ -456,10 +456,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                     label: 'Chỉnh sửa',
                     icon: Symbols.edit,
                   ),
-                  if (context.read<AuthProvider>().user?.roles.any(
-                        (role) => role == 'ADMIN' || role == 'ROLE_ADMIN',
-                      ) ??
-                      false)
+                  if (context.read<AuthProvider>().hasRole('ADMIN'))
                     const ActionMenuItem(
                       value: 'delete',
                       label: 'Xóa',
