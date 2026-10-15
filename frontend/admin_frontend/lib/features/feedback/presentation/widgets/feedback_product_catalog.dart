@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/pagination_footer.dart';
-import '../../data/repositories/feedback_repository.dart';
 import '../providers/feedback_provider.dart';
 
 class FeedbackProductCatalog extends StatelessWidget {
@@ -36,7 +35,7 @@ class FeedbackProductCatalog extends StatelessWidget {
     ],
   );
   Widget _product(int id) {
-    final product = FeedbackRepository.products.firstWhere((r) => r.id == id);
+    final product = provider.products.firstWhere((r) => r.id == id);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
@@ -87,7 +86,9 @@ class FeedbackProductCatalog extends StatelessWidget {
                             children: [
                               const Icon(Symbols.star, size: 14, fill: 1),
                               const SizedBox(width: 4),
-                              Text('${provider.averageFor(id).toStringAsFixed(1)} / 5'),
+                              Text(
+                                '${provider.averageFor(id).toStringAsFixed(1)} / 5',
+                              ),
                             ],
                           ),
                           Text('${provider.reviewsFor(id).length} đánh giá'),

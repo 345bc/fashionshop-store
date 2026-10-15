@@ -24,6 +24,14 @@ import java.util.List;
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class})
+    ResponseEntity<ApiError> handleInvalidRequest(Exception ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR",
+                "Dữ liệu yêu cầu không hợp lệ", request, List.of());
+    }
+
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ApiError> handleBusiness(BusinessException ex, HttpServletRequest request) {
         return build(ex.getStatus(), ex.getCode(), ex.getMessage(), request, List.of());
