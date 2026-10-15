@@ -14,7 +14,7 @@ class StaffTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> allStaff = [
       {
-        'id': 'NV-001',
+
         'name': 'Đinh Thùy Linh',
         'role': 'manager',
         'email': 'thuylinh@zella.vn',
@@ -24,7 +24,7 @@ class StaffTable extends StatelessWidget {
         'status': 'active',
       },
       {
-        'id': 'NV-002',
+
         'name': 'Phùng Minh Tú',
         'role': 'sales',
         'email': 'minhtu@zella.vn',
@@ -34,17 +34,7 @@ class StaffTable extends StatelessWidget {
         'status': 'active',
       },
       {
-        'id': 'NV-003',
-        'name': 'Bùi Khánh Linh',
-        'role': 'warehouse',
-        'email': 'khanhlinh@zella.vn',
-        'phone': '0978 003 003',
-        'shift': 'Ca chiều',
-        'startDate': '01 Jan 2025',
-        'status': 'leave',
-      },
-      {
-        'id': 'NV-004',
+
         'name': 'Hoàng Anh Đức',
         'role': 'designer',
         'email': 'anhduc@zella.vn',
@@ -54,7 +44,7 @@ class StaffTable extends StatelessWidget {
         'status': 'active',
       },
       {
-        'id': 'NV-005',
+
         'name': 'Trần Thị Ngọc',
         'role': 'accountant',
         'email': 'thingoc@zella.vn',
@@ -62,16 +52,6 @@ class StaffTable extends StatelessWidget {
         'shift': 'Hành chính',
         'startDate': '15 Apr 2022',
         'status': 'active',
-      },
-      {
-        'id': 'NV-006',
-        'name': 'Lê Bảo Châu',
-        'role': 'sales',
-        'email': 'baochau@zella.vn',
-        'phone': '0962 006 006',
-        'shift': 'Ca sáng',
-        'startDate': '20 Nov 2025',
-        'status': 'leave',
       },
     ];
 
@@ -173,10 +153,6 @@ class StaffTable extends StatelessWidget {
                           staff['name'],
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        Text(
-                          staff['id'],
-                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                        ),
                       ],
                     ),
                   ),
@@ -233,14 +209,14 @@ class StaffTable extends StatelessWidget {
                     height: 8,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: staff['status'] == 'active' ? AppTheme.success : AppTheme.warning,
+                      color: staff['status'] == 'active' ? AppTheme.success : AppTheme.error,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    staff['status'] == 'active' ? 'Đang làm' : 'Nghỉ phép',
+                    staff['status'] == 'active' ? 'Đang làm' : 'Ngừng làm việc',
                     style: TextStyle(
-                      color: staff['status'] == 'active' ? AppTheme.success : AppTheme.warning,
+                      color: staff['status'] == 'active' ? AppTheme.success : AppTheme.error,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

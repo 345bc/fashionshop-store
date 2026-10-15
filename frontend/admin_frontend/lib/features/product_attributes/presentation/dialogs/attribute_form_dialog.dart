@@ -1,5 +1,6 @@
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -208,18 +209,15 @@ class _AttributeFormDialogState extends State<AttributeFormDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (widget.kind == AttributeKind.size)
-                DropdownButtonFormField<String>(
-                  initialValue: _name.text.isEmpty ? null : _name.text,
-                  decoration: const InputDecoration(labelText: 'Size *'),
-                  items: const ['XS', 'S', 'M', 'L', 'XL', 'XXL']
-                      .map(
-                        (value) =>
-                            DropdownMenuItem(value: value, child: Text(value)),
-                      )
-                      .toList(),
-                  onChanged: (value) => _name.text = value ?? '',
-                  validator: (value) =>
-                      value == null ? 'Vui lòng chọn size' : null,
+                TextFormField(
+                  controller: _name,
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [LengthLimitingTextInputFormatter(100)],
+                  decoration: const InputDecoration(
+                    labelText: 'Size *',
+                    hintText: 'Ví dụ: S, XL, 39 hoặc 39-40',
+                  ),
+                  validator: (value) => _required(value, 100),
                 )
               else
                 TextFormField(

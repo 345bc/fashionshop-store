@@ -1,5 +1,8 @@
+import '../../../../core/security/role_access.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../providers/users_provider.dart';
@@ -18,11 +21,18 @@ class _UserEditDialogState extends State<UserEditDialog> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
-  String _selectedRole = 'USER';
+  final Set<String> _selectedRoles = {'USER'};
   bool _isActive = true;
   bool _isLoading = false;
 
-  final List<String> _roles = ['ADMIN', 'USER', 'EMPLOYEE'];
+  final List<String> _roles = [
+    'ADMIN',
+    'USER',
+    'SALES',
+    'WAREHOUSE',
+    'CUSTOMER_SUPPORT',
+    'MARKETING',
+  ];
 
   @override
   void initState() {
@@ -30,13 +40,16 @@ class _UserEditDialogState extends State<UserEditDialog> {
     _nameController = TextEditingController(text: widget.user?['name']);
     _emailController = TextEditingController(text: widget.user?['email']);
     _passwordController = TextEditingController();
-    
+
     if (widget.user != null) {
-      if (widget.user!['roles'] != null && (widget.user!['roles'] as List).isNotEmpty) {
-        String role = (widget.user!['roles'] as List).first.toString().toUpperCase();
-        if (_roles.contains(role)) {
-          _selectedRole = role;
-        }
+      if (widget.user!['roles'] != null &&
+          (widget.user!['roles'] as List).isNotEmpty) {
+        _selectedRoles.clear();
+        _selectedRoles.addAll(
+          (widget.user!['roles'] as List)
+              .map((role) => role.toString())
+              .where(_roles.contains),
+        );
       }
       _isActive = widget.user!['isActive'] ?? true;
     }
@@ -52,23 +65,29 @@ class _UserEditDialogState extends State<UserEditDialog> {
 
   Future<void> _saveUser() async {
     if (!_formKey.currentState!.validate()) return;
-    
+    if (_selectedRoles.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Chọn ít nhất một vai trò')));
+      return;
+    }
+
     setState(() => _isLoading = true);
-    
+
     try {
       final provider = context.read<UsersProvider>();
       final isEditing = widget.user != null;
-      
+
       final data = {
         'username': _nameController.text.trim(),
         'email': _emailController.text.trim(),
-        'roles': [_selectedRole],
+        'roles': _selectedRoles.toList(),
       };
-      
+
       if (!isEditing || _passwordController.text.isNotEmpty) {
         data['password'] = _passwordController.text;
       }
-      
+
       if (isEditing) {
         data['isActive'] = _isActive;
         await provider.updateItem(widget.user!['id'], data);
@@ -85,13 +104,16 @@ class _UserEditDialogState extends State<UserEditDialog> {
           );
         }
       }
-      
+
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
         final errorMsg = e.toString().replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $errorMsg'), backgroundColor: AppTheme.error),
+          SnackBar(
+            content: Text('Lỗi: $errorMsg'),
+            backgroundColor: AppTheme.error,
+          ),
         );
       }
     } finally {
@@ -125,7 +147,13 @@ class _UserEditDialogState extends State<UserEditDialog> {
     );
   }
 
-  Widget _buildTextField(String label, String hint, TextEditingController controller, {bool obscureText = false, bool required = true}) {
+  Widget _buildTextField(
+    String label,
+    String hint,
+    TextEditingController controller, {
+    bool obscureText = false,
+    bool required = true,
+  }) {
     return _buildFieldRow(
       label,
       TextFormField(
@@ -136,7 +164,10 @@ class _UserEditDialogState extends State<UserEditDialog> {
           hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: AppTheme.borderLight),
@@ -152,12 +183,18 @@ class _UserEditDialogState extends State<UserEditDialog> {
           isDense: true,
         ),
         style: const TextStyle(fontSize: 14),
-        validator: required ? (value) {
-          if (value == null || value.isEmpty) {
+        validator: (value) {
+          if (required && (value == null || value.trim().isEmpty)) {
             return 'Vui lòng nhập trường này';
           }
+          if (obscureText &&
+              value != null &&
+              value.isNotEmpty &&
+              value.length < 6) {
+            return 'Mật khẩu tối thiểu 6 ký tự';
+          }
           return null;
-        } : null,
+        },
       ),
     );
   }
@@ -184,47 +221,48 @@ class _UserEditDialogState extends State<UserEditDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 8),
-              
+
               // Form Fields
-              _buildTextField('Tên đăng nhập', 'Nhập tên đăng nhập', _nameController),
+              _buildTextField(
+                'Tên đăng nhập',
+                'Nhập tên đăng nhập',
+                _nameController,
+              ),
               _buildTextField('Email', 'Nhập địa chỉ email', _emailController),
               _buildTextField(
-                isEditing ? 'Mật khẩu mới' : 'Mật khẩu', 
-                isEditing ? 'Để trống nếu không đổi' : 'Nhập mật khẩu', 
-                _passwordController, 
+                isEditing ? 'Mật khẩu mới' : 'Mật khẩu',
+                isEditing ? 'Để trống nếu không đổi' : 'Nhập mật khẩu',
+                _passwordController,
                 obscureText: true,
-                required: !isEditing
+                required: !isEditing,
               ),
-              
+
               // Role Dropdown
               _buildFieldRow(
                 'Vai trò',
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedRole,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8), 
-                      borderSide: const BorderSide(color: AppTheme.borderLight),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8), 
-                      borderSide: const BorderSide(color: AppTheme.borderLight),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8), 
-                      borderSide: const BorderSide(color: AppTheme.primary),
-                    ),
-                    isDense: true,
-                  ),
-                  style: const TextStyle(fontSize: 14, color: AppTheme.text),
-                  items: _roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-                  onChanged: (v) => setState(() => _selectedRole = v!),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _roles
+                      .map(
+                        (role) => FilterChip(
+                          label: Text(RoleAccess.labels[role] ?? role),
+                          selected: _selectedRoles.contains(role),
+                          onSelected: _isLoading
+                              ? null
+                              : (selected) => setState(() {
+                                  if (selected) {
+                                    _selectedRoles.add(role);
+                                  } else {
+                                    _selectedRoles.remove(role);
+                                  }
+                                }),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
-              
+
               if (isEditing) ...[
                 Row(
                   children: [
@@ -240,7 +278,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
                       ),
                     ),
                     Switch(
-                      value: _isActive, 
+                      value: _isActive,
                       onChanged: (v) => setState(() => _isActive = v),
                       activeThumbColor: AppTheme.primary,
                     ),

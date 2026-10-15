@@ -67,11 +67,6 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                       .toList(),
                   onChanged: (v) => p.filter(v),
                 ),
-                IconButton(
-                  tooltip: 'Làm mới',
-                  onPressed: p.loadItems,
-                  icon: const Icon(Symbols.refresh),
-                ),
               ],
             ),
           ),

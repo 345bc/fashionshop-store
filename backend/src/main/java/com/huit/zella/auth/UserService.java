@@ -33,6 +33,8 @@ public class UserService {
     RoleRepository role_repository;
     PasswordEncoder passwordEncoder;
     CustomerRepository customerRepository;
+    RefreshSessionRepository refreshSessions;
+    com.huit.zella.staff.StaffRepository staffRepository;
 
     @Transactional(readOnly = true)
     public CurrentUser requireById(Long id) {
@@ -78,7 +80,7 @@ public class UserService {
             throw informationAlreadyExists();
         }
 
-        Role userRole = role_repository.findByRoleCode(RoleEnum.CUSTOMER.name())
+        Role userRole = role_repository.findByRoleCode(RoleEnum.USER.name())
                 .orElseThrow(() -> new BusinessException(
                         HttpStatus.INTERNAL_SERVER_ERROR,
                         "ROLE_NOT_FOUND",
@@ -151,7 +153,13 @@ public class UserService {
 
     @Transactional
     public UserResponse update(Long id, UpdateUserRequest update) {
+        var lockedAccounts = user_repository.lockAccounts();
         User feature = requireFeature(id);
+        boolean wasAdmin = feature.isActive() && feature.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getRoleCode()));
+        if (wasAdmin && (!update.isActive() || !update.roles().contains(RoleEnum.ADMIN))
+                && lockedAccounts.stream().noneMatch(u -> !u.getId().equals(id) && u.isActive() && u.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getRoleCode())))) {
+            throw new BusinessException(HttpStatus.CONFLICT,"LAST_ADMIN","Không thể khóa hoặc thu hồi quyền quản trị viên cuối cùng");
+        }
         String username = update.username().trim();
         String email = update.email().toLowerCase().trim();
         boolean is_active = update.isActive();
@@ -176,6 +184,9 @@ public class UserService {
             roles.add(dbRole);
         }
 
+        boolean securityChanged = feature.isActive()!=is_active || !feature.getRoles().stream().map(Role::getRoleCode).collect(java.util.stream.Collectors.toSet()).equals(roles.stream().map(Role::getRoleCode).collect(java.util.stream.Collectors.toSet())) || (update.password()!=null&&!update.password().isBlank());
+        if(securityChanged) {feature.setAuthVersion(feature.getAuthVersion()+1);refreshSessions.revokeAllForUser(id, java.time.Instant.now());}
+        feature.setUserName(username);
         feature.setEmail(email);
         feature.setActive(is_active);
 
@@ -203,8 +214,11 @@ public class UserService {
         return requireByEmail(authentication.getName());
     }
 
+    @Transactional
     public void deleteUser(Long id) {
         User user = requireFeature(id);
+        if(staffRepository.existsByUserId(id)) throw new BusinessException(HttpStatus.CONFLICT,"STAFF_HISTORY_PRESERVED","Nhân sự cần được khóa tài khoản để giữ lịch sử");
+        if(user.isActive()&&user.getRoles().stream().anyMatch(r->"ADMIN".equals(r.getRoleCode()))) throw new BusinessException(HttpStatus.CONFLICT,"ADMIN_DELETE_BLOCKED","Khóa tài khoản quản trị trước khi xóa");
         user_repository.delete(user);
     }
 

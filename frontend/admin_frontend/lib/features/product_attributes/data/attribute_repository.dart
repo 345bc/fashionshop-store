@@ -25,15 +25,6 @@ class AttributeRepository {
     }
   }
 
-  Future<Map<String, dynamic>> getById(AttributeKind kind, int id) async {
-    try {
-      final response = await _api.get('${kind.path}/$id');
-      return response.data['data'] as Map<String, dynamic>;
-    } on DioException catch (error) {
-      _throwMessage(error);
-    }
-  }
-
   Future<Map<String, dynamic>> create(
     AttributeKind kind,
     Map<String, dynamic> data,
@@ -80,14 +71,6 @@ class AttributeRepository {
   ) async {
     try {
       await _api.put('${kind.path}/$id', data: data);
-    } on DioException catch (error) {
-      _throwMessage(error);
-    }
-  }
-
-  Future<void> delete(AttributeKind kind, int id) async {
-    try {
-      await _api.delete('${kind.path}/$id');
     } on DioException catch (error) {
       _throwMessage(error);
     }

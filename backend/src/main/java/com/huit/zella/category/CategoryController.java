@@ -54,13 +54,13 @@ public class CategoryController {
         return ApiResponse.success(categoryService.get(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<CategoryResponse>> create(@Valid @RequestBody CreateCategoryRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(categoryService.create(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/{id}")
     public ApiResponse<CategoryResponse> update(@PathVariable Long id, @Valid @RequestBody CreateCategoryRequest request) {
         return ApiResponse.success(categoryService.update(id, request));
@@ -73,13 +73,13 @@ public class CategoryController {
         return ApiResponse.success(null);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping(value = "/{id}/image", consumes = "multipart/form-data")
     public ApiResponse<CategoryResponse> uploadImage(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         return ApiResponse.success(categoryImageUploadService.upload(id, file));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @DeleteMapping("/{id}/image")
     public ApiResponse<CategoryResponse> removeImage(@PathVariable Long id) {
         return ApiResponse.success(categoryService.replaceImage(id, null));

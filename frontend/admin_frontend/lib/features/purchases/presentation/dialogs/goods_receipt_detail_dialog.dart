@@ -1,3 +1,4 @@
+import '../../../auth/presentation/provider/auth_provider.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -603,7 +604,8 @@ class _GoodsReceiptDetailDialogState extends State<GoodsReceiptDetailDialog> {
           if (saved == true && mounted) setState(_load);
         }, isOutlined: true),
       );
-      actions.add(
+      if (context.watch<AuthProvider>().hasRole('ADMIN')) {
+        actions.add(
         _actionButton(
           'Xác nhận nhập kho',
           Symbols.inventory,
@@ -611,9 +613,10 @@ class _GoodsReceiptDetailDialogState extends State<GoodsReceiptDetailDialog> {
           () => _action('post'),
         ),
       );
+      }
     }
 
-    if (r.status == 'POSTED' && r.remainingAmount > 0) {
+    if (context.watch<AuthProvider>().hasRole('ADMIN') && r.status == 'POSTED' && r.remainingAmount > 0) {
       actions.add(
         _actionButton(
           'Thanh toán cho NCC',
@@ -645,7 +648,7 @@ class _GoodsReceiptDetailDialogState extends State<GoodsReceiptDetailDialog> {
       );
     }
 
-    if (r.status == 'POSTED' && r.supplierRefundDue > 0) {
+    if (context.watch<AuthProvider>().hasRole('ADMIN') && r.status == 'POSTED' && r.supplierRefundDue > 0) {
       actions.add(
         _actionButton(
           'Ghi nhận đã nhận tiền hoàn',

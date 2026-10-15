@@ -41,13 +41,13 @@ public class SupplierController {
         return ApiResponse.success(supplierService.get(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE')")
     @PostMapping
     public ResponseEntity<ApiResponse<SupplierResponse>> create(@Valid @RequestBody CreateSupplierRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(supplierService.create(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE')")
     @PutMapping("/{id}")
     public ApiResponse<SupplierResponse> update(@PathVariable Long id, @Valid @RequestBody CreateSupplierRequest request) {
         return ApiResponse.success(supplierService.update(id, request));

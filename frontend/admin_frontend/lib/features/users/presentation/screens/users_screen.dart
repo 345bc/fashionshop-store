@@ -17,8 +17,7 @@ import '../../data/models/user_response_model.dart';
 import '../providers/users_provider.dart';
 import '../dialogs/user_details_dialog.dart';
 import '../dialogs/user_edit_dialog.dart';
-import '../dialogs/user_permissions_dialog.dart';
-import '../dialogs/user_reset_password_dialog.dart';
+import '../dialogs/role_create_dialog.dart';
 import '../dialogs/user_lock_dialog.dart';
 import '../dialogs/user_delete_dialog.dart';
 
@@ -55,6 +54,21 @@ class _UsersScreenState extends State<UsersScreen> {
                 FeatureHeader(
                   title: 'Tài khoản hệ thống',
                   subtitle: 'Quản lý tài khoản và phân quyền truy cập',
+                  secondaryAction: OutlinedButton.icon(
+                    icon: const Icon(Symbols.add, size: 18),
+                    label: const Text('Thêm role'),
+                    onPressed: () async {
+                      final created = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => const RoleCreateDialog(),
+                      );
+                      if (created == true && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Đã thêm role')),
+                        );
+                      }
+                    },
+                  ),
                   actionLabel: 'Tạo tài khoản',
                   actionIcon: Symbols.add,
                   onExportPressed: () {},
@@ -280,7 +294,9 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Widget _buildDataRow(BuildContext context, UserResponseModel user) {
-    final roleDisplay = user.roles.isNotEmpty ? user.roles.first : 'USER';
+    final roleDisplay = user.roles.isEmpty
+        ? 'USER'
+        : '${user.roles.first}${user.roles.length > 1 ? ' +${user.roles.length - 1}' : ''}';
     final statusDisplay = user.isActive ? 'Hoạt động' : 'Bị khóa';
 
     String dateDisplay = '';
@@ -364,22 +380,26 @@ class _UsersScreenState extends State<UsersScreen> {
                 flex: 2,
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: StatusBadge(
-                    text: roleDisplay,
-                    textColor: roleDisplay.toLowerCase() == 'super admin'
-                        ? AppTheme.primary
-                        : roleDisplay.toLowerCase() == 'admin'
-                        ? const Color(0xFF1976D2)
-                        : roleDisplay.toLowerCase() == 'manager'
-                        ? const Color(0xFF7B1FA2)
-                        : AppTheme.textSecondary,
-                    backgroundColor: roleDisplay.toLowerCase() == 'super admin'
-                        ? AppTheme.primary.withAlpha(25)
-                        : roleDisplay.toLowerCase() == 'admin'
-                        ? const Color(0xFFE3F2FD)
-                        : roleDisplay.toLowerCase() == 'manager'
-                        ? const Color(0xFFF3E5F5)
-                        : AppTheme.surface,
+                  child: Tooltip(
+                    message: user.roles.join(', '),
+                    child: StatusBadge(
+                      text: roleDisplay,
+                      textColor: roleDisplay.toLowerCase() == 'super admin'
+                          ? AppTheme.primary
+                          : roleDisplay.toLowerCase() == 'admin'
+                          ? const Color(0xFF1976D2)
+                          : roleDisplay.toLowerCase() == 'manager'
+                          ? const Color(0xFF7B1FA2)
+                          : AppTheme.textSecondary,
+                      backgroundColor:
+                          roleDisplay.toLowerCase() == 'super admin'
+                          ? AppTheme.primary.withAlpha(25)
+                          : roleDisplay.toLowerCase() == 'admin'
+                          ? const Color(0xFFE3F2FD)
+                          : roleDisplay.toLowerCase() == 'manager'
+                          ? const Color(0xFFF3E5F5)
+                          : AppTheme.surface,
+                    ),
                   ),
                 ),
               ),
@@ -479,14 +499,13 @@ class _UsersScreenState extends State<UsersScreen> {
                       case 'permission':
                         showDialog(
                           context: context,
-                          builder: (_) => UserPermissionsDialog(user: userMap),
+                          builder: (_) => UserEditDialog(user: userMap),
                         );
                         break;
                       case 'reset_password':
                         showDialog(
                           context: context,
-                          builder: (_) =>
-                              UserResetPasswordDialog(user: userMap),
+                          builder: (_) => UserEditDialog(user: userMap),
                         );
                         break;
                       case 'lock':

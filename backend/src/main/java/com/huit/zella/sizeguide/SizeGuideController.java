@@ -38,39 +38,28 @@ public class SizeGuideController {
         )));
     }
 
-    @GetMapping("/{id}")
-    public ApiResponse<SizeGuideResponse> get(@PathVariable Long id) {
-        return ApiResponse.success(sizeGuideService.get(id));
-    }
-
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<SizeGuideResponse>> create(@Valid @RequestBody CreateSizeGuideRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(sizeGuideService.create(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/{id}")
     public ApiResponse<SizeGuideResponse> update(@PathVariable Long id, @Valid @RequestBody CreateSizeGuideRequest request) {
         return ApiResponse.success(sizeGuideService.update(id, request));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping(value = "/{id}/image", consumes = "multipart/form-data")
     public ApiResponse<SizeGuideResponse> uploadImage(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         return ApiResponse.success(imageUploadService.upload(id, file));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @DeleteMapping("/{id}/image")
     public ApiResponse<SizeGuideResponse> removeImage(@PathVariable Long id) {
         return ApiResponse.success(sizeGuideService.removeImage(id));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
-        sizeGuideService.delete(id);
-        return ApiResponse.success(null);
-    }
 }

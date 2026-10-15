@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/order")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+@PreAuthorize("hasAnyRole('ADMIN','SALES','CUSTOMER_SUPPORT','WAREHOUSE')")
 public class OrderController {
     private final OrderService orderService;
     public record NoteRequest(@NotBlank @Size(max = 400) String note) {}
@@ -39,24 +39,29 @@ public class OrderController {
     }
     @GetMapping("/{id}")
     public ApiResponse<OrderResponse> get(@PathVariable Long id) { return ApiResponse.success(orderService.get(id)); }
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<OrderResponse>> create(@Valid @RequestBody CreateOrderRequest request,
             @AuthenticationPrincipal CurrentUser actor) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(orderService.create(request, actor.id())));
     }
+    @PreAuthorize("hasAnyRole('ADMIN','SALES')")
     @PostMapping("/{id}/ship")
     public ApiResponse<OrderResponse> ship(@PathVariable Long id, @AuthenticationPrincipal CurrentUser actor) {
         return ApiResponse.success(orderService.ship(id, actor.id()));
     }
+    @PreAuthorize("hasAnyRole('ADMIN','SALES')")
     @PostMapping("/{id}/deliver")
     public ApiResponse<OrderResponse> deliver(@PathVariable Long id, @AuthenticationPrincipal CurrentUser actor) {
         return ApiResponse.success(orderService.deliver(id, actor.id()));
     }
+    @PreAuthorize("hasAnyRole('ADMIN','SALES')")
     @PostMapping("/{id}/cancel")
     public ApiResponse<OrderResponse> cancel(@PathVariable Long id, @Valid @RequestBody NoteRequest request,
             @AuthenticationPrincipal CurrentUser actor) {
         return ApiResponse.success(orderService.cancel(id, request.note(), actor.id()));
     }
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/refunded")
     public ApiResponse<OrderResponse> refunded(@PathVariable Long id, @Valid @RequestBody NoteRequest request,
             @AuthenticationPrincipal CurrentUser actor) {

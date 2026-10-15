@@ -26,7 +26,7 @@ public class VariantImageController {
         return ApiResponse.success(imageService.list(variantId));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','MARKETING')")
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<VariantImageResponse>> upload(
             @RequestParam("variantId") Long variantId,
@@ -43,13 +43,13 @@ public class VariantImageController {
         return ApiResponse.success(imageService.get(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','MARKETING')")
     @PostMapping
     public ResponseEntity<ApiResponse<VariantImageResponse>> create(@Valid @RequestBody CreateVariantImageRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(imageService.create(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','MARKETING')")
     @PutMapping("/{id}")
     public ApiResponse<VariantImageResponse> update(@PathVariable Long id, @Valid @RequestBody CreateVariantImageRequest request) {
         return ApiResponse.success(imageService.update(id, request));

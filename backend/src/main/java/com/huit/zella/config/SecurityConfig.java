@@ -86,20 +86,30 @@ public class SecurityConfig {
             HttpSecurity http,
             JwtAccessTokenService jwtAccessTokenService,
             UserService userService,
+            UserRepository users,
+            RefreshSessionRepository sessions,
             ApiSecurityErrorHandler apiSecurityErrorHandler
     ) throws Exception {
         return configureCookieSecurity(http, apiSecurityErrorHandler)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout",
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/admin/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout",
                                 "/api/v1/checkout/orders", "/api/v1/checkout/orders/lookup", "/api/v1/checkout/orders/voucher", "/api/v1/checkout/orders/quote", "/api/v1/checkout/orders/*/cancel", "/api/v1/cart/quote",
                                 "/api/v1/checkout/orders/*/payment", "/api/v1/checkout/orders/*/payment/verify").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/supplier/**", "/api/v1/sizeguide/**", "/api/v1/product-variant/**", "/api/v1/product-image/**", "/api/v1/variant-image/**")
+                            .hasAnyRole("ADMIN", "SALES", "WAREHOUSE", "MARKETING")
+                        .requestMatchers("/api/v1/role", "/api/v1/role/**", "/api/v1/user/**", "/api/v1/staff/**", "/api/v1/dashboard/**", "/api/v1/settings/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/inventory/**", "/api/v1/goods-receipt/**", "/api/v1/supplier/**").hasAnyRole("ADMIN", "WAREHOUSE")
+                        .requestMatchers("/api/v1/campaigns/**").hasAnyRole("ADMIN", "MARKETING")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/order/**").hasAnyRole("ADMIN", "SALES", "CUSTOMER_SUPPORT", "WAREHOUSE")
+                        .requestMatchers("/api/v1/order/**").hasAnyRole("ADMIN", "SALES", "CUSTOMER_SUPPORT")
+                        .requestMatchers("/api/v1/order-return/**").hasAnyRole("ADMIN", "CUSTOMER_SUPPORT", "WAREHOUSE")
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(apiSecurityErrorHandler)
                         .accessDeniedHandler(apiSecurityErrorHandler))
-                .addFilterBefore(new JwtCookieAuthenticationFilter(jwtAccessTokenService, userService), AuthorizationFilter.class)
+                .addFilterBefore(new JwtCookieAuthenticationFilter(jwtAccessTokenService, userService, users, sessions), AuthorizationFilter.class)
                 .build();
     }
 
@@ -131,7 +141,7 @@ public class SecurityConfig {
         requestHandler.setCsrfRequestAttributeName(null);
         return http
                 .csrf(config -> config
-                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/auth/mock-login")
+                        .ignoringRequestMatchers("/api/v1/auth/login", "/api/v1/auth/admin/login", "/api/v1/auth/register", "/api/auth/mock-login")
                         .csrfTokenRepository(csrf)
                         .csrfTokenRequestHandler(requestHandler)
                         .withObjectPostProcessor(new ObjectPostProcessor<CsrfFilter>() {

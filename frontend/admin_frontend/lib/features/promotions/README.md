@@ -2,7 +2,7 @@
 
 ## Dữ liệu thật
 
-Admin gọi `/api/v1/campaigns`, dành cho ADMIN/EMPLOYEE. Không còn dữ liệu mẫu trong bộ nhớ.
+Admin gọi `/api/v1/campaigns`, dành cho ADMIN/MARKETING (theo activeRole). Không còn dữ liệu mẫu trong bộ nhớ.
 Trang Voucher có hai nhóm: Voucher nhập mã và Voucher đổi điểm. Trang Khuyến mãi quản lý giảm giá tự động.
 
 ## Voucher nhập mã

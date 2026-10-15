@@ -16,7 +16,6 @@ class StaffTabs extends StatelessWidget {
     final tabs = [
       {'id': 'all', 'label': 'Tất cả', 'count': 9},
       {'id': 'active', 'label': 'Đang làm', 'count': 7},
-      {'id': 'leave', 'label': 'Nghỉ phép', 'count': 2},
     ];
 
     return Container(

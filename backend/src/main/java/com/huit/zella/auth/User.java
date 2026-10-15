@@ -49,6 +49,9 @@ public class User {
         }
     }
 
+    @Column(name = "auth_version", nullable = false)
+    private long authVersion;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

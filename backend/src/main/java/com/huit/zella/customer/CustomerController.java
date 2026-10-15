@@ -26,7 +26,7 @@ public class CustomerController {
 
     CustomerService customerService;
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES','CUSTOMER_SUPPORT')")
     @GetMapping
     public ApiResponse<PageResponse<CustomerResponse>> list(
             @RequestParam(required = false) String q,
@@ -41,13 +41,13 @@ public class CustomerController {
         )));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','SALES','CUSTOMER_SUPPORT')")
     @GetMapping("/{id}")
     public ApiResponse<CustomerResponse> get(@PathVariable Long id) {
         return ApiResponse.success(customerService.getById(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ApiResponse<CustomerResponse> update(@PathVariable Long id, @Valid @RequestBody UpdateCustomerRequest request) {
         return ApiResponse.success(customerService.update(id, request));
@@ -56,7 +56,7 @@ public class CustomerController {
     @GetMapping("/user/{id}")
     public ApiResponse<CustomerResponse> getCustomerByUserId(@PathVariable Long id, Authentication authentication) {
         if (!(authentication.getPrincipal() instanceof CurrentUser current)
-                || (!current.id().equals(id) && !current.hasRole("ADMIN") && !current.hasRole("EMPLOYEE"))) {
+                || (!current.id().equals(id) && !current.hasRole("ADMIN") && !current.hasRole("SALES") && !current.hasRole("CUSTOMER_SUPPORT"))) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "CUSTOMER_ACCESS_DENIED", "Cannot view this customer");
         }
         return ApiResponse.success(customerService.get(id));
@@ -65,7 +65,7 @@ public class CustomerController {
     @PutMapping("/user/{id}")
     public ApiResponse<CustomerResponse> updateCustomerByUserId(@PathVariable Long id, @Valid @RequestBody UpdateCustomerRequest request, Authentication authentication) {
         if (!(authentication.getPrincipal() instanceof CurrentUser current)
-                || (!current.id().equals(id) && !current.hasRole("ADMIN") && !current.hasRole("EMPLOYEE"))) {
+                || (!current.id().equals(id) && !current.hasRole("ADMIN"))) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "CUSTOMER_ACCESS_DENIED", "Cannot update this customer");
         }
         return ApiResponse.success(customerService.updateByUserId(id, request));

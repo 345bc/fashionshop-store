@@ -1,3 +1,6 @@
+import '../dialogs/product_content_dialog.dart';
+import '../../../auth/presentation/provider/auth_provider.dart';
+
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -54,119 +57,180 @@ class _ProductsScreenState extends State<ProductsScreen> {
           SingleChildScrollView(
             padding: const EdgeInsets.all(32.0),
             child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            FeatureHeader(
-              title: 'Sản phẩm & Bộ sưu tập',
-              subtitle: 'Quản lý hàng hoá, giá bán và thuộc tính',
-              actionLabel: 'Thêm sản phẩm',
-              actionIcon: Symbols.add,
-              onExportPressed: () {},
-              onActionPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => const ProductCreateDialog(),
-                );
-              },
-            ),
-            const SizedBox(height: 32),
-            Consumer2<ProductsProvider, CategoriesProvider>(
-              builder: (context, products, categories, _) => FeatureToolbar(
-                searchHint: 'Tìm kiếm sản phẩm theo tên',
-                onSearchChanged: (query) => products.loadItems(query: query),
-                initialSearchText: products.currentQuery,
-                filterWidget: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FilterDropdown<int>(
-                      label: 'Danh mục',
-                      searchHint: 'Tìm kiếm danh mục',
-                      value: products.categoryId ?? 0,
-                      defaultValue: 0,
-                      options: [
-                        if (products.categoryId != null &&
-                            !categories.options.any((c) => c.id == products.categoryId))
-                          FilterOption(
-                            value: products.categoryId!,
-                            label: 'Danh mục đang chọn',
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FeatureHeader(
+                  showAction: context.watch<AuthProvider>().hasRole('ADMIN'),
+                  title: 'Sản phẩm & Bộ sưu tập',
+                  subtitle: 'Quản lý hàng hoá, giá bán và thuộc tính',
+                  secondaryAction:
+                      context.watch<AuthProvider>().hasRole('ADMIN')
+                      ? PopupMenuButton<String>(
+                          tooltip: 'Thuộc tính sản phẩm',
+                          onSelected: (route) =>
+                              MainScreen.of(context).navigate(route),
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: '/sizes', child: Text('Size')),
+                            PopupMenuItem(
+                              value: '/colors',
+                              child: Text('Màu sắc'),
+                            ),
+                            PopupMenuItem(
+                              value: '/sizeguides',
+                              child: Text('Bảng size'),
+                            ),
+                          ],
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppTheme.borderLight),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Symbols.tune, size: 18),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Thuộc tính sản phẩm',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ...categories.options.map((category) => FilterOption<int>(
-                              value: category.id,
-                              label: category.parentName == null
-                                  ? category.name
-                                  : '${category.parentName} / ${category.name}',
-                            )),
-                      ],
-                      onChanged: (id) => products.setCategory(id == 0 ? null : id),
-                    ),
-                    if (categories.optionsError != null)
-                      IconButton(
-                        tooltip: 'Không tải được danh mục. Nhấn để thử lại.',
-                        onPressed: categories.loadOptions,
-                        icon: const Icon(Symbols.refresh, color: AppTheme.error),
-                      ),
-                  ],
+                        )
+                      : null,
+                  actionLabel: 'Thêm sản phẩm',
+                  actionIcon: Symbols.add,
+                  onExportPressed: () {},
+                  onActionPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const ProductCreateDialog(),
+                    );
+                  },
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.borderLight),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(5),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                const SizedBox(height: 32),
+                Consumer2<ProductsProvider, CategoriesProvider>(
+                  builder: (context, products, categories, _) => FeatureToolbar(
+                    searchHint: 'Tìm kiếm sản phẩm theo tên',
+                    onSearchChanged: (query) =>
+                        products.loadItems(query: query),
+                    initialSearchText: products.currentQuery,
+                    filterWidget: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FilterDropdown<int>(
+                          label: 'Danh mục',
+                          searchHint: 'Tìm kiếm danh mục',
+                          value: products.categoryId ?? 0,
+                          defaultValue: 0,
+                          options: [
+                            if (products.categoryId != null &&
+                                !categories.options.any(
+                                  (c) => c.id == products.categoryId,
+                                ))
+                              FilterOption(
+                                value: products.categoryId!,
+                                label: 'Danh mục đang chọn',
+                              ),
+                            ...categories.options.map(
+                              (category) => FilterOption<int>(
+                                value: category.id,
+                                label: category.parentName == null
+                                    ? category.name
+                                    : '${category.parentName} / ${category.name}',
+                              ),
+                            ),
+                          ],
+                          onChanged: (id) =>
+                              products.setCategory(id == 0 ? null : id),
+                        ),
+                        if (categories.optionsError != null)
+                          IconButton(
+                            tooltip:
+                                'Không tải được danh mục. Nhấn để thử lại.',
+                            onPressed: categories.loadOptions,
+                            icon: const Icon(
+                              Symbols.refresh,
+                              color: AppTheme.error,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-              child: Column(children: [_buildTable(context)]),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.borderLight),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(children: [_buildTable(context)]),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      BulkActionBar(
-        selectedCount: selectedIds.length,
-        itemLabel: 'sản phẩm đã chọn',
-        onClear: () => setState(() => selectedIds.clear()),
-        actions: [
-          BulkActionButton(
-            icon: Symbols.visibility_off,
-            tooltip: 'Ẩn',
-            onPressed: () async {
-              final ids = selectedIds.toList();
-              await context.read<ProductsProvider>().toggleActiveBulk(ids, false);
-              if (context.mounted) {
-                ZellaToast.show(
-                  context,
-                  message: 'Đã ẩn ${ids.length} sản phẩm',
-                  type: ToastType.success,
-                );
-              }
-              setState(() => selectedIds.clear());
-            },
           ),
-          BulkActionButton(
-            icon: Symbols.visibility,
-            tooltip: 'Hoạt động',
-            onPressed: () async {
-              final ids = selectedIds.toList();
-              await context.read<ProductsProvider>().toggleActiveBulk(ids, true);
-              if (context.mounted) {
-                ZellaToast.show(
-                  context,
-                  message: 'Đã hiện ${ids.length} sản phẩm',
-                  type: ToastType.success,
-                );
-              }
-              setState(() => selectedIds.clear());
-            },
-          ),
-        ],
-      ),
+          if (context.watch<AuthProvider>().hasRole('ADMIN'))
+            BulkActionBar(
+              selectedCount: selectedIds.length,
+              itemLabel: 'sản phẩm đã chọn',
+              onClear: () => setState(() => selectedIds.clear()),
+              actions: [
+                BulkActionButton(
+                  icon: Symbols.visibility_off,
+                  tooltip: 'Ẩn',
+                  onPressed: () async {
+                    final ids = selectedIds.toList();
+                    await context.read<ProductsProvider>().toggleActiveBulk(
+                      ids,
+                      false,
+                    );
+                    if (context.mounted) {
+                      ZellaToast.show(
+                        context,
+                        message: 'Đã ẩn ${ids.length} sản phẩm',
+                        type: ToastType.success,
+                      );
+                    }
+                    setState(() => selectedIds.clear());
+                  },
+                ),
+                BulkActionButton(
+                  icon: Symbols.visibility,
+                  tooltip: 'Hoạt động',
+                  onPressed: () async {
+                    final ids = selectedIds.toList();
+                    await context.read<ProductsProvider>().toggleActiveBulk(
+                      ids,
+                      true,
+                    );
+                    if (context.mounted) {
+                      ZellaToast.show(
+                        context,
+                        message: 'Đã hiện ${ids.length} sản phẩm',
+                        type: ToastType.success,
+                      );
+                    }
+                    setState(() => selectedIds.clear());
+                  },
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -208,7 +272,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
               child: Row(
                 children: [
                   ZellaCheckbox(
-                    value: products.isNotEmpty && selectedIds.length == products.length,
+                    value:
+                        products.isNotEmpty &&
+                        selectedIds.length == products.length,
                     onChanged: (val) {
                       setState(() {
                         if (val == true) {
@@ -411,16 +477,25 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       label: 'Xem chi tiết',
                       icon: Symbols.visibility,
                     ),
-                    const ActionMenuItem(
-                      value: 'edit',
-                      label: 'Chỉnh sửa',
-                      icon: Symbols.edit,
-                    ),
-                    const ActionMenuItem(
-                      value: 'variants',
-                      label: 'Quản lý biến thể',
-                      icon: Symbols.inventory_2,
-                    ),
+                    if (context.watch<AuthProvider>().hasRole('MARKETING'))
+                      const ActionMenuItem(
+                        value: 'content',
+                        label: 'Sửa nội dung',
+                        icon: Symbols.edit,
+                      ),
+                    if (context.watch<AuthProvider>().hasRole('ADMIN'))
+                      const ActionMenuItem(
+                        value: 'edit',
+                        label: 'Chỉnh sửa',
+                        icon: Symbols.edit,
+                      ),
+                    if (context.watch<AuthProvider>().hasRole('ADMIN') ||
+                        context.watch<AuthProvider>().hasRole('WAREHOUSE'))
+                      const ActionMenuItem(
+                        value: 'variants',
+                        label: 'Quản lý biến thể',
+                        icon: Symbols.inventory_2,
+                      ),
                     // ActionMenuItem.divider(),
                     // const ActionMenuItem(
                     //   value: 'delete',
@@ -432,6 +507,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   onSelected: (value) {
                     if (value == 'view') {
                       _showProductDetail(context, product);
+                    } else if (value == 'content') {
+                      showDialog(
+                        context: context,
+                        builder: (_) =>
+                            ProductContentDialog(product: product.toJson()),
+                      );
                     } else if (value == 'edit') {
                       showDialog(
                         context: context,

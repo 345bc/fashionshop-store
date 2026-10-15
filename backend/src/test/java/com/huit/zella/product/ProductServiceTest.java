@@ -41,4 +41,22 @@ class ProductServiceTest {
         verify(products).save(argThat(product -> product.getDescription() == null
                 && product.getStyle() == null && product.getOccasion() == null));
     }
+
+    @Test
+    void contentUpdatePreservesPriceAvailabilityAndCatalogAssignments() {
+        Product product = new Product();
+        product.setId(7L); product.setName("Áo cũ"); product.setSlug("ao-cu");
+        product.setBasePrice(new BigDecimal("500000")); product.setActive(false);
+        Category category = new Category(); category.setId(1L); product.setCategory(category);
+        Supplier supplier = new Supplier(); supplier.setId(2L); product.setSupplier(supplier);
+        SizeGuide guide = new SizeGuide(); guide.setId(3L); product.setSizeGuide(guide);
+        when(products.findById(7L)).thenReturn(Optional.of(product));
+        when(products.save(any(Product.class))).thenAnswer(call -> call.getArgument(0));
+        ProductResponse result = service.updateContent(7L,
+                new ProductContentRequest("Áo mới", "Mô tả mới", "Tối giản", "Đi làm"));
+        assertEquals(new BigDecimal("500000"), result.basePrice());
+        org.junit.jupiter.api.Assertions.assertFalse(result.isActive());
+        assertEquals(1L, result.categoryId()); assertEquals(2L, result.supplierId()); assertEquals(3L, result.sizeGuideId());
+        assertEquals("Áo mới", result.name());
+    }
 }

@@ -8,7 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController @RequestMapping("/api/v1/campaigns") @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+@PreAuthorize("hasAnyRole('ADMIN','MARKETING')")
 public class CampaignController {
     private final CampaignManagementService service;
     @GetMapping("/products") public ApiResponse<List<CampaignResponse.ProductOption>> products(){return ApiResponse.success(service.catalog());}

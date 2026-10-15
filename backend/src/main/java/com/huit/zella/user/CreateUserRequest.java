@@ -16,7 +16,7 @@ public record CreateUserRequest(
         String username,
 
         @NotBlank(message = "Password is required")
-        @Size(max = 50, message = "Password must not exceed 50 characters")
+        @Size(min = 6, max = 50, message = "Mật khẩu phải từ 6 đến 50 ký tự")
         String password,
 
         @Email

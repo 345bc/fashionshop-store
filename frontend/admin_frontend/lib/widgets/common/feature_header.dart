@@ -5,21 +5,23 @@ import '../../theme/app_theme.dart';
 class FeatureHeader extends StatelessWidget {
   final String title;
   final String subtitle;
-  final String actionLabel;
-  final IconData actionIcon;
-  final VoidCallback onActionPressed;
+  final String? actionLabel;
+  final IconData? actionIcon;
+  final VoidCallback? onActionPressed;
   final VoidCallback? onExportPressed;
   final bool showAction;
+  final Widget? secondaryAction;
 
   const FeatureHeader({
     super.key,
     required this.title,
     required this.subtitle,
-    required this.actionLabel,
-    required this.actionIcon,
-    required this.onActionPressed,
+    this.actionLabel,
+    this.actionIcon,
+    this.onActionPressed,
     this.onExportPressed,
     this.showAction = true,
+    this.secondaryAction,
   });
 
   @override
@@ -54,11 +56,15 @@ class FeatureHeader extends StatelessWidget {
             //   ),
             //   const SizedBox(width: 12),
             // ],
-            if (showAction)
+            if (secondaryAction != null) ...[
+              secondaryAction!,
+              const SizedBox(width: 12),
+            ],
+            if (showAction && onActionPressed != null && actionLabel != null)
               ElevatedButton.icon(
                 onPressed: onActionPressed,
                 icon: Icon(actionIcon, size: 18),
-                label: Text(actionLabel),
+                label: Text(actionLabel!),
               ),
           ],
         ),

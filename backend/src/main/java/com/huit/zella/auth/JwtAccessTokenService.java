@@ -21,6 +21,8 @@ import java.time.Instant;
 public class JwtAccessTokenService {
     static final String COOKIE_NAME = "ACCESS_TOKEN";
 
+    private final UserRepository users;
+    private long accountVersion(Long id) { return users.findById(id).orElseThrow().getAuthVersion(); }
     private final SecretKey secretKey;
     private final JwtEncoder encoder;
     private final JwtDecoder decoder;
@@ -29,11 +31,13 @@ public class JwtAccessTokenService {
     private final boolean secureCookie;
 
     JwtAccessTokenService(
+            UserRepository users,
             @Value("${app.auth.jwt.secret}") String secret,
             @Value("${app.auth.jwt.issuer:fresher-core}") String issuer,
             @Value("${app.auth.jwt.access-token-minutes:30}") long tokenMinutes,
             @Value("${app.auth.jwt.cookie-secure:false}") boolean secureCookie
     ) {
+        this.users = users;
         byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (secretBytes.length < 32) {
             throw new IllegalStateException("JWT_SECRET phải có ít nhất 32 ký tự");
@@ -48,15 +52,18 @@ public class JwtAccessTokenService {
         this.secureCookie = secureCookie;
     }
 
-    void writeLoginCookie(HttpServletResponse response, CurrentUser user) {
+    void writeLoginCookie(HttpServletResponse response, CurrentUser user, Long sessionId) {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .subject(user.email())
                 .issuedAt(now)
                 .expiresAt(now.plus(tokenTtl))
-                .claim("roles", user.roles())
+                .claim("roleSelectionRequired", user.roleSelectionRequired())
+                .claim("authVersion", accountVersion(user.id()))
+                .claims(values -> { if(user.activeRole()!=null) values.put("activeRole",user.activeRole()); })
                 .claim("uid", user.id())
+                .claim("sid", sessionId)
                 .build();
         String token = encoder.encode(JwtEncoderParameters.from(
                 org.springframework.security.oauth2.jwt.JwsHeader.with(MacAlgorithm.HS256).build(), claims

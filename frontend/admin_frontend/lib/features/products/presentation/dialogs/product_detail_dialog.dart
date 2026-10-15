@@ -1,3 +1,4 @@
+import '../../../auth/presentation/provider/auth_provider.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -280,7 +281,7 @@ class _ProductDetailDialogState extends State<ProductDetailDialog> {
                 child: const Text('Đóng'),
               ),
               const SizedBox(width: 12),
-              ElevatedButton.icon(
+              if (context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('WAREHOUSE')) ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
                   widget.onManageVariants(product);

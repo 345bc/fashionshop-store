@@ -9,6 +9,8 @@ import java.time.Instant;
 
 @Entity @Table(name = "refresh_sessions") @Getter @Setter
 public class RefreshSession {
+    @Column(name = "role_selection_required", nullable = false) private boolean roleSelectionRequired;
+    @Column(name = "active_role", length = 50) private String activeRole;
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "user_id", nullable = false) private User user;
     @Column(name = "token_hash", nullable = false, length = 64) private String tokenHash;

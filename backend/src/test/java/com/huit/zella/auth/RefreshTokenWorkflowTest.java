@@ -26,6 +26,7 @@ class RefreshTokenWorkflowTest {
     @Autowired RoleRepository roles;
     @Autowired RefreshSessionRepository sessions;
     @Autowired PasswordEncoder passwords;
+    @Autowired JwtAccessTokenService accessTokens;
     MockMvc mvc;
     User user;
 
@@ -35,7 +36,7 @@ class RefreshTokenWorkflowTest {
         String key = UUID.randomUUID().toString().substring(0, 12);
         user.setEmail("refresh-" + key + "@example.test"); user.setUserName("refresh-" + key);
         user.setPasswordHash(passwords.encode("TestPassword123!"));
-        user.getRoles().add(roles.findByRoleCode("CUSTOMER").orElseThrow());
+        user.getRoles().add(roles.findByRoleCode("USER").orElseThrow());
         users.saveAndFlush(user);
     }
 
@@ -46,6 +47,45 @@ class RefreshTokenWorkflowTest {
     }
     Cookie cookie(MvcResult result, String name) { return result.getResponse().getCookie(name); }
     RefreshSession session(Cookie token) { return sessions.findForUpdate(RefreshTokenService.hash(token.getValue())).orElseThrow(); }
+
+    @Test void onlyAdminCanCreateRoleAndDuplicateCodesAreRejected() throws Exception {
+        user.getRoles().clear();user.getRoles().add(roles.findByRoleCode("ADMIN").orElseThrow());users.flush();
+        Cookie adminAccess=cookie(login(),"ACCESS_TOKEN");String code=("TEST_"+UUID.randomUUID().toString().replace("-","")).toUpperCase(java.util.Locale.ROOT);
+        String body="{\"roleCode\":\""+code.toLowerCase()+"\",\"roleName\":\"Vai trò thử nghiệm\",\"description\":\"Kiểm tra API\"}";
+        mvc.perform(post("/api/v1/role").with(csrf()).cookie(adminAccess).contentType("application/json").content(body))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.data.roleCode").value(code));
+        mvc.perform(post("/api/v1/role").with(csrf()).cookie(adminAccess).contentType("application/json").content(body))
+          .andExpect(status().isConflict());
+        user.getRoles().clear();user.getRoles().add(roles.findByRoleCode("SALES").orElseThrow());users.flush();
+        Cookie salesAccess=cookie(login(),"ACCESS_TOKEN");
+        mvc.perform(post("/api/v1/role").with(csrf()).cookie(salesAccess).contentType("application/json").content(body))
+          .andExpect(status().isForbidden());
+    }
+
+    @Test void adminLoginRejectsCustomerWithoutIssuingCookies() throws Exception {
+        long count=sessions.count();
+        var denied=mvc.perform(post("/api/v1/auth/admin/login").contentType("application/json")
+                .content("{\"email\":\""+user.getEmail()+"\",\"password\":\"TestPassword123!\"}"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ADMIN_ACCESS_DENIED")).andReturn();
+        assertNull(cookie(denied,"ACCESS_TOKEN"));assertNull(cookie(denied,"REFRESH_TOKEN"));
+        assertEquals(count,sessions.count());
+        login(); // Customer login still works.
+    }
+
+    @Test void adminLoginAllowsBusinessRolesAndKeepsMultiRoleSelectionMandatory() throws Exception {
+        user.getRoles().clear();user.getRoles().add(roles.findByRoleCode("SALES").orElseThrow());users.flush();
+        var single=mvc.perform(post("/api/v1/auth/admin/login").contentType("application/json")
+                .content("{\"email\":\""+user.getEmail()+"\",\"password\":\"TestPassword123!\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.activeRole").value("SALES")).andReturn();
+        assertNotNull(cookie(single,"ACCESS_TOKEN"));
+        user.getRoles().add(roles.findByRoleCode("ADMIN").orElseThrow());users.flush();
+        var multi=mvc.perform(post("/api/v1/auth/admin/login").contentType("application/json")
+                .cookie(new Cookie("ACCESS_TOKEN","expired"))
+                .content("{\"email\":\""+user.getEmail()+"\",\"password\":\"TestPassword123!\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.roleSelectionRequired").value(true)).andReturn();
+        mvc.perform(get("/api/v1/user").cookie(cookie(multi,"ACCESS_TOKEN")))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ROLE_SELECTION_REQUIRED"));
+    }
 
     @Test void loginSetsHttpOnlyCookiesAndRefreshWorksWithoutAccessTokenButRequiresCsrf() throws Exception {
         var logged = login();
@@ -97,5 +137,105 @@ class RefreshTokenWorkflowTest {
         mvc.perform(get("/api/v1/auth/me").cookie(cookie(logged, "ACCESS_TOKEN"))).andExpect(status().isOk());
         mvc.perform(post("/api/v1/auth/refresh").with(csrf()).cookie(refresh)).andExpect(status().isOk());
         assertEquals(deadline, session(refresh).getExpiresAt());
+    }
+
+    @Test void accessContainsOnlyActiveRoleAndSwitchDoesNotCombinePermissions() throws Exception {
+        user.getRoles().clear();
+        user.getRoles().add(roles.findByRoleCode("ADMIN").orElseThrow());
+        user.getRoles().add(roles.findByRoleCode("SALES").orElseThrow());
+        users.flush();
+        var logged = login();
+        var claims = accessTokens.decode(cookie(logged, "ACCESS_TOKEN").getValue());
+        assertFalse(claims.hasClaim("roles"));
+        assertNull(claims.getClaimAsString("activeRole"));
+        assertEquals(true, claims.getClaim("roleSelectionRequired"));
+        mvc.perform(get("/api/v1/user").cookie(cookie(logged,"ACCESS_TOKEN")))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ROLE_SELECTION_REQUIRED"));
+        mvc.perform(get("/api/v1/product").cookie(cookie(logged,"ACCESS_TOKEN")))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ROLE_SELECTION_REQUIRED"));
+        mvc.perform(get("/api/v1/auth/me").cookie(cookie(logged,"ACCESS_TOKEN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.roleSelectionRequired").value(true));
+        var pendingRefresh=mvc.perform(post("/api/v1/auth/refresh").with(csrf()).cookie(cookie(logged,"REFRESH_TOKEN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.roleSelectionRequired").value(true)).andReturn();
+        mvc.perform(get("/api/v1/customers").cookie(cookie(pendingRefresh,"ACCESS_TOKEN")))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ROLE_SELECTION_REQUIRED"));
+        mvc.perform(post("/api/v1/auth/select-role").with(csrf()).cookie(cookie(logged, "ACCESS_TOKEN"))
+                .contentType("application/json").content("{\"role\":\"WAREHOUSE\"}"))
+                .andExpect(status().isForbidden());
+        var switched = mvc.perform(post("/api/v1/auth/select-role").with(csrf())
+                .cookie(cookie(logged, "ACCESS_TOKEN"), cookie(logged, "REFRESH_TOKEN"))
+                .contentType("application/json").content("{\"role\":\"SALES\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.activeRole").value("SALES"))
+                .andExpect(jsonPath("$.data.roles.length()").value(2)).andReturn();
+        mvc.perform(get("/api/v1/user").cookie(cookie(switched, "ACCESS_TOKEN")))
+                .andExpect(status().isForbidden());
+        var renewed = mvc.perform(post("/api/v1/auth/refresh").with(csrf()).cookie(cookie(switched, "REFRESH_TOKEN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.activeRole").value("SALES")).andReturn();
+        mvc.perform(get("/api/v1/inventory").cookie(cookie(renewed, "ACCESS_TOKEN")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test void pendingSessionCannotBeReplayedAfterSelectionOrLogout() throws Exception {
+        user.getRoles().add(roles.findByRoleCode("SALES").orElseThrow()); users.flush();
+        var logged=login();Cookie pending=cookie(logged,"ACCESS_TOKEN");
+        var selected=mvc.perform(post("/api/v1/auth/select-role").with(csrf()).cookie(pending)
+                .contentType("application/json").content("{\"role\":\"SALES\"}"))
+                .andExpect(status().isOk()).andReturn();
+        mvc.perform(post("/api/v1/auth/select-role").with(csrf()).cookie(pending)
+                .contentType("application/json").content("{\"role\":\"USER\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/auth/logout").with(csrf()).cookie(cookie(selected,"ACCESS_TOKEN")))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/auth/me").cookie(cookie(selected,"ACCESS_TOKEN")))
+                .andExpect(status().isUnauthorized());
+        var another=login();
+        mvc.perform(post("/api/v1/auth/logout").with(csrf()).cookie(cookie(another,"ACCESS_TOKEN")))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/auth/select-role").with(csrf()).cookie(cookie(another,"ACCESS_TOKEN"))
+                .contentType("application/json").content("{\"role\":\"SALES\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test void revokingActiveRoleBlocksAccessAndRefresh() throws Exception {
+        var logged = login();
+        user.getRoles().clear();
+        user.getRoles().add(roles.findByRoleCode("SALES").orElseThrow());
+        users.flush();
+        mvc.perform(get("/api/v1/auth/me").cookie(cookie(logged, "ACCESS_TOKEN")))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/auth/refresh").with(csrf()).cookie(cookie(logged, "REFRESH_TOKEN")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test void businessModulesUseActiveRoleEvenWhenAccountHasEveryRole() throws Exception {
+        user.getRoles().clear();
+        for (var role : com.huit.zella.enums.RoleEnum.values()) {
+            user.getRoles().add(roles.findByRoleCode(role.name()).orElseThrow());
+        }
+        users.flush();
+        Cookie access = cookie(login(), "ACCESS_TOKEN");
+        for (String role : new String[]{"ADMIN", "SALES", "WAREHOUSE", "CUSTOMER_SUPPORT", "MARKETING", "USER"}) {
+            var selected = mvc.perform(post("/api/v1/auth/select-role").with(csrf()).cookie(access)
+                    .contentType("application/json").content("{\"role\":\"" + role + "\"}"))
+                    .andExpect(status().isOk()).andReturn();
+            Cookie active = cookie(selected, "ACCESS_TOKEN");
+            access=active;
+            boolean admin = role.equals("ADMIN");
+            mvc.perform(get("/api/v1/user").cookie(active)).andExpect(status().is(admin ? 200 : 403));
+            mvc.perform(get("/api/v1/inventory").cookie(active))
+                    .andExpect(status().is(admin || role.equals("WAREHOUSE") ? 200 : 403));
+            mvc.perform(get("/api/v1/campaigns/voucher").cookie(active))
+                    .andExpect(status().is(admin || role.equals("MARKETING") ? 200 : 403));
+            mvc.perform(get("/api/v1/customers").cookie(active))
+                    .andExpect(status().is(admin || role.equals("SALES") || role.equals("CUSTOMER_SUPPORT") ? 200 : 403));
+            if (!admin) {
+                mvc.perform(post("/api/v1/inventory/adjustments").with(csrf()).cookie(active)
+                        .contentType("application/json").content("{\"reason\":\"test\",\"items\":[{\"variantId\":1,\"expectedQuantity\":0,\"countedQuantity\":0}]}"))
+                        .andExpect(status().isForbidden());
+                mvc.perform(post("/api/v1/order/1/refunded").with(csrf()).cookie(active)
+                        .contentType("application/json").content("{\"note\":\"test\"}"))
+                        .andExpect(status().isForbidden());
+            }
+        }
     }
 }
