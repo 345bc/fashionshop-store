@@ -21,7 +21,7 @@ class StaffToolbar extends StatelessWidget {
             flex: 2,
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Tìm kiếm theo tên, mã NV, email',
+                hintText: 'Tìm kiếm theo tên, email',
                 hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 14),
                 prefixIcon: Icon(Symbols.search, size: 20, color: AppTheme.textMuted),
                 border: InputBorder.none,
