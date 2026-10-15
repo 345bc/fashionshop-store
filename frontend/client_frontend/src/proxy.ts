@@ -15,7 +15,7 @@ export async function proxy(request: NextRequest) {
     const token = request.cookies.get("ACCESS_TOKEN")?.value;
     const refreshToken = request.cookies.get("REFRESH_TOKEN")?.value;
     if (!token && !refreshToken) return NextResponse.redirect(login);
-    const backend = (process.env.NEXT_PUBLIC_API_BASE_URL || `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080"}/api/v1`).replace(/\/$/, "");
+    const backend = (process.env.BACKEND_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080"}/api/v1`).replace(/\/$/, "");
     try {
       const cookieHeader = request.cookies.getAll().map(cookie => `${cookie.name}=${encodeURIComponent(cookie.value)}`).join("; ");
       let auth = token ? await fetch(`${backend}/auth/me`, { headers: { Cookie: cookieHeader }, signal: AbortSignal.timeout(3000), cache: "no-store" }) : null;

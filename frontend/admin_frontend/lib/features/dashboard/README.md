@@ -1,107 +1,51 @@
-# Dashboard & Báo cáo — chỉ frontend
+# Dashboard & Báo cáo
 
-## Phạm vi và luồng
+## Phạm vi
 
-Một mục Dashboard & Báo cáo thay cho hai màn hình mock rời rạc. /reports vẫn mở
-cùng feature ở phần Doanh thu để giữ tương thích. Gồm Tổng quan, Doanh thu,
-Đơn hàng, Trả hàng, Sản phẩm, Kho, Khách hàng, Nhập hàng, Ưu đãi.
+Dashboard quản trị dùng dữ liệu thật từ GET `/api/v1/dashboard`. Chỉ ADMIN được xem chỉ số tài chính; bảo vệ cả security route hiện có và @PreAuthorize tại controller. Không tạo bảng báo cáo, không thêm hoặc sửa migration và không tạo giao dịch mẫu trong luồng chạy thật.
 
-- Thời gian: hôm nay, 7/30/90 ngày, khoảng tùy chọn; tính đủ cả ngày đầu/cuối.
-- So sánh kỳ trước liền kề cùng số ngày. Không hiển thị % tăng trưởng hoặc đường
-  so sánh nếu kỳ trước thiếu dữ liệu mẫu; mẫu chỉ có 90 ngày.
-- KPI có tooltip giải thích và nhấp để đi vào báo cáo tương ứng.
-- Biểu đồ tương tác xem số theo ngày; bảng tìm kiếm, lọc cục bộ theo trạng thái đơn
-  hoặc danh mục, phân trang và xem số đầy đủ của dòng trong dialog.
-- Sao chép CSV lấy tất cả các dòng của bộ lọc, không chỉ trang đang xem; có tiêu đề,
-  khoảng ngày, ghi chú. Đây là sao chép clipboard, không phải download file Excel.
-- Tổng quan chỉ có 4 KPI chính và biểu đồ doanh thu. Bảng, đối chiếu và cảnh báo
-  thuộc phần chi tiết của từng tab; không trưng toàn bộ nghiệp vụ ở trang đầu.
-- Các tab chi tiết không hiển thị dãy KPI mặc định. Chỉ số tổng hợp và giải thích
-  được gập trong “Xem chỉ số tổng hợp & cách tính”; mở khi cần. Bộ lọc kỳ dùng
-  dropdown và thông báo dữ liệu mẫu gọn, phần giải thích dài nằm ở tooltip.
+Gồm Tổng quan, Doanh thu, Đơn hàng, Trả hàng, Sản phẩm, Kho, Khách hàng, Nhập hàng, Ưu đãi. Route /reports vẫn mở tab Doanh thu. Tổng quan chỉ giữ 4 KPI và biểu đồ. Các tab có bảng phân trang ở server; giải thích/chỉ số phụ gập trong “Xem chỉ số tổng hợp & cách tính”.
 
-Tất cả doanh số/đơn/phiếu nhập là dữ liệu mẫu cùng một nguồn, được tính toán nhất quán.
-Không gọi API, không sửa BE/database, không tạo entity backend. Dữ liệu số lượng
-tồn kho là ảnh chụp hiện tại mẫu.
+## Thời gian và chỉ số
 
-## Cấu trúc
+- Báo cáo theo ngày Việt Nam (Asia/Ho_Chi_Minh), lấy đủ ngày đầu/cuối bằng khoảng [00:00 ngày đầu, 00:00 ngày sau ngày cuối). So sánh kỳ trước liền kề cùng số ngày. Ngày không phát sinh vẫn có điểm 0 trên biểu đồ; kỳ trước bằng 0 không tạo tỷ lệ tăng trưởng vô hạn.
+- Doanh thu thuần hàng = giá gốc snapshot dòng hàng đã giao − giảm giá sản phẩm − discount_amount (gồm voucher và thành viên) − giá trị trả của đơn từng giao đã nhận trong kỳ. Phí giao hàng tách riêng. Đơn chưa giao không tạo doanh thu dù đã thanh toán.
+- Giá vốn ròng = unit_cost snapshot dòng giao − giá vốn hàng trả INTACT của đơn từng giao. Hàng hỏng không đảo giá vốn. Lợi nhuận gộp chưa trừ vận hành, thuế, phí giao hàng/cổng thanh toán.
+- Trả do giao thất bại chưa từng ghi nhận doanh thu không giảm doanh thu/giá vốn. Tiền hoàn phiếu này vẫn tính vào tiền đã hoàn khi completed_at có giá trị, gồm phí giao nếu nghiệp vụ trả đã tính.
+- AOV = tiền hàng sau giảm trên đơn giao / số đơn giao, trước hàng trả, không gồm vận chuyển.
+- Thu tiền theo lần chuyển PENDING → CONFIRMED trong order_histories hoặc sự kiện thanh toán về sau hủy; hoàn đơn hủy theo sự kiện “Đã hoàn …”, hoàn hàng trả theo completed_at. Mỗi đơn lấy MIN timestamp để tránh cộng lặp callback/lịch sử trạng thái. Không dùng updated_at hoặc ngày tạo đơn thay ngày thu/hoàn. Đây là thống kê vận hành theo lịch sử hiện có, chưa phải sổ kế toán/gateway settlement.
+- Số đơn đặt theo ngày tạo, gồm chờ/hủy. Tỷ lệ hủy là trạng thái hiện tại của nhóm tạo trong kỳ. Phân bố có cả RETURNED. Đơn giao là nhóm riêng theo lần giao thành công đầu tiên trong lịch sử.
+- Sản phẩm nhóm theo SKU, cộng tất cả dòng và trừ trả nhận trong kỳ. Giảm giá cấp đơn và tiền hoàn cấp phiếu phân bổ theo giá trị dòng; dòng cuối nhận phần dư làm tròn để đối chiếu với tổng. Lọc danh mục chỉ tác động bảng; KPI toàn cửa hàng.
+- Kho hiện tại: có thể bán = tồn − giữ, ngưỡng cảnh báo ≤ 5, gồm SKU tạm ngừng bán. Giá trị tồn = tồn × cost_price hiện tại. Không áp dụng khoảng ngày vào tồn kho.
+- Công nợ NCC hiện tại trên toàn bộ phiếu POSTED = max(total − returned − tổng supplier_payments, 0). Phiếu nháp/hủy không tính. Nhập ròng nhóm phiếu theo posted_at trong kỳ trừ credit trả NCC lũy kế hiện tại. Đã trả tiền/còn nợ của phiếu không phải dòng tiền chi trong kỳ.
+- Người mua tài khoản theo user_id; khách vãng lai theo số điện thoại đặt hàng đã chuẩn hóa khoảng trắng. Không tự gộp hai loại định danh. Thiếu cả hai thì không tính thành người mới. Mới/quay lại dùng lần thanh toán đầu tiên trong toàn bộ lịch sử sẵn có, không giới hạn mẫu 90 ngày. Dùng chung số điện thoại có thể đại diện nhiều người; không coi đây là nhận diện cá nhân tuyệt đối.
+- Ưu đãi theo snapshot đơn: voucher tách phần thành viên, giảm giá sản phẩm chỉ ghi tổng mức giảm, không bịa tên chiến dịch không được snapshot. Một đơn có thể nằm nhiều nhóm, không cộng lượt giữa nhóm. Mức giảm chưa đảo hàng trả; không kết luận tác động tăng trưởng.
 
-- data/models: read models/DTO báo cáo, enums phần/khoảng ngày, summary/table.
-- data/repositories: dữ liệu mẫu Order/OrderItem, Return, Receipt và SKU.
-- data/analytics_calculations: hàm tổng hợp dùng chung cho KPI/biểu đồ/bảng.
-- data/analytics_report_builder: các bảng theo nghiệp vụ, nhóm/xếp hạng trước định dạng.
-- presentation/providers: khoảng ngày, so sánh, phần chọn, tìm/lọc/phân trang, CSV.
-- presentation/widgets: bộ lọc, KPI, biểu đồ, panel nghiệp vụ và bảng dùng chung.
-- presentation/screens: ghép trang. ReportsScreen chỉ là wrapper cho route cũ.
+## Request và response
 
-Khi làm BE, tận dụng Order/OrderItem, OrderHistory, ReturnRequest/ReturnItem,
-Product/Variant, InventoryMovement, GoodsReceipt/Item, SupplierPayment/Return/Refund,
-CustomerProfile/User, Voucher và Promotion/Product. Báo cáo là truy vấn tổng hợp,
-không phải lý do để thêm entity mới. BE nên trả DTO tổng hợp và phân trang thay vì
-tải toàn bộ dữ liệu giao dịch về FE.
+GET `/api/v1/dashboard?start=2026-10-01&end=2026-10-15&section=overview&page=0&size=10`
 
-## Định nghĩa chỉ số
+- start/end bắt buộc, ISO yyyy-MM-dd, start ≤ end, tối đa 366 ngày, không quá hôm nay Việt Nam.
+- section: overview/revenue/orders/returns/products/inventory/customers/purchases/promotions, mặc định overview.
+- q tối đa 200 ký tự, category tối đa 100; status chỉ nhận PENDING/CONFIRMED/SHIPPED/DELIVERED/CANCELLED/RETURNED.
+- page 0–1000000; size 1–100. Sai kiểu, giá trị, enum hoặc thiếu ngày trả 400 trước truy vấn database.
+- Response ApiResponse.data: summary, previous, trend, current, distribution, categories, table(columns/rows/totalElements/note), warnings, timezone, generatedAt.
+- Báo cáo tổng hợp, tìm kiếm, xếp hạng và phân trang trên SQL Server. Tham số SQL bind; q được escape ký tự wildcard. Không tải toàn bộ giao dịch xuống frontend.
+- Các giá trị tổng hợp dùng BigDecimal phía backend. FE hiển thị KPI/biểu đồ làm tròn đến đồng; ô tiền trong bảng giữ tối đa 2 chữ số thập phân để không mất phần phân bổ.
 
-### Doanh thu và lợi nhuận gộp
+## Trạng thái giao diện
 
-1. Tiền hàng trước giảm giá = giá niêm yết snapshot × SL các dòng thuộc đơn đã giao,
-   theo thời điểm giao thực tế (không theo ngày tạo đơn hoặc trạng thái thanh toán).
-2. Trừ giảm sản phẩm và voucher đã phân bổ cho các dòng giao trong kỳ.
-3. Trừ tiền hàng trả đã nhận trong kỳ theo giá thực trả. Phiếu trả chờ duyệt/chưa nhận
-   chưa giảm doanh số. Nhận trả kỳ này có thể thuộc đơn giao kỳ trước.
-4. Doanh thu thuần hàng = (1) − giảm sản phẩm − voucher − tiền hàng trả.
-   Phí vận chuyển tách riêng, không gộp vào chỉ số này.
-5. Giá vốn ròng = snapshot unitCost lúc bán × SL đã giao − giá vốn hàng trả nguyên
-   vẹn nhận lại. Hàng hỏng không vào kho bán và không đảo giá vốn.
-6. Lợi nhuận gộp = doanh thu thuần hàng − giá vốn ròng. Chưa trừ vận hành, thuế,
-   phí cổng thanh toán/chi phí giao hàng; không gọi là lợi nhuận ròng.
-7. AOV đơn giao = tiền hàng sau giảm / số đơn giao, trước hàng trả, không gồm vận chuyển.
+Mặc định AnalyticsRepository gọi API thật; AnalyticsRepository.demo chỉ dùng fixture kiểm thử. Đang tải hiện tiến trình và ẩn nội dung cũ; lỗi có Thử lại, không thay bằng dữ liệu mẫu. Kết quả request cũ không đè lên khoảng ngày/tab mới. Tìm kiếm đang chờ được tách theo tab. Sao chép CSV tải từng trang 100 dòng của bộ lọc đã chụp lúc bấm, không chỉ trang đang nhìn; escape công thức khi nhập vào spreadsheet. Nếu lỗi giữa chừng thì không sao chép báo cáo thiếu. CSV nhiều trang phản ánh dữ liệu tại các lần đọc, không phải snapshot giao dịch duy nhất khi cửa hàng đang cập nhật.
 
-### Thu và hoàn tiền
+## Lưu ý dữ liệu thời gian và giới hạn
 
-- Thực thu: toàn bộ thanh toán thành công trong kỳ, gồm phí vận chuyển. Đơn đã thu
-  nhưng chưa giao chưa phải doanh thu giao hàng; đơn đã hủy vẫn có lịch sử thu.
-- Đã hoàn: hoàn đơn hủy + hoàn hàng trả theo thời điểm thực chi hoàn tiền.
-  Refund pending không tính là đã hoàn. Callback trùng phải tính đúng một lần khi làm BE.
-- Thu − hoàn chỉ là tiền thu khách sau hoàn, không phải số dư quỹ: chưa trừ chi NCC
-  hoặc chi phí khác. Bộ mẫu chưa có chi phí/cổng thanh toán thật.
-- Trả hàng ở dashboard là phiếu đã nhận; không mô tả tất cả phiếu nháp/chờ duyệt.
+Các entity Order/OrderHistory/ReturnRequest hiện dùng LocalDateTime UTC với Hibernate TIMESTAMP và jdbc.time_zone=UTC. Trên JVM múi giờ Việt Nam, driver ghi DATETIME2 lệch −7 giờ so với giá trị entity. Repository báo cáo bù offset JVM để đọc cùng thời gian logic với các entity rồi mới nhóm ngày Việt Nam; Instant/DATETIMEOFFSET của phiếu nhập không bù. Đã kiểm thử ranh giới 23:59:59/00:00 trên SQL Server local. Môi trường dùng múi giờ cố định UTC hoặc Việt Nam; nếu đổi timezone máy chủ giữa các lần ghi dữ liệu hoặc nhập SQL ngoài Hibernate, cần chuẩn hóa/đối soát timestamp trước khi dùng cho báo cáo. Không tự viết lại lịch sử giao dịch.
 
-### Đơn, khách, sản phẩm
+Đơn cũ thiếu mốc thanh toán/giao được cảnh báo và không tự đoán ngày. Không có dữ liệu truy cập web để tính conversion, không có đủ chi phí để tính lợi nhuận ròng. Truy vấn tổng hợp dựa vào lịch sử hiện có; khi thay nội dung sự kiện thu/hoàn trong OrderService cần cập nhật bộ nhận diện tương ứng. Tồn và công nợ luôn là ảnh chụp hiện tại.
 
-- Số đơn đặt: theo ngày tạo; gồm đơn chờ, hủy. Tỷ lệ hủy: trạng thái hiện tại của
-  nhóm đơn tạo trong kỳ. Đơn giao trong kỳ là một nhóm khác (theo ngày giao).
-- Sản phẩm: SL bán ròng và doanh thu ròng trừ trả nhận trong kỳ, có thể âm.
-  Xếp theo doanh thu thuần. Lọc danh mục tác động bảng, KPI vẫn toàn cửa hàng.
-- Người mua: khóa người mua duy nhất có thanh toán trong kỳ, gồm khách vãng lai;
-  không đếm mỗi đơn vãng lai thành một người. Mới/quay lại dựa trên lần thanh toán
-  đầu tiên trong mẫu 90 ngày; BE cần toàn bộ lịch sử và cách định danh hợp lệ.
-- Không coi lượng tài khoản đăng ký là lượng người mua. Không suy diễn conversion
-  website vì chưa có dữ liệu truy cập/session/giỏ bỏ quên.
+## Kiểm thử
 
-### Kho, nhập hàng, ưu đãi
-
-- Kho hiện tại: có thể bán = tồn − giữ, giá trị tồn = tồn × costPrice hiện tại.
-  SKU ≤ 5 có cảnh báo; bằng 0 là hết hàng. Không lọc theo ngày hoặc giả lập tồn lịch sử.
-- Giá trị nhập ròng của nhóm phiếu: phiếu POSTED trong kỳ trừ credit trả NCC hiện tại
-  của những phiếu đó; không phải dòng nhập/trả ròng theo thời điểm credit phát sinh.
-- Công nợ hiện tại: toàn bộ phiếu POSTED, max(total − credit − paid, 0).
-  Draft/cancelled không tính nợ. Nếu paid > nghĩa vụ sau trả hàng là khoản phải thu
-  lại NCC, không hiển thị là nợ âm. Bộ mẫu không có khoản phải thu này.
-- Số đã trả tiền phiếu là lũy kế hiện tại, không phải tiền chi trong kỳ. Khi BE có
-  SupplierPayment/Refund theo ngày, có thể thêm báo cáo dòng tiền NCC.
-- Voucher/khuyến mãi: giảm trên đơn giao; lượt dùng mã theo đơn có thanh toán trong kỳ.
-  Các nhóm có thể giao nhau, không cộng lượt giữa voucher và promotion. Giảm trong
-  bảng ưu đãi chưa đảo theo hàng trả; doanh thu thuần đã trừ hàng trả riêng.
-- Doanh thu gắn ưu đãi không chứng minh hiệu quả tăng trưởng do ưu đãi.
-
-## Giới hạn và triển khai sau
-
-Bộ mẫu 90 ngày, một SKU mỗi đơn, tiền VND nguyên. Chưa có giá vốn thay đổi theo
-lịch sử, nhiều kho, thuế, chi phí vận hành hoặc gateway. Không tạo chỉ số bịa cho
-những dữ liệu chưa có. Kho/công nợ/cảnh báo là số hiện tại, độc lập bộ lọc ngày.
-
-Khi nối BE: giờ UTC -> local, làm tròn BigDecimal, loại đơn chưa giao khỏi doanh thu,
-giữ snapshot giá và giá vốn, phân bổ voucher/hàng trả, dùng timestamp giao/nhận trả/
-thu/hoàn thật, kiểm soát quyền xem báo cáo nhạy cảm theo roles hiện có. Chính sách
-ghi nhận trên đây là thống kê vận hành đề xuất, không phải sổ kế toán chính thức.
+DashboardWorkflowTest: chạy các truy vấn của cả 9 tab trên SQL Server, đối chiếu nhiều dòng/trả hàng, giao thất bại, ranh giới ngày Việt Nam, phân trang và escape tìm kiếm; dữ liệu fixture rollback.
+DashboardApiTest: validation request và phân quyền.
+dashboard_workflow_test.dart: luồng màn hình và nghiệp vụ mẫu.
+dashboard_live_test.dart: lỗi API không hiện mẫu, phản hồi cũ không đè báo cáo mới, phân trang server và xuất CSV nhiều trang.

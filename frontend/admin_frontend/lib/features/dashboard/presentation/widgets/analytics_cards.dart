@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../data/models/analytics_models.dart';
-import '../../data/repositories/analytics_repository.dart';
 import '../providers/dashboard_provider.dart';
 
 class AnalyticsCards extends StatelessWidget {
@@ -44,7 +43,7 @@ class AnalyticsCards extends StatelessWidget {
           label: 'Người mua trả tiền',
           value: '${p.purchasingBuyers}',
           help: 'Người mua có thanh toán trong kỳ, gồm khách vãng lai; đơn đã hoàn vẫn là giao dịch trả tiền.',
-          footer: '${p.newBuyers} người mua mới trong bộ mẫu',
+          footer: '${p.newBuyers} người mua mới trong kỳ',
           target: AnalyticsSection.customers,
         ),
       ],
@@ -134,15 +133,7 @@ class AnalyticsCards extends StatelessWidget {
         ),
         (
           label: 'Đảo giá vốn',
-          value: reportMoney(
-            p.data.returns
-                .where(
-                  (r) =>
-                      !r.receivedAt.isBefore(p.start) &&
-                      r.receivedAt.isBefore(p.end.add(const Duration(days: 1))),
-                )
-                .fold<int>(0, (n, r) => n + r.costReversal),
-          ),
+          value: reportMoney(p.costReversal),
           help: 'Chỉ hàng nguyên vẹn nhập lại kho mới đảo giá vốn bán hàng.',
           footer: 'Hàng hỏng không đảo',
           target: AnalyticsSection.returns,
@@ -150,7 +141,7 @@ class AnalyticsCards extends StatelessWidget {
         (
           label: 'Phiếu chờ hoàn hiện tại',
           value: '${p.pendingRefunds}',
-          help: 'Phiếu trả đã nhận nhưng chưa thực hoàn, trên toàn bộ bộ mẫu.',
+          help: 'Phiếu trả đã nhận nhưng chưa thực hoàn, trên toàn bộ dữ liệu.',
           footer: 'Không lọc theo ngày',
           target: AnalyticsSection.returns,
         ),
@@ -158,16 +149,14 @@ class AnalyticsCards extends StatelessWidget {
       AnalyticsSection.inventory => [
         (
           label: 'Tồn vật lý',
-          value:
-              '${AnalyticsRepository.products.fold<int>(0, (n, r) => n + r.stock)}',
+          value: '${p.stock}',
           help: 'Tồn hiện tại gồm cả hàng đang giữ.',
           footer: 'Hiện tại • Không lọc theo ngày',
           target: AnalyticsSection.inventory,
         ),
         (
           label: 'Đang giữ',
-          value:
-              '${AnalyticsRepository.products.fold<int>(0, (n, r) => n + r.reserved)}',
+          value: '${p.reserved}',
           help: 'Hàng giữ cho đơn đang chờ thanh toán/chuẩn bị giao.',
           footer: 'Hiện tại',
           target: AnalyticsSection.inventory,
@@ -176,14 +165,14 @@ class AnalyticsCards extends StatelessWidget {
           label: 'Giá trị tồn kho',
           value: reportMoney(p.stockValue),
           help: 'Tồn vật lý × giá vốn bình quân hiện tại. Không dùng giá bán.',
-          footer: 'Toàn bộ SKU mẫu',
+          footer: 'Toàn bộ SKU',
           target: AnalyticsSection.inventory,
         ),
         (
           label: 'SKU cần nhập thêm',
           value: '${p.lowStock}',
           help: 'Có thể bán ≤ 5, bao gồm SKU hết hàng.',
-          footer: 'Ngưỡng cảnh báo mẫu: 5',
+          footer: 'Ngưỡng cảnh báo: 5',
           target: AnalyticsSection.inventory,
         ),
       ],
@@ -198,16 +187,14 @@ class AnalyticsCards extends StatelessWidget {
         (
           label: 'Người mua mới',
           value: '${p.newBuyers}',
-          help:
-              'Lần thanh toán đầu tiên thuộc kỳ chọn trong bộ dữ liệu 90 ngày.',
-          footer: 'Chưa phải lịch sử trọn đời',
+          help: 'Lần thanh toán đầu tiên thuộc kỳ chọn trong toàn bộ lịch sử thanh toán hiện có.',
+          footer: 'Theo lần thanh toán đầu tiên',
           target: AnalyticsSection.customers,
         ),
         (
           label: 'Người mua quay lại',
           value: '${p.purchasingBuyers - p.newBuyers}',
-          help:
-              'Người mua trong kỳ đã có lần thanh toán trước kỳ trong bộ mẫu.',
+          help: 'Người mua trong kỳ đã có lần thanh toán trước kỳ trong lịch sử hiện có.',
           footer: 'Không phải số tài khoản đăng ký',
           target: AnalyticsSection.customers,
         ),
@@ -230,9 +217,9 @@ class AnalyticsCards extends StatelessWidget {
       ],
       AnalyticsSection.promotions => [
         (
-          label: 'Giảm bằng voucher',
+          label: 'Voucher & thành viên',
           value: reportMoney(s.voucherDiscount),
-          help: 'Giảm voucher trên các đơn giao trong kỳ, trước đảo hàng trả.',
+          help: 'Giảm voucher và thành viên trên các đơn giao trong kỳ, trước đảo hàng trả.',
           footer: 'Theo ngày giao',
           target: AnalyticsSection.promotions,
         ),

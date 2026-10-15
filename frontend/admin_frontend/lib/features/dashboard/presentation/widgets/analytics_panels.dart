@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
-import '../../data/analytics_calculations.dart';
 import '../../data/models/analytics_models.dart';
 import '../providers/dashboard_provider.dart';
 
@@ -19,7 +18,7 @@ class AnalyticsPanels extends StatelessWidget {
           children: [
             _amount('Tiền hàng trước giảm giá', s.grossGoods),
             _amount('− Khuyến mãi sản phẩm', s.promotionDiscount),
-            _amount('− Voucher', s.voucherDiscount),
+            _amount('− Voucher & thành viên', s.voucherDiscount),
             _amount('− Hàng trả đã nhận', s.returnedGoods),
             const Divider(),
             _amount('= Doanh thu thuần hàng', s.netRevenue),
@@ -58,7 +57,7 @@ class AnalyticsPanels extends StatelessWidget {
         'Nhận diện người mua',
         const Text(
           'Khách vãng lai vẫn được thống kê. Không coi mỗi đơn vãng lai là một người mới. '
-          'Bộ mẫu dùng khóa người mua ổn định; khi nối BE cần nhận diện người mua hợp lệ và toàn bộ lịch sử để phân loại mới/quay lại.',
+          'Tài khoản được nhận diện theo mã người dùng, khách vãng lai theo số điện thoại đặt hàng. Mới/quay lại dựa trên toàn bộ lịch sử thanh toán hiện có.',
         ),
       ),
       AnalyticsSection.purchases => _card(
@@ -125,9 +124,8 @@ class AnalyticsPanels extends StatelessWidget {
     ),
   );
   Widget _orderDistribution(DashboardProvider p) {
-    final orders = p.data.orders.where(
-      (o) => AnalyticsCalculations.inside(o.createdAt, p.start, p.end),
-    );
+    final counts = p.distribution;
+    final total = counts.values.fold<int>(0, (n, v) => n + v);
     return _card(
       'Đơn tạo trong kỳ theo trạng thái hiện tại',
       Column(
@@ -138,6 +136,7 @@ class AnalyticsPanels extends StatelessWidget {
             'SHIPPED',
             'DELIVERED',
             'CANCELLED',
+            'RETURNED',
           ])
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -147,16 +146,13 @@ class AnalyticsPanels extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${orderStatusLabel(state)} • ${orders.where((o) => o.status == state).length} đơn',
+                      '${orderStatusLabel(state)} • ${counts[state] ?? 0} đơn',
                     ),
                     const SizedBox(height: 6),
                     LinearProgressIndicator(
                       minHeight: 8,
                       borderRadius: BorderRadius.circular(4),
-                      value: orders.isEmpty
-                          ? 0
-                          : orders.where((o) => o.status == state).length /
-                                orders.length,
+                      value: total == 0 ? 0 : (counts[state] ?? 0) / total,
                       backgroundColor: AppTheme.surface,
                       color: state == 'CANCELLED'
                           ? AppTheme.danger

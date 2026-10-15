@@ -142,8 +142,9 @@ class MainScreenState extends State<MainScreen> {
     if (!RoleAccess.canOpen(
       context.read<AuthProvider>().user?.activeRole,
       route,
-    ))
+    )) {
       return;
+    }
     setState(() {
       _currentRoute = route;
       _currentArgs = args;

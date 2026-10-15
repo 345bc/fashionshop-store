@@ -7,7 +7,6 @@ import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
 import '../../../../widgets/common/filter_dropdown.dart';
 import '../../data/models/analytics_models.dart';
-import '../../data/repositories/analytics_repository.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/analytics_filters.dart';
 import '../widgets/analytics_cards.dart';
@@ -26,13 +25,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialSection != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.read<DashboardProvider>().setSection(widget.initialSection!);
-        }
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final p = context.read<DashboardProvider>();
+      if (widget.initialSection != null) {
+        p.setSection(widget.initialSection!);
+      } else if (!p.initialized) {
+        p.load();
+      }
+    });
   }
 
   @override
@@ -71,36 +72,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
                 OutlinedButton.icon(
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: p.csv));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Đã sao chép CSV của toàn bộ dòng trong bộ lọc hiện tại',
-                          ),
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: !p.ready || p.exporting
+                      ? null
+                      : () async {
+                          try {
+                            final csv = await p.exportCsv();
+                            await Clipboard.setData(ClipboardData(text: csv));
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Đã sao chép CSV của toàn bộ dòng trong bộ lọc hiện tại',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (_) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Không thể xuất báo cáo. Vui lòng thử lại.',
+                                ),
+                              ),
+                            );
+                          }
+                        },
                   icon: const Icon(Symbols.content_copy, size: 18),
                   label: const Text('Sao chép CSV'),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            Tooltip(
-              message:
-                  'Dữ liệu mẫu • ${reportDate(p.data.today.subtract(const Duration(days: 89)))} – ${reportDate(p.data.today)}. '
-                  'Chưa kết nối backend; các số liệu không phải hoạt động thực tế.',
-              child: const Align(
-                alignment: Alignment.centerLeft,
+            if (p.isDemo)
+              const Text(
+                'Dữ liệu mẫu',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+            if (p.loading) const LinearProgressIndicator(),
+            if (p.error != null)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      p.error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                  TextButton(onPressed: p.load, child: const Text('Thử lại')),
+                ],
+              ),
+            for (final warning in p.warnings)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
-                  'Dữ liệu mẫu',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  warning,
+                  style: const TextStyle(color: AppTheme.textSecondary),
                 ),
               ),
-            ),
             const SizedBox(height: 16),
             AnalyticsFilters(provider: p),
             const SizedBox(height: 20),
@@ -121,44 +150,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            if (p.section == AnalyticsSection.overview) ...[
-              AnalyticsCards(provider: p),
-              const SizedBox(height: 24),
-            ],
-            if (chart) ...[
-              RevenueChart(provider: p),
-              const SizedBox(height: 24),
-            ],
-            if (p.section != AnalyticsSection.overview) ...[
-              ExpansionTile(
-                key: PageStorageKey('analytics-summary-${p.section.name}'),
-                title: const Text('Xem chỉ số tổng hợp & cách tính'),
-                tilePadding: EdgeInsets.zero,
-                childrenPadding: const EdgeInsets.symmetric(vertical: 16),
-                children: [
-                  AnalyticsCards(provider: p),
-                  const SizedBox(height: 16),
-                  AnalyticsPanels(provider: p),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Chi tiết ${p.section.label.toLowerCase()}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+            if (p.ready) ...[
+              if (p.section == AnalyticsSection.overview) ...[
+                AnalyticsCards(provider: p),
+                const SizedBox(height: 24),
+              ],
+              if (chart) ...[
+                RevenueChart(provider: p),
+                const SizedBox(height: 24),
+              ],
+              if (p.section != AnalyticsSection.overview) ...[
+                ExpansionTile(
+                  key: PageStorageKey('analytics-summary-${p.section.name}'),
+                  title: const Text('Xem chỉ số tổng hợp & cách tính'),
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.symmetric(vertical: 16),
+                  children: [
+                    AnalyticsCards(provider: p),
+                    const SizedBox(height: 16),
+                    AnalyticsPanels(provider: p),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              FeatureToolbar(
-                searchHint:
-                    'Tìm trong bảng ${p.section.label.toLowerCase()}',
-                initialSearchText: p.query,
-                onSearchChanged: p.setQuery,
-                filterWidget: _filter(p),
-              ),
-              const SizedBox(height: 16),
-              AnalyticsTable(provider: p),
+                const SizedBox(height: 16),
+                Text(
+                  'Chi tiết ${p.section.label.toLowerCase()}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FeatureToolbar(
+                  maxSearchLength: 200,
+                  key: ValueKey(p.section),
+                  searchHint: 'Tìm trong bảng ${p.section.label.toLowerCase()}',
+                  initialSearchText: p.query,
+                  onSearchChanged: p.setQuery,
+                  filterWidget: _filter(p),
+                ),
+                const SizedBox(height: 16),
+                AnalyticsTable(provider: p),
+              ],
             ],
           ],
         ),
@@ -175,8 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         value: p.category,
         defaultValue: null,
         options: [
-          for (final category
-              in AnalyticsRepository.products.map((r) => r.category).toSet())
+          for (final category in p.categories)
             FilterOption(value: category, label: category),
         ],
         onChanged: p.setCategory,
@@ -196,11 +227,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             'SHIPPED',
             'DELIVERED',
             'CANCELLED',
+            'RETURNED',
           ])
-            FilterOption(
-              value: status,
-              label: orderStatusLabel(status),
-            ),
+            FilterOption(value: status, label: orderStatusLabel(status)),
         ],
         onChanged: p.setOrderStatus,
       );

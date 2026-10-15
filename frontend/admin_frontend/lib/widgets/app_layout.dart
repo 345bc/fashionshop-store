@@ -422,8 +422,9 @@ class _AppLayoutState extends State<AppLayout> {
                             Consumer<AuthProvider>(
                               builder: (context, auth, _) {
                                 final user = auth.user;
-                                if (user == null)
+                                if (user == null) {
                                   return const SizedBox.shrink();
+                                }
                                 if (user.roles.length < 2) {
                                   return Text(
                                     RoleAccess.labels[user.activeRole] ?? '',
@@ -443,11 +444,12 @@ class _AppLayoutState extends State<AppLayout> {
                                           .popUntil((route) => route.isFirst);
                                       widget.onNavigate(RoleAccess.home(role));
                                     } catch (error) {
-                                      if (context.mounted)
+                                      if (context.mounted) {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                               SnackBar(content: Text('$error')),
                                             );
+                                      }
                                     }
                                   },
                                   itemBuilder: (_) => user.roles

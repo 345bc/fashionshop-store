@@ -14,9 +14,9 @@ void main() {
   final today = DateTime(2026, 10, 1);
   int amount(String text) => int.parse(text.replaceAll(RegExp(r'[^0-9-]'), ''));
   DashboardProvider provider() =>
-      DashboardProvider(repository: AnalyticsRepository(now: today));
+      DashboardProvider(repository: AnalyticsRepository.demo(now: today));
   test('Revenue, cash and refund use separate event dates and reconcile return cost', () {
-    final data = AnalyticsRepository(now: today);
+    final data = AnalyticsRepository.demo(now: today);
     data.orders.clear();
     data.returns.clear();
     data.orders.addAll([
@@ -151,7 +151,7 @@ void main() {
     final p = provider();
     p.setSection(AnalyticsSection.orders);
     await mount(tester, p);
-    await tester.tap(find.byType(DropdownButton<AnalyticsPeriod>));
+    await tester.tap(find.text('Thời gian'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('7 ngày').last);
     await tester.pumpAndSettle();
