@@ -1,3 +1,5 @@
+import 'package:zella_admin_flutter/features/auth/presentation/provider/auth_provider.dart';
+import 'support/fake_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -132,6 +134,7 @@ Future<void> openDialog(
   await tester.pumpWidget(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuth()),
         ChangeNotifierProvider<OrdersProvider>.value(value: provider),
         ChangeNotifierProvider<InventoryProvider>(
           create: (_) => FakeInventory(),
@@ -171,6 +174,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+        ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuth()),
             ChangeNotifierProvider<OrdersProvider>.value(value: provider),
             ChangeNotifierProvider<InventoryProvider>(
               create: (_) => FakeInventory(),
@@ -306,7 +310,7 @@ void main() {
         ..pending = true
         ..simulation = true;
       await openDialog(tester, provider, const OrderDetailDialog(orderId: 10));
-      final button = find.text('TEST • Xác nhận đơn (giả lập)');
+      final button = find.text('TEST • Xác nhận đơn');
       expect(button, findsOneWidget);
       await tester.ensureVisible(button);
       await tester.tap(button);

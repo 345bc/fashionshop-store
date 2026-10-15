@@ -188,11 +188,6 @@ class _ReturnManagementDialogState extends State<ReturnManagementDialog> {
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ),
-            TextButton.icon(
-              onPressed: _loading ? null : _load,
-              icon: const Icon(Symbols.refresh, size: 16),
-              label: const Text('Làm mới'),
-            ),
           ],
         ),
         const Divider(height: 1),

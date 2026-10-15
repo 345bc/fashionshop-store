@@ -1,6 +1,9 @@
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../../auth/presentation/provider/auth_provider.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../../../widgets/common/feature_header.dart';
@@ -37,6 +40,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           FeatureHeader(
+            showAction: [
+              'ADMIN',
+              'WAREHOUSE',
+              'CUSTOMER_SUPPORT',
+            ].contains(context.watch<AuthProvider>().user?.activeRole),
             title: 'Đơn hàng',
             subtitle: 'Quản lý đơn bán, giữ hàng, xuất kho và trả hàng',
             actionLabel: 'Quản lý hoàn hàng',
@@ -63,11 +71,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       .map((e) => FilterOption(value: e.key, label: e.value))
                       .toList(),
                   onChanged: (v) => p.filter(v),
-                ),
-                IconButton(
-                  onPressed: p.loadItems,
-                  tooltip: 'Làm mới',
-                  icon: const Icon(Symbols.refresh),
                 ),
               ],
             ),

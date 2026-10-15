@@ -1,3 +1,4 @@
+import '../../../auth/presentation/provider/auth_provider.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -273,13 +274,13 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
+        Wrap(
+          spacing: 8, runSpacing: 8,
           children: [
             _statusBadge(
               orderStatuses[order.status] ?? order.status,
               _getStatusColor(order.status),
             ),
-            const SizedBox(width: 8),
             _statusBadge(
               orderPaymentStatuses[order.paymentStatus] ?? order.paymentStatus,
               _getPaymentStatusColor(order.paymentStatus),
@@ -567,7 +568,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     }
 
     if (order.inventoryManaged) {
-      if (simulationEnabled &&
+      if (context.watch<AuthProvider>().hasRole('ADMIN') && simulationEnabled &&
           order.status == 'PENDING' &&
           order.paymentStatus == 'PENDING') {
         actions.add(
@@ -583,7 +584,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if (order.status == 'CONFIRMED' && order.paymentStatus == 'PAID') {
+      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('SALES')) && order.status == 'CONFIRMED' && order.paymentStatus == 'PAID') {
         actions.add(
           _actionButton(
             'Xuất kho',
@@ -597,7 +598,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if (order.status == 'SHIPPED' &&
+      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('SALES')) && order.status == 'SHIPPED' &&
           returns.every(
             (r) => r.status == 'CANCELLED' || r.status == 'REJECTED',
           )) {
@@ -614,7 +615,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if (order.status == 'PENDING' || order.status == 'CONFIRMED') {
+      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('SALES')) && (order.status == 'PENDING' || order.status == 'CONFIRMED')) {
         actions.add(
           _actionButton(
             'Hủy đơn',
@@ -630,7 +631,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if (order.paymentStatus == 'REFUND_PENDING') {
+      if (context.watch<AuthProvider>().hasRole('ADMIN') && order.paymentStatus == 'REFUND_PENDING') {
         actions.add(
           _actionButton(
             'Ghi nhận đã hoàn tiền',
@@ -645,7 +646,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if ((order.status == 'SHIPPED' || order.status == 'DELIVERED') &&
+      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('CUSTOMER_SUPPORT')) && (order.status == 'SHIPPED' || order.status == 'DELIVERED') &&
           canReturn) {
         actions.add(
           _actionButton(
@@ -778,7 +779,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      if (r.status == 'PENDING')
+                      if (context.watch<AuthProvider>().hasRole('ADMIN') && r.status == 'PENDING')
                         ElevatedButton(
                           onPressed: _busy
                               ? null
@@ -793,7 +794,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           ),
                           child: const Text('Duyệt'),
                         ),
-                      if (r.status == 'PENDING')
+                      if (context.watch<AuthProvider>().hasRole('ADMIN') && r.status == 'PENDING')
                         OutlinedButton(
                           onPressed: _busy
                               ? null
@@ -812,7 +813,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           ),
                           child: const Text('Từ chối'),
                         ),
-                      if (r.status == 'PENDING' || r.status == 'APPROVED')
+                      if (context.watch<AuthProvider>().hasRole('ADMIN') && (r.status == 'PENDING' || r.status == 'APPROVED'))
                         OutlinedButton(
                           onPressed: _busy
                               ? null
@@ -827,7 +828,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                                 ),
                           child: const Text('Hủy phiếu'),
                         ),
-                      if (r.status == 'APPROVED')
+                      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('WAREHOUSE')) && r.status == 'APPROVED')
                         ElevatedButton(
                           onPressed: _busy
                               ? null
@@ -845,7 +846,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           ),
                           child: const Text('Nhận hàng'),
                         ),
-                      if (r.status == 'RECEIVED')
+                      if (context.watch<AuthProvider>().hasRole('ADMIN') && r.status == 'RECEIVED')
                         ElevatedButton(
                           onPressed: _busy
                               ? null
