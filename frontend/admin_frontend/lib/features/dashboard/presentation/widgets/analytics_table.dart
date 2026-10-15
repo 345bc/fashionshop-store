@@ -77,9 +77,9 @@ class AnalyticsTable extends StatelessWidget {
                       ),
                       PaginationFooter(
                         currentPage: provider.page,
-                        totalPages: (table.rows.length / provider.pageSize)
+                        totalPages: (provider.totalElements / provider.pageSize)
                             .ceil(),
-                        totalElements: table.rows.length,
+                        totalElements: provider.totalElements,
                         pageSize: provider.pageSize,
                         onPageChanged: provider.setPage,
                       ),

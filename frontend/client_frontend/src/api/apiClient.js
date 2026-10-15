@@ -4,7 +4,8 @@ const BACKEND_URL = trimTrailingSlash(
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080",
 );
 const API_BASE_URL = trimTrailingSlash(
-  process.env.NEXT_PUBLIC_API_BASE_URL || `${BACKEND_URL}/api/v1`,
+  (typeof window === "undefined" && process.env.BACKEND_API_BASE_URL) ||
+    process.env.NEXT_PUBLIC_API_BASE_URL || `${BACKEND_URL}/api/v1`,
 );
 
 let csrf = null;

@@ -1,3 +1,4 @@
+import '../../../../core/network/api_client.dart';
 import '../models/analytics_models.dart';
 
 class AnalyticsRepository {
@@ -73,8 +74,29 @@ class AnalyticsRepository {
       2,
     ),
   ];
+  final bool isDemo;
   AnalyticsRepository({DateTime? now})
-    : today = DateTime(
+    : isDemo = false,
+      today = DateTime(
+        (now ?? DateTime.now()).toUtc().add(const Duration(hours: 7)).year,
+        (now ?? DateTime.now()).toUtc().add(const Duration(hours: 7)).month,
+        (now ?? DateTime.now()).toUtc().add(const Duration(hours: 7)).day,
+      ) {
+    orders = [];
+    returns = [];
+    receipts = [];
+  }
+  Future<Map<String, dynamic>> fetch(Map<String, dynamic> parameters) async {
+    final response = await ApiClient().get(
+      '/dashboard',
+      queryParameters: parameters,
+    );
+    return Map<String, dynamic>.from(response.data['data']);
+  }
+
+  AnalyticsRepository.demo({DateTime? now})
+    : isDemo = true,
+      today = DateTime(
         (now ?? DateTime.now()).year,
         (now ?? DateTime.now()).month,
         (now ?? DateTime.now()).day,

@@ -127,7 +127,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
       expect(p.selectedReview!.orderCode, 'ORD-DEMO-104');
-      await tester.tap(find.byType(DropdownButton<int>).last);
+      await tester.ensureVisible(find.text('Đánh giá'));
+      await tester.tap(find.text('Đánh giá'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('5 sao').last);
       await tester.pumpAndSettle();

@@ -36,6 +36,7 @@ String orderStatusLabel(String status) =>
       'SHIPPED': 'Đang giao',
       'DELIVERED': 'Đã giao',
       'CANCELLED': 'Đã hủy',
+      'RETURNED': 'Đã trả hàng',
     }[status] ??
     status;
 
@@ -158,6 +159,23 @@ class AnalyticsSummary {
     required this.cancelledOrders,
     required this.soldQuantity,
   });
+  factory AnalyticsSummary.fromJson(Map<String, dynamic> j) {
+    int n(String key) => (j[key] as num? ?? 0).round();
+    return AnalyticsSummary(
+      grossGoods: n('grossGoods'),
+      promotionDiscount: n('promotionDiscount'),
+      voucherDiscount: n('voucherDiscount'),
+      returnedGoods: n('returnedGoods'),
+      cogs: n('cogs'),
+      shipping: n('shipping'),
+      cashIn: n('cashIn'),
+      cashOut: n('cashOut'),
+      createdOrders: n('createdOrders'),
+      deliveredOrders: n('deliveredOrders'),
+      cancelledOrders: n('cancelledOrders'),
+      soldQuantity: n('soldQuantity'),
+    );
+  }
   int get netRevenue =>
       grossGoods - promotionDiscount - voucherDiscount - returnedGoods;
   int get grossProfit => netRevenue - cogs;
