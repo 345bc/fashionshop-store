@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/inventory")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+@PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE')")
 public class InventoryController {
     private final InventoryService service;
 
@@ -47,6 +47,7 @@ public class InventoryController {
         )));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/adjustments")
     public ApiResponse<String> adjust(@Valid @RequestBody CreateInventoryAdjustmentRequest request,
                                       @AuthenticationPrincipal CurrentUser actor) {

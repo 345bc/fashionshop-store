@@ -1,3 +1,4 @@
+
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -35,11 +36,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           FeatureHeader(
+            showAction: false,
             title: 'Tồn kho',
             subtitle: 'Quản lý tồn theo biến thể sản phẩm',
-            actionLabel: 'Làm mới',
-            actionIcon: Symbols.refresh,
-            onActionPressed: p.loadItems,
           ),
           const SizedBox(height: 24),
           Wrap(
@@ -69,8 +68,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
               value: p.status,
               defaultValue: 'all',
               options: const [
-                FilterOption(value: 'available', label: 'Còn hàng', icon: Symbols.check_circle, iconColor: AppTheme.success),
-                FilterOption(value: 'out', label: 'Hết hàng khả dụng', icon: Symbols.cancel),
+                FilterOption(
+                  value: 'available',
+                  label: 'Còn hàng',
+                  icon: Symbols.check_circle,
+                  iconColor: AppTheme.success,
+                ),
+                FilterOption(
+                  value: 'out',
+                  label: 'Hết hàng khả dụng',
+                  icon: Symbols.cancel,
+                ),
               ],
               onChanged: (v) => p.filter(v),
             ),
