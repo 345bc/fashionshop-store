@@ -56,7 +56,10 @@ public class SessionPrincipalRefreshFilter extends OncePerRequestFilter {
 
         try {
             CurrentUser refreshed = appUserService.requireByEmail(emailOf(authentication));
-            var authorities = refreshed.roles().stream()
+            if (authentication.getPrincipal() instanceof CurrentUser previous) {
+                refreshed = refreshed.withActiveRole(previous.activeRole());
+            }
+            var authorities = java.util.List.of(refreshed.activeRole()).stream()
                     .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                     .toList();
             var replacement = UsernamePasswordAuthenticationToken.authenticated(refreshed, null, authorities);

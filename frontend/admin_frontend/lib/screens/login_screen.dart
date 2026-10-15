@@ -1,6 +1,5 @@
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../features/auth/presentation/provider/auth_provider.dart';
@@ -29,6 +28,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text,
         _passwordController.text,
       );
+
+      if (!mounted) return;
+      if (success) Navigator.of(context).popUntil((route) => route.isFirst);
 
       final message = success
           ? 'Đăng nhập thành công'
@@ -60,7 +62,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.watch<AuthProvider>().isLoading;
+    final auth = context.watch<AuthProvider>();
+    if (auth.isAuthenticated) return const AdminAuthGate();
+    final isLoading = auth.isLoading;
 
     return Scaffold(
       backgroundColor: AppTheme.surface,
@@ -91,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     'Admin',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primary,

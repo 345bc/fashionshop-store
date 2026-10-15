@@ -1,10 +1,12 @@
+import '../core/security/role_access.dart';
+import '../features/auth/presentation/dialogs/session_profile_dialog.dart';
+
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../theme/app_theme.dart';
 import '../features/auth/presentation/provider/auth_provider.dart';
-import '../screens/login_screen.dart';
 
 class NavItem {
   final String title;
@@ -30,7 +32,7 @@ final List<NavGroup> navGroups = [
     NavItem('Voucher & Khuyến mãi', Symbols.local_offer, '/promotions'),
   ]),
   NavGroup('SẢN PHẨM & KHO', [
-    NavItem('Thuộc tính sản phẩm', Symbols.tune, '/product-attributes'),
+    NavItem('Danh mục sản phẩm', Symbols.category, '/categories'),
     NavItem('Sản phẩm', Symbols.inventory_2, '/products'),
     NavItem('Tồn kho', Symbols.storage, '/inventory'),
     NavItem('Nhập hàng', Symbols.local_shipping, '/purchases'),
@@ -66,6 +68,21 @@ class AppLayout extends StatefulWidget {
 class _AppLayoutState extends State<AppLayout> {
   bool _sidebarOpen = true;
 
+  List<NavGroup> get _visibleGroups {
+    final role = context.watch<AuthProvider>().user?.activeRole;
+    return navGroups
+        .map(
+          (group) => NavGroup(
+            group.title,
+            group.items
+                .where((item) => RoleAccess.canOpen(role, item.route))
+                .toList(),
+          ),
+        )
+        .where((group) => group.items.isNotEmpty)
+        .toList();
+  }
+
   bool _isActive(NavItem item) =>
       widget.currentRoute == item.route ||
       (item.route == '/' && widget.currentRoute == '/reports') ||
@@ -92,7 +109,7 @@ class _AppLayoutState extends State<AppLayout> {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
             children: [
-              for (final group in navGroups) ...[
+              for (final group in _visibleGroups) ...[
                 for (final item in group.items)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 3),
@@ -113,7 +130,7 @@ class _AppLayoutState extends State<AppLayout> {
                       icon: Icon(item.icon, size: 20),
                     ),
                   ),
-                if (group != navGroups.last) const Divider(height: 16),
+                if (group != _visibleGroups.last) const Divider(height: 16),
               ],
             ],
           ),
@@ -169,9 +186,9 @@ class _AppLayoutState extends State<AppLayout> {
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
-                                itemCount: navGroups.length,
+                                itemCount: _visibleGroups.length,
                                 itemBuilder: (context, groupIndex) {
-                                  final group = navGroups[groupIndex];
+                                  final group = _visibleGroups[groupIndex];
                                   return Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -402,6 +419,59 @@ class _AppLayoutState extends State<AppLayout> {
                         // Actions
                         Row(
                           children: [
+                            Consumer<AuthProvider>(
+                              builder: (context, auth, _) {
+                                final user = auth.user;
+                                if (user == null)
+                                  return const SizedBox.shrink();
+                                if (user.roles.length < 2) {
+                                  return Text(
+                                    RoleAccess.labels[user.activeRole] ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  );
+                                }
+                                return PopupMenuButton<String>(
+                                  tooltip: 'Chuyển vai trò',
+                                  onSelected: (role) async {
+                                    try {
+                                      await auth.selectRole(role);
+                                      if (!context.mounted) return;
+                                      Navigator.of(context)
+                                          .popUntil((route) => route.isFirst);
+                                      widget.onNavigate(RoleAccess.home(role));
+                                    } catch (error) {
+                                      if (context.mounted)
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              SnackBar(content: Text('$error')),
+                                            );
+                                    }
+                                  },
+                                  itemBuilder: (_) => user.roles
+                                      .where((role) => role != 'USER')
+                                      .map(
+                                        (role) => PopupMenuItem(
+                                          value: role,
+                                          child: Text(
+                                            RoleAccess.labels[role] ?? role,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Text(
+                                      RoleAccess.labels[user.activeRole] ??
+                                          'Vai trò',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 16),
                             IconButton(
                               icon: const Icon(
                                 Symbols.notifications,
@@ -417,15 +487,19 @@ class _AppLayoutState extends State<AppLayout> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               onSelected: (value) async {
+                                if (value == 'profile') {
+                                  await showDialog(
+                                    context: context,
+                                    builder: (_) =>
+                                        const SessionProfileDialog(),
+                                  );
+                                  return;
+                                }
                                 if (value == 'logout') {
                                   await context.read<AuthProvider>().logout();
                                   if (!context.mounted) return;
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(
-                                      builder: (context) => const LoginScreen(),
-                                    ),
-                                    (route) => false,
-                                  );
+                                  Navigator.of(context)
+                                      .popUntil((route) => route.isFirst);
                                 }
                               },
                               itemBuilder: (BuildContext context) => [
@@ -467,10 +541,24 @@ class _AppLayoutState extends State<AppLayout> {
                                   color: AppTheme.primary,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Center(
+                                child: Center(
                                   child: Text(
-                                    'A',
-                                    style: TextStyle(
+                                    context
+                                                .watch<AuthProvider>()
+                                                .user
+                                                ?.username
+                                                .trim()
+                                                .isNotEmpty ==
+                                            true
+                                        ? context
+                                              .watch<AuthProvider>()
+                                              .user!
+                                              .username
+                                              .trim()
+                                              .substring(0, 1)
+                                              .toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),

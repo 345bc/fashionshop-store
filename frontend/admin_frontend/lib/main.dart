@@ -1,3 +1,6 @@
+import 'core/security/role_access.dart';
+import 'screens/role_selection_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -39,7 +42,6 @@ import 'screens/login_screen.dart';
 import 'features/products/presentation/screens/product_variants_screen.dart';
 import 'features/categories/presentation/screens/categories_screen.dart';
 import 'features/product_attributes/data/attribute_kind.dart';
-import 'features/product_attributes/presentation/screens/product_attributes_screen.dart';
 import 'features/product_attributes/presentation/screens/attribute_management_screen.dart';
 import 'screens/unauthorized_screen.dart';
 
@@ -96,17 +98,26 @@ class ZellaAdminApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             scaffoldMessengerKey: adminScaffoldMessengerKey,
             navigatorKey: adminNavigatorKey,
-            home: authProvider.isInitializing
-                ? const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  )
-                : authProvider.isAuthenticated
-                ? const MainScreen()
-                : const LoginScreen(),
+            home: const AdminAuthGate(),
           );
         },
       ),
     );
+  }
+}
+
+class AdminAuthGate extends StatelessWidget {
+  const AdminAuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    if (auth.isInitializing) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (!auth.isAuthenticated) return const LoginScreen();
+    if (auth.needsRoleSelection) return const RoleSelectionScreen();
+    return const MainScreen();
   }
 }
 
@@ -128,6 +139,11 @@ class MainScreenState extends State<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void navigate(String route, [Map<String, dynamic>? args]) {
+    if (!RoleAccess.canOpen(
+      context.read<AuthProvider>().user?.activeRole,
+      route,
+    ))
+      return;
     setState(() {
       _currentRoute = route;
       _currentArgs = args;
@@ -146,13 +162,19 @@ class MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildScreen() {
+    final role = context.watch<AuthProvider>().user?.activeRole;
+    if (!RoleAccess.canOpen(role, _currentRoute)) {
+      _currentRoute = RoleAccess.home(role);
+      _currentArgs = null;
+      _currentDrawer = null;
+    }
     switch (_currentRoute) {
       case '/':
         return const DashboardScreen();
       case '/categories':
         return const CategoriesScreen();
       case '/product-attributes':
-        return const ProductAttributesScreen();
+        return const CategoriesScreen();
       case '/colors':
         return const AttributeManagementScreen(kind: AttributeKind.color);
       case '/sizes':

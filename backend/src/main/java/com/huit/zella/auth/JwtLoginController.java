@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.huit.zella.common.api.ApiResponse;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -35,7 +34,24 @@ public class JwtLoginController {
     @PostMapping("/login")
     ApiResponse<CurrentUser> login(@Valid @RequestBody LoginRequest request, HttpServletRequest servletRequest, HttpServletResponse response) {
         CurrentUser user = appUserService.authenticate(request.email(), request.password(), passwordEncoder);
+        if (user.roles().size() > 1) user = user.pendingRoleSelection();
         refreshTokens.issue(user, servletRequest, response);
+        return ApiResponse.success(user, "Đăng nhập thành công");
+    }
+
+    @PostMapping("/admin/login")
+    ApiResponse<CurrentUser> adminLogin(@Valid @RequestBody LoginRequest request,
+            HttpServletRequest servletRequest, HttpServletResponse response) {
+        CurrentUser user = appUserService.authenticate(request.email(), request.password(), passwordEncoder);
+        var businessRoles = java.util.Set.of("ADMIN", "SALES", "WAREHOUSE", "CUSTOMER_SUPPORT", "MARKETING");
+        if (user.roles().stream().noneMatch(businessRoles::contains)) {
+            throw new com.huit.zella.common.exception.BusinessException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "ADMIN_ACCESS_DENIED",
+                    "Bạn không có quyền truy cập vào hệ thống Quản trị.");
+        }
+        if (user.roles().size() > 1) user = user.pendingRoleSelection();
+        refreshTokens.issue(user, servletRequest, response);
+        response.setHeader("Cache-Control", "no-store");
         return ApiResponse.success(user, "Đăng nhập thành công");
     }
 
@@ -43,6 +59,18 @@ public class JwtLoginController {
     ApiResponse<CurrentUser> refresh(HttpServletRequest request, HttpServletResponse response) {
         return ApiResponse.success(refreshTokens.refresh(request, response));
     }
+
+    @PostMapping("/select-role")
+    ApiResponse<CurrentUser> selectRole(@Valid @RequestBody SelectRoleRequest selection,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal CurrentUser principal,
+            HttpServletRequest request, HttpServletResponse response) {
+        CurrentUser user = appUserService.requireById(principal.id()).withActiveRole(selection.role());
+        refreshTokens.issue(user, request, response);
+        response.setHeader("Cache-Control", "no-store");
+        return ApiResponse.success(user, "Đã chuyển vai trò");
+    }
+
+    record SelectRoleRequest(@NotBlank String role) {}
 
     @PostMapping("/register")
     ApiResponse<CurrentUser> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {

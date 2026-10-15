@@ -76,7 +76,7 @@ class ZellaFormDialog extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: isLoading ? null : onCancel,
                 icon: const Icon(Symbols.close, size: 20),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),

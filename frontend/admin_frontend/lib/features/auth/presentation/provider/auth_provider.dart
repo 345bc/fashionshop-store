@@ -12,6 +12,7 @@ class AuthProvider with ChangeNotifier {
   final AuthRepository _authRepository = AuthRepository();
   Timer? _expiryTimer;
   String? _sessionToken;
+  int _sessionGeneration = 0;
   VoidCallback? onSessionExpired;
 
   UserModel? _user;
@@ -27,19 +28,65 @@ class AuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   bool get isAuthenticated => _user != null;
+  bool _needsRoleSelection = false;
+  bool get needsRoleSelection => _needsRoleSelection;
 
   bool _hasAdminPermission(UserModel user) {
-    return user.roles.any(
-      (role) =>
-          role == 'ADMIN' ||
-          role == 'ROLE_ADMIN' ||
-          role == 'EMPLOYEE' ||
-          role == 'ROLE_EMPLOYEE',
+    return const [
+          'ADMIN',
+          'SALES',
+          'WAREHOUSE',
+          'CUSTOMER_SUPPORT',
+          'MARKETING',
+        ].contains(user.activeRole) ||
+        (user.activeRole == null &&
+            user.roles.any(
+              const [
+                'ADMIN',
+                'SALES',
+                'WAREHOUSE',
+                'CUSTOMER_SUPPORT',
+                'MARKETING',
+              ].contains,
+            ));
+  }
+
+  bool hasRole(String role) => _user?.activeRole == role;
+
+  Future<UserModel> loadSessionProfile() async {
+    final generation = _sessionGeneration;
+    final current = await _authRepository.getProfile();
+    if (generation != _sessionGeneration) {
+      throw StateError('Phiên làm việc đã thay đổi');
+    }
+    if (!_hasAdminPermission(current)) {
+      _user = null;
+      notifyListeners();
+      throw StateError('Phiên không có quyền truy cập quản trị');
+    }
+    _needsRoleSelection = current.activeRole == null;
+    _user = current;
+    notifyListeners();
+    return current;
+  }
+
+  Future<void> selectRole(String role) async {
+    _sessionGeneration++;
+    final response = await ApiClient().post(
+      '/auth/select-role',
+      data: {'role': role},
     );
+    _user = UserModel.fromJson(response.data['data']);
+    _needsRoleSelection = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('role_selection_required', false);
+    await _scheduleExpiry();
+    notifyListeners();
   }
 
   // Gọi hàm này từ màn hình Login
   Future<bool> login(String email, String password) async {
+    _sessionGeneration++;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -56,6 +103,9 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
 
+      _needsRoleSelection = _user!.activeRole == null;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('role_selection_required', _needsRoleSelection);
       _isLoading = false;
       await _scheduleExpiry();
       notifyListeners();
@@ -77,6 +127,7 @@ class AuthProvider with ChangeNotifier {
       if ((token != null && token.isNotEmpty) ||
           prefs.getString('refresh_token')?.isNotEmpty == true) {
         _user = await _authRepository.getProfile();
+        _needsRoleSelection = _user!.activeRole == null;
 
         if (_user != null && !_hasAdminPermission(_user!)) {
           await _authRepository.logout();
@@ -95,6 +146,8 @@ class AuthProvider with ChangeNotifier {
 
   // Hàm Đăng xuất
   Future<void> logout() async {
+    _needsRoleSelection = false;
+    _sessionGeneration++;
     _expiryTimer?.cancel();
     _sessionToken = null;
     _isLoading = true;
@@ -146,6 +199,7 @@ class AuthProvider with ChangeNotifier {
       }
       if (_user == null) return;
       _user = await _authRepository.getProfile();
+      _needsRoleSelection = _user!.activeRole == null;
       if (!_hasAdminPermission(_user!)) {
         await logout();
         return;
@@ -160,6 +214,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   void expireSession() {
+    _sessionGeneration++;
     if (_user == null) return;
     _expiryTimer?.cancel();
     final expiredToken = _sessionToken;

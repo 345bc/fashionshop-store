@@ -50,11 +50,13 @@ public class RefreshTokenService {
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         Instant now = Instant.now();
         RefreshSession session = new RefreshSession();
+        session.setActiveRole(user.activeRole());
+        session.setRoleSelectionRequired(user.roleSelectionRequired());
         session.setUser(users.getReferenceById(user.id())); session.setTokenHash(hash(token));
         session.setPasswordFingerprint(hash(session.getUser().getPasswordHash()));
         session.setCreatedAt(now); session.setRotatedAt(now); session.setExpiresAt(now.plus(ttl));
-        sessions.save(session);
-        accessTokens.writeLoginCookie(response, user);
+        sessions.saveAndFlush(session);
+        accessTokens.writeLoginCookie(response, user, session.getId());
         writeCookie(response, token, ttl);
     }
 
@@ -83,7 +85,11 @@ public class RefreshTokenService {
             token = successor(token); session.setTokenHash(hash(token)); session.setRotatedAt(now);
         }
         CurrentUser current = userService.requireById(user.getId());
-        accessTokens.writeLoginCookie(response, current);
+        if (!session.isRoleSelectionRequired() && (session.getActiveRole() == null || !current.roles().contains(session.getActiveRole()))) {
+            session.setRevokedAt(now); throw invalid(response);
+        }
+        current = session.isRoleSelectionRequired() ? current.pendingRoleSelection() : current.withActiveRole(session.getActiveRole());
+        accessTokens.writeLoginCookie(response, current, session.getId());
         writeCookie(response, token, Duration.between(now, session.getExpiresAt()));
         response.setHeader("Cache-Control", "no-store");
         return current;
@@ -91,6 +97,13 @@ public class RefreshTokenService {
 
     @Transactional
     public void revoke(HttpServletRequest request) {
+        Arrays.stream(request.getCookies()==null ? new Cookie[0] : request.getCookies())
+                .filter(c -> JwtAccessTokenService.COOKIE_NAME.equals(c.getName())).findFirst().ifPresent(cookie -> {
+                    try {
+                        Number sid=accessTokens.decode(cookie.getValue()).getClaim("sid");
+                        if(sid!=null) sessions.findById(sid.longValue()).ifPresent(s -> s.setRevokedAt(Instant.now()));
+                    } catch(org.springframework.security.oauth2.jwt.JwtException ignored) { }
+                });
         String token = readCookie(request);
         if (token != null && token.matches("[A-Za-z0-9_-]{43}")) {
             sessions.findForUpdate(hash(token)).ifPresent(session -> session.setRevokedAt(Instant.now()));

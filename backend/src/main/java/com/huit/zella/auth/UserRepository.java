@@ -25,6 +25,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
                            @org.springframework.data.repository.query.Param("role") String role, 
                            Pageable pageable);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u order by u.id")
+    java.util.List<User> lockAccounts();
+
     boolean existsByUserNameIgnoreCaseAndIdNot(String username, Long id);
 
     boolean existsByEmailIgnoreCase(String email);
