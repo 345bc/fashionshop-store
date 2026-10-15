@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+import 'admin_font.dart';
+
+class AppAnimations {
+  static const Duration fast = Duration(milliseconds: 150);
+  static const Duration normal = Duration(milliseconds: 300);
+  static const Duration slow = Duration(milliseconds: 500);
+  static const Duration toastDuration = Duration(seconds: 3);
+}
 
 class AppTheme {
+  // Change this selection to preview a font across the admin.
+  static const AdminFont font = AdminFont.sourceSerif4;
+
   // Colors from CSS variables
   static const Color primary = Color(0xFF171717);
   static const Color secondary = Color(0xFF525252);
@@ -12,16 +23,18 @@ class AppTheme {
   static const Color text = Color(0xFF171717);
   static const Color textSecondary = Color(0xFF737373);
   static const Color textMuted = Color(0xFFA3A3A3);
-  
+
   // Status colors
   static const Color success = Color(0xFF16A34A);
   static const Color warning = Color(0xFFD97706);
   static const Color danger = Color(0xFFDC2626);
+  static const Color error = Color(0xFFDC2626);
   static const Color info = Color(0xFF2563EB);
 
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: font.style().fontFamily,
       brightness: Brightness.light,
       primaryColor: primary,
       scaffoldBackgroundColor: surface,
@@ -31,26 +44,66 @@ class AppTheme {
         surface: background,
         error: danger,
       ),
-      textTheme: GoogleFonts.interTextTheme().copyWith(
-        displayLarge: GoogleFonts.outfit(color: text, fontWeight: FontWeight.bold),
-        displayMedium: GoogleFonts.outfit(color: text, fontWeight: FontWeight.w600),
-        displaySmall: GoogleFonts.outfit(color: text, fontWeight: FontWeight.w600),
-        headlineMedium: GoogleFonts.outfit(color: text, fontWeight: FontWeight.w600),
-        titleLarge: GoogleFonts.outfit(color: text, fontWeight: FontWeight.w600),
-        bodyLarge: const TextStyle(color: text),
-        bodyMedium: const TextStyle(color: text),
-        bodySmall: const TextStyle(color: textSecondary),
+      textTheme: font.textTheme().copyWith(
+        displayLarge: font.style(color: text, fontWeight: FontWeight.w600),
+        displayMedium: font.style(color: text, fontWeight: FontWeight.w600),
+        displaySmall: font.style(color: text, fontWeight: FontWeight.w600),
+        headlineMedium: font.style(color: text, fontWeight: FontWeight.w600),
+        headlineLarge: font.style(color: text, fontWeight: FontWeight.w600),
+        headlineSmall: font.style(color: text, fontWeight: FontWeight.w600),
+        titleLarge: font.style(color: text, fontWeight: FontWeight.w600),
+        titleMedium: font.style(
+          color: text,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+        titleSmall: font.style(
+          color: text,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+        bodyLarge: font.style(
+          color: text,
+          fontWeight: FontWeight.w400,
+          fontSize: 14,
+        ),
+        bodyMedium: font.style(
+          color: text,
+          fontWeight: FontWeight.w400,
+          fontSize: 13,
+        ),
+        bodySmall: font.style(
+          color: textSecondary,
+          fontWeight: FontWeight.w400,
+          fontSize: 13,
+        ),
+        labelLarge: font.style(
+          color: text,
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
+        labelMedium: font.style(
+          color: text,
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
+        labelSmall: font.style(
+          color: textSecondary,
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: background,
         elevation: 0,
-        iconTheme: IconThemeData(color: text),
-        titleTextStyle: TextStyle(color: text, fontSize: 20, fontWeight: FontWeight.w600),
+        iconTheme: const IconThemeData(color: text),
+        titleTextStyle: font.style(
+          color: text,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
       ),
-      dividerTheme: const DividerThemeData(
-        color: border,
-        thickness: 1,
-      ),
+      dividerTheme: const DividerThemeData(color: border, thickness: 1),
       cardTheme: CardThemeData(
         color: background,
         elevation: 0,
@@ -64,22 +117,18 @@ class AppTheme {
           backgroundColor: primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          textStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          textStyle: font.style(fontWeight: FontWeight.w500, fontSize: 14),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: text,
           side: const BorderSide(color: border),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          textStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          textStyle: font.style(fontWeight: FontWeight.w500, fontSize: 14),
         ),
       ),
     );

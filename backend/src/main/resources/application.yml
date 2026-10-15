@@ -6,10 +6,9 @@ spring:
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
-    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=fashionshop_store;encrypt=true;trustServerCertificate=true}
-#    url: ${DB_URL:jdbc:mysql://localhost:3306/van_ban_di?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -39,16 +38,36 @@ server:
         secure: ${SESSION_COOKIE_SECURE:false}
 
 app:
+  checkout:
+    pricing:
+      standard-shipping-fee: ${CHECKOUT_STANDARD_SHIPPING_FEE:30000}
+      shipping-discount-threshold: ${CHECKOUT_SHIPPING_DISCOUNT_THRESHOLD:600000}
+      shipping-discount-amount: ${CHECKOUT_SHIPPING_DISCOUNT_AMOUNT:30000}
+      standard-discount-percent: ${CHECKOUT_STANDARD_DISCOUNT_PERCENT:5}
+      silver-discount-percent: ${CHECKOUT_SILVER_DISCOUNT_PERCENT:7}
+      gold-discount-percent: ${CHECKOUT_GOLD_DISCOUNT_PERCENT:10}
+  payment:
+    vnpay:
+      enabled: ${VNPAY_ENABLED:false}
+      ipn-required: ${VNPAY_IPN_REQUIRED:true}
+      tmn-code: ${VNPAY_TMN_CODE:}
+      hash-secret: ${VNPAY_HASH_SECRET:}
+      payment-url: ${VNPAY_PAYMENT_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      return-url: ${VNPAY_RETURN_URL:http://localhost:3000/checkout}
+  order:
+    payment-simulation:
+      enabled: ${ORDER_PAYMENT_SIMULATION_ENABLED:false}
   project:
     name: ${PROJECT_NAME:Xây dựng website shop thời trang}
     version: 0.1.0-starter
   auth:
     # Chỉ là secret dev; môi trường dùng chung phải đặt JWT_SECRET qua biến môi trường.
-    demo-password: ${DEMO_USER_PASSWORD:Demo@123}
+#    demo-password: ${DEMO_USER_PASSWORD:Demo@123}
     jwt:
       secret: ${JWT_SECRET}
       issuer: ${JWT_ISSUER:HUIT}
       access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:30}
+      refresh-token-days: ${JWT_REFRESH_TOKEN_DAYS:7}
       cookie-secure: ${JWT_COOKIE_SECURE:false}
   swagger:
     # Disabled unless explicitly enabled in the local profile.
@@ -56,6 +75,14 @@ app:
   cors:
     allowed-origin: ${CORS_ORIGIN:http://localhost:3000}
   storage:
-    root: ${FILE_STORAGE_ROOT:${java.io.tmpdir}/fresher-storage}
+    root: ${FILE_STORAGE_ROOT:./uploads}
     max-bytes: ${FILE_MAX_BYTES:10485760}
     allowed-content-types: ${FILE_ALLOWED_TYPES:application/pdf,image/png,image/jpeg,text/plain}
+
+cloudflare:
+  r2:
+    access-key: ${R2_ACCESS_KEY:}
+    secret-key: ${R2_SECRET_KEY:}
+    bucket: ${R2_BUCKET:}
+    endpoint: ${R2_ENDPOINT:}
+    public-url: ${R2_PUBLIC_URL:}
