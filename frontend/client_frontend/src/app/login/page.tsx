@@ -21,6 +21,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const [remember, setRemember] = useState(false);
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitting(true);
@@ -73,8 +74,9 @@ export default function LoginPage() {
               </div>
             </label>
             <div className="form-row-between">
-              <label className="remember-row"><input type="checkbox" /> <span>Ghi nhớ đăng nhập</span></label>
-              <Link href="#">Quên mật khẩu?</Link>
+              <label className="remember-row"><input type="checkbox" onChange={(e) => setRemember(e.target.checked)} /> <span>Ghi nhớ đăng nhập</span></label>
+              {/* <Link href="#">Quên mật khẩu?</Link> */}
+              <button></button>
             </div>
             <button type="submit" className="modern-submit" disabled={submitting}>
               {submitting ? "Đang đăng nhập..." : "Đăng nhập"}
