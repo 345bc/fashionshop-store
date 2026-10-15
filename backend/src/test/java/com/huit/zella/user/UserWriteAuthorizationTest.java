@@ -24,7 +24,7 @@ class UserWriteAuthorizationTest {
         try (var context = new AnnotationConfigApplicationContext(Config.class)) {
             var controller = context.getBean(UserController.class);
             var users = context.getBean(UserService.class);
-            authenticate("EMPLOYEE");
+            authenticate("SALES");
             assertThrows(AccessDeniedException.class, () -> controller.create(null));
             assertThrows(AccessDeniedException.class, () -> controller.update(1L, null));
             assertThrows(AccessDeniedException.class, () -> controller.deleteUser(1L));

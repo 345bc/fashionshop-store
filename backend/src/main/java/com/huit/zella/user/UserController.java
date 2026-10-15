@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping
     public ApiResponse<PageResponse<UserResponse>> list(
             @RequestParam(required = false) String q,
@@ -42,7 +42,7 @@ public class UserController {
                 .body(ApiResponse.success(userService.createUser(request)));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/{id}")
     public ApiResponse<UserResponse> get(@PathVariable Long id) {
         return ApiResponse.success(userService.get(id));
