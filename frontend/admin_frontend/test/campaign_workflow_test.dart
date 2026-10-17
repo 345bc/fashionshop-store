@@ -144,4 +144,59 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Ưu đãi nhập mã'), findsOneWidget);
   });
+
+  testWidgets('Gift voucher form renders without assertion error', (tester) async {
+    final repo = FakeCampaigns();
+    final giftVoucher = VoucherModel(
+      id: 3,
+      name: 'Ưu đãi quà',
+      description: 'Test quà',
+      startsAt: now,
+      endsAt: now.add(const Duration(days: 30)),
+      enabled: true,
+      code: 'REWARD-GIFT',
+      discountType: DiscountType.gift,
+      discountValue: 0,
+      redeemable: false,
+      pointsRequired: 150,
+    );
+    repo.replace(giftVoucher);
+    final p = CampaignsProvider(repository: repo, clock: () => now);
+    await mount(
+      tester,
+      p,
+      CampaignFormDialog(kind: CampaignKind.voucher, item: giftVoucher),
+    );
+    expect(find.byType(CampaignFormDialog), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Promotion screen does not show Xem chi tiết menu', (tester) async {
+    final repo = FakeCampaigns();
+    repo.replace(
+      PromotionModel(
+        id: 10,
+        name: 'Giảm giá mùa hè',
+        description: 'Test KM',
+        startsAt: now,
+        endsAt: now.add(const Duration(days: 10)),
+        enabled: true,
+        discountPercent: 15,
+        targetMode: 'SELECTED',
+        products: [const PromotionProductModel(1, 'Áo test')],
+      ),
+    );
+    final p = CampaignsProvider(repository: repo, clock: () => now);
+    await mount(
+      tester,
+      p,
+      const CampaignManagementScreen(kind: CampaignKind.promotion),
+    );
+    expect(find.text('Giảm giá mùa hè'), findsOneWidget);
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    expect(find.text('Chỉnh sửa'), findsOneWidget);
+    expect(find.text('Xem chi tiết'), findsNothing);
+  });
 }
+

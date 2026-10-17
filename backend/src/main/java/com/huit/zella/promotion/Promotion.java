@@ -16,6 +16,8 @@ import org.hibernate.annotations.Nationalized;
 @Getter
 @Setter
 public class Promotion {
+    @Column(name="image_url",length=500) private String imageUrl;
+    @Column(name="is_display",nullable=false) private boolean display;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -1,0 +1,96 @@
+.panel {
+  min-height: 580px;
+}
+.productImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center center; }
+.panel .campaignImage { object-fit: cover; object-position: center top; }
+.panel:hover .campaignImage { transform: none; }
+.campaignPeriod { margin-top: 14px; font-size: clamp(12px, 1vw, 14px); font-weight: 600; line-height: 1.6; color: #ef4444; text-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
+.skeleton { background: #e9e8e3; animation: campaignPulse 1.5s ease-in-out infinite alternate; }
+@keyframes campaignPulse { to { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+.panel::after {
+  background: linear-gradient(to top, rgba(0, 0, 0, .35), rgba(0, 0, 0, .08) 45%, transparent 75%);
+  pointer-events: none;
+}
+
+.panel > div {
+  left: 0;
+  right: 0;
+  bottom: clamp(48px, 7vw, 100px);
+  padding-inline: 28px;
+  gap: 0;
+}
+
+.panel > div > span {
+  display: inline-block;
+  background: #93c5fd;
+  border-radius: 24px;
+  padding: 6px 11px;
+  margin-bottom: 22px;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .02em;
+  opacity: 1;
+  color: #173b65;
+}
+
+.panel .productName {
+  max-width: min(100%, 1000px);
+  font-family: inherit;
+  font-size: clamp(22px, 2.2vw, 30px);
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .65);
+  margin: 0;
+}
+
+.panel .description {
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  font-size: clamp(14px, 1.2vw, 17px);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.5;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .65);
+  max-width: 1000px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.pricing { display: flex; flex-direction: column; align-items: flex-start; margin-top: 16px; gap: 3px; }
+.salePrice { margin: 0; color: #ef0000; font-size: clamp(23px, 2vw, 30px); font-weight: 750; line-height: 1.2; }
+.originalPrice { color: #fff; font-size: 12px; font-weight: 600; line-height: 1.5; text-shadow: 0 1px 3px rgba(0, 0, 0, .65); }
+.promotionPeriod { margin-top: 6px; color: #ef0000; font-size: 12px; font-weight: 500; line-height: 1.5; }
+.panel .spotlightContent > * { max-width: 50%; }
+.panel .spotlightContent .productName {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .panel .spotlightContent > * { max-width: 100%; }
+  .panel { min-height: 400px; }
+  .panel > div { padding-inline: 16px; bottom: 36px; }
+  .panel > div > span { margin-bottom: 20px; }
+  .panel .description { margin-top: 12px; }
+  .promotionPeriod { font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .panel .productName { font-size: 21px; }
+  .panel .description { font-size: 14px; }
+}
+
+.skeleton::after { display: none; }
+.skeletonTitle { width: 420px; height: 30px; border-radius: 5px; background: #d2d3d0; margin-bottom: 18px; }
+.skeletonDescription { width: 560px; height: 14px; border-radius: 4px; background: #d9dad6; margin-top: 10px; }
+.skeletonDescription:last-child { width: 360px; }

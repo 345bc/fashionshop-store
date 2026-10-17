@@ -40,6 +40,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             Long categoryId, String query, Pageable pageable
     );
 
+    @Query("select p from Product p where p.id in :ids and p.isActive=true and p.category.isActive=true and exists (select v.id from ProductVariant v where v.product=p and v.isActive=true and v.stockQuantity>v.reservedQuantity)")
+    List<Product> findVisibleFeaturedProducts(@Param("ids") List<Long> ids);
+
     //    Card
     @Query("""
             select p from Product p
@@ -84,6 +87,45 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             select p from Product p
             where p.isActive = true
               and p.category.isActive = true
+              and p.category.id in :categoryIds
+              and (:q = '' or lower(p.name) like lower(concat('%', :q, '%')))
+              and (
+                :filterColors = false
+                or exists (
+                    select v.id from ProductVariant v
+                    where v.product = p
+                      and v.isActive = true
+                      and v.color.id in :colorIds
+                )
+              )
+              and (
+                :filterSizes = false
+                or exists (
+                    select v.id from ProductVariant v
+                    where v.product = p
+                      and v.isActive = true
+                      and v.size.id in :sizeIds
+                )
+              )
+                          AND (:minPrice IS NULL OR p.basePrice >= :minPrice)
+                                AND (:maxPrice IS NULL OR p.basePrice <= :maxPrice)
+            """)
+    Page<Product> searchCardsByCategories(
+            @Param("q") String q,
+            @Param("categoryIds") List<Long> categoryIds,
+            @Param("filterColors") boolean filterColors,
+            @Param("colorIds") List<Integer> colorIds,
+            @Param("filterSizes") boolean filterSizes,
+            @Param("sizeIds") List<Integer> sizeIds,
+            @Param("minPrice") BigDecimal minPrice,
+            @Param("maxPrice") BigDecimal maxPrice,
+            Pageable pageable
+    );
+
+    @Query("""
+            select p from Product p
+            where p.isActive = true
+              and p.category.isActive = true
               and p.createdAt >= :createdFrom
               and p.createdAt <= :createdTo
             """)
@@ -92,6 +134,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("createdTo") Instant createdTo,
             Pageable pageable
     );
+
+    @Query("select p from Product p where p.id in :ids and p.isActive=true and p.category.isActive=true")
+    Page<Product> findVisibleCampaignProducts(@Param("ids") List<Long> ids, Pageable pageable);
 
     @Query("""
         select p from Product p

@@ -221,7 +221,9 @@ class _CampaignManagementScreenState extends State<CampaignManagementScreen> {
                                 color: Colors.transparent,
                                 child: InkWell(
                                   hoverColor: AppTheme.surface,
-                                  onTap: () => _detail(p, item),
+                                  onTap: () => voucher
+                                      ? _detail(p, item)
+                                      : _form(p, item),
                                   child: Padding(
                                     padding: const EdgeInsets.all(20),
                                     child: Row(
@@ -299,12 +301,13 @@ class _CampaignManagementScreenState extends State<CampaignManagementScreen> {
                                               action == 'view'
                                               ? _detail(p, item)
                                               : _form(p, item),
-                                          itemBuilder: (_) => const [
-                                            PopupMenuItem(
-                                              value: 'view',
-                                              child: Text('Xem chi tiết'),
-                                            ),
-                                            PopupMenuItem(
+                                          itemBuilder: (_) => [
+                                            if (voucher)
+                                              const PopupMenuItem(
+                                                value: 'view',
+                                                child: Text('Xem chi tiết'),
+                                              ),
+                                            const PopupMenuItem(
                                               value: 'edit',
                                               child: Text('Chỉnh sửa'),
                                             ),

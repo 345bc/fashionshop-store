@@ -80,6 +80,27 @@ class ProductCardServiceTest {
         verifyNoInteractions(images, variants, variantImages);
     }
 
+    @Test
+    void multipleCategoriesKeepPagingAndOtherFiltersInsteadOfIntersectingOriginalCategory() {
+        var pageable = PageRequest.of(1, 12);
+        var min = new java.math.BigDecimal("199000");
+        var max = new java.math.BigDecimal("499000");
+        when(products.searchCardsByCategories("coat", List.of(10L, 11L), true, List.of(3), true, List.of(4), min, max, pageable))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 12));
+        var result = service.listCardsByCategories(" coat ", 9L, List.of(10L,11L,10L), List.of(3), List.of(4), min, max, pageable);
+        assertEquals(12, result.getTotalElements());
+        verify(products).searchCardsByCategories("coat", List.of(10L,11L), true, List.of(3), true, List.of(4), min, max, pageable);
+        verifyNoInteractions(images, variants, variantImages);
+    }
+
+    @Test
+    void emptyCategorySelectionPreservesLegacySingleCategoryApi() {
+        var pageable = PageRequest.of(0, 12);
+        when(products.searchCards("", 9L, false, List.of(-1), false, List.of(-1), null, null, pageable)).thenReturn(Page.empty(pageable));
+        assertTrue(service.listCardsByCategories(null,9L,List.of(),null,null,null,null,pageable).isEmpty());
+        verify(products).searchCards("",9L,false,List.of(-1),false,List.of(-1),null,null,pageable);
+    }
+
     private Product product(Long id) {
         Product product = new Product();
         product.setId(id);
