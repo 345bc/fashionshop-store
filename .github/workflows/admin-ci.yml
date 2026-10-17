@@ -32,7 +32,7 @@ jobs:
         env:
           FLUTTER_VERSION: '3.47.0'
         run: |
-          $manifest = Invoke-RestMethod 'https://storage.googleapis.com/flutter_infra_release/flutter/releases/releases_windows.json'
+          $manifest = Invoke-RestMethod 'https://storage.googleapis.com/flutter_infra_release/releases/releases_windows.json'
           $release = $manifest.releases | Where-Object { $_.version -eq $env:FLUTTER_VERSION -and $_.channel -eq 'stable' } | Select-Object -First 1
           if (-not $release -or -not $release.sha256) { throw "Stable Flutter $env:FLUTTER_VERSION with SHA256 was not found in the official release manifest." }
           $archive = Join-Path $env:RUNNER_TEMP 'flutter-sdk.zip'
