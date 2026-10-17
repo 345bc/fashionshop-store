@@ -13,6 +13,7 @@ import ProductAccordion from "@/components/ProductAccordion";
 import ProductRail from "@/components/ProductRail";
 import ProductSimilar from "@/components/ui/ProductSimilar";
 
+import ProductDetailSkeleton from "@/components/skeleton-ui/ProductDetailSkeleton";
 import { getProductDetail } from "@/service/productService";
 import type { PageResponse } from "@/type/api";
 
@@ -94,7 +95,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     return (
       <>
         <Header />
-        <main className="main-content" style={{ padding: "100px", textAlign: "center" }}>Đang tải...</main>
+        <ProductDetailSkeleton />
         <Footer />
       </>
     );
@@ -104,7 +105,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     return (
       <>
         <Header />
-        <main className="main-content" style={{ padding: "100px", textAlign: "center" }}>Sản phẩm không tồn tại</main>
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 main-content" style={{ padding: "100px 0", textAlign: "center" }}>
+          <p style={{ color: "var(--ink-secondary)", fontSize: "16px" }}>Sản phẩm không tồn tại hoặc đã ngừng kinh doanh.</p>
+        </main>
         <Footer />
       </>
     );

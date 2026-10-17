@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { apiRequest, ApiClientError } from "@/api/apiClient";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./skeleton-ui/ProductCardSkeleton";
 import FilterSidebar from "./FilterSidebar";
-import { getProductCards, getNewArrivals } from "../service/productService";
+import { getProductCards } from "../service/productService";
 import type { ApiResponse, PageResponse } from "../type/api";
 import type { ProductCardData } from "../type/product";
 
 type ProductCardsResponse =
   ApiResponse<PageResponse<ProductCardData>>;
+
+type CategoryOption = { id: number; name: string; parentId: number | null; parentName: string | null; isActive: boolean };
 
 type FilterState = { types: string[]; sizes: string[]; price: string };
 
@@ -26,13 +29,12 @@ export default function ProductCatalog({
   initialQuery = "",
   initialCategory = "",
   initialCategoryName = "",
-  newArrivalsOnly = false,
 }: {
   initialQuery?: string;
   initialCategory?: string;
   initialCategoryName?: string;
-  newArrivalsOnly?: boolean;
 }) {
+  const router = useRouter();
   // 1. Trạng thái khởi tạo / Truy vấn
   const [query, setQuery] = useState(initialQuery.trim());
   const [categoryId, setCategoryId] = useState<number | null>(
@@ -52,7 +54,45 @@ export default function ProductCatalog({
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [sort, setSort] = useState("featured");
-  const [filters, setFilters] = useState<FilterState>({ types: [], sizes: [], price: "all" });
+  const [filters, setFilters] = useState<FilterState>({ types: /^[1-9]\d*$/.test(initialCategory) ? [initialCategory] : [], sizes: [], price: "all" });
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
+  const [categoryParentName, setCategoryParentName] = useState("");
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState("");
+  const [categoryRetry, setCategoryRetry] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadCategories() {
+      setCategoriesLoading(true);
+      setCategoriesError("");
+      setCategoryParentName("");
+      try {
+        if (categoryId == null) {
+          setCategoryOptions([]);
+          return;
+        }
+        const detail = await apiRequest(`/category/${categoryId}`, { signal: controller.signal });
+        const category = detail.data as CategoryOption;
+        if (!category.isActive) { router.replace("/"); return; }
+        const parentId = category.parentId ?? category.id;
+        const response = await apiRequest(`/category/parents/${parentId}`, { signal: controller.signal });
+        if (!Array.isArray(response.data)) throw new Error("Danh mục trả về không hợp lệ.");
+        if (!controller.signal.aborted) {
+          setCategoryParentName(category.parentName ?? category.name);
+          setCategoryOptions((response.data as CategoryOption[]).filter(c => c.isActive && c.parentId === parentId));
+          if (category.parentId == null) setFilters(previous => ({ ...previous, types: [] }));
+        }
+      } catch (error) {
+        if (!controller.signal.aborted && error instanceof ApiClientError && error.status === 404) { router.replace("/"); return; }
+        if (!controller.signal.aborted) setCategoriesError("Không tải được loại sản phẩm.");
+      } finally {
+        if (!controller.signal.aborted) setCategoriesLoading(false);
+      }
+    }
+    void loadCategories();
+    return () => controller.abort();
+  }, [categoryId, categoryRetry, router]);
+
   const [selectedColorIds, setSelectedColorIds] = useState<number[]>([]);
   const [selectedSizeIds, setSelectedSizeIds] = useState<number[]>([]);
 
@@ -103,12 +143,16 @@ export default function ProductCatalog({
       setLoading(true);
       setError("");
 
+      if (categoriesLoading) return;
+      if (!categoriesError && categoryId != null && categoryOptions.length === 0 && filters.types.length === 0) {
+        setProducts([]); setTotalProducts(0); setTotalPages(0); setLoading(false); setConnectionLost(false);
+        return;
+      }
       try {
-        const response: ProductCardsResponse = newArrivalsOnly
-          ? await getNewArrivals({ page, size: 12, signal: controller.signal })
-          : await getProductCards({
+        const response: ProductCardsResponse = await getProductCards({
             q: query,
-            categoryId,
+            categoryId: categoriesLoading || categoriesError ? categoryId : null,
+            categoryIds: filters.types.length ? filters.types.map(Number) : categoryId != null ? categoryOptions.map(c => c.id) : [],
             page,
             size: 12,
             sort,
@@ -149,7 +193,7 @@ export default function ProductCatalog({
       controller.abort();
       clearTimeout(retryTimer);
     };
-  }, [query, categoryId, page, sort, selectedColorIds, selectedSizeIds, minPrice, maxPrice, productRetry, newArrivalsOnly]);
+  }, [query, categoryId, page, sort, selectedColorIds, selectedSizeIds, minPrice, maxPrice, productRetry, filters.types, categoryOptions, categoriesLoading, categoriesError]);
 
   function toggleColor(colorId: number) {
     setSelectedColorIds((previous) =>
@@ -178,44 +222,24 @@ export default function ProductCatalog({
     setPage(0);
   }
 
-  // const filtered = useMemo(() => {
-  //   const q = query.toLocaleLowerCase("vi");
-  //   let list = products.filter((product) => {
-  //     const queryMatch = !q || product.name.toLocaleLowerCase("vi").includes(q) || product.type.toLocaleLowerCase("vi").includes(q);
-  //     const typeMatch = filters.types.length === 0 || filters.types.includes(product.type);
-  //     const sizeMatch = filters.sizes.length === 0 || filters.sizes.some((size) => product.sizes.includes(size));
-  //     const priceMatch = filters.price === "all" ||
-  //       (filters.price === "under300" && product.price < 300000) ||
-  //       (filters.price === "300to500" && product.price >= 300000 && product.price <= 500000) ||
-  //       (filters.price === "over500" && product.price > 500000);
-  //     return queryMatch && typeMatch && sizeMatch && priceMatch;
-  //   });
-  //   if (sort === "low") list = [...list].sort((a, b) => a.price - b.price);
-  //   if (sort === "high") list = [...list].sort((a, b) => b.price - a.price);
-  //   if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
-  //   return list;
-  // }, [filters, sort, query]);
-
-
-
 
   return (
     <>
       <section className="catalog-hero">
         <div>
           <h1>
-            {newArrivalsOnly ? "Sản phẩm mới" : query
+            {query
               ? `Kết quả tìm kiếm cho “${query}”`
               : categoryId !== null
-                ? `Kết quả tìm kiếm cho ${initialCategoryName || "danh mục đã chọn"}`
+                ? `Kết quả tìm kiếm cho ${filters.types.length ? filters.types.map(id => categoryOptions.find(c => String(c.id) === id)?.name ?? initialCategoryName).filter(Boolean).join(", ") || "danh mục đã chọn" : categoryParentName || initialCategoryName || "danh mục đã chọn"}`
                 : "Tất cả sản phẩm"}
           </h1>
-          <p>{newArrivalsOnly ? "Các thiết kế mới ra mắt trong 7 ngày gần nhất, sắp xếp mới nhất trước." : "Những thiết kế dễ mặc, bảng màu trung tính và phom dáng hiện đại cho tủ đồ mỗi ngày."}</p>
+          <p>Những thiết kế dễ mặc, bảng màu trung tính và phom dáng hiện đại cho tủ đồ mỗi ngày.</p>
         </div>
         <div className="catalog-hero-count">{totalProducts}<span>sản phẩm</span></div>
       </section>
 
-      {!newArrivalsOnly && <div className="mb-6 mt-2 flex flex-col justify-between gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-center">
+      <div className="mb-6 mt-2 flex flex-col justify-between gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
           <button
             className="flex h-9 items-center justify-center gap-2 rounded-full border border-black/20 bg-white px-5 text-[13px] font-semibold tracking-wide text-black transition-all hover:border-black hover:bg-black/5 active:scale-[0.98]"
@@ -277,7 +301,7 @@ export default function ProductCatalog({
             )}
           </div>
         </div>
-      </div>}
+      </div>
 
       {productsLoading && products.length === 0 ? (
         <ProductCardSkeleton />
@@ -383,15 +407,21 @@ export default function ProductCatalog({
         </div>
       ) : (
         <div className="empty-catalog">
-          <h2>{newArrivalsOnly ? "Chưa có sản phẩm mới" : "Chưa có sản phẩm phù hợp"}</h2>
-          <p>{newArrivalsOnly ? "Hiện chưa có sản phẩm được tạo trong 7 ngày gần nhất." : "Hãy thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác."}</p>
-          {newArrivalsOnly ? <Link href="/products">Khám phá sản phẩm</Link> : <button onClick={() => { clearFilters(); setQuery(""); setCategoryId(null); }}>Xem tất cả sản phẩm</button>}
+          <h2>Chưa có sản phẩm phù hợp</h2>
+          <p>Hãy thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác.</p>
+          <button onClick={() => { clearFilters(); setQuery(""); setCategoryId(null); router.replace("/"); }}>Về trang chủ</button>
         </div>
       )}
 
-      {!newArrivalsOnly && <FilterSidebar
+      <FilterSidebar
         isOpen={filterOpen}
         onClose={() => setFilterOpen(false)}
+        showCategoryTypes={categoryId != null}
+        categoryOptions={categoryOptions}
+        categoryParentName={categoryParentName}
+        categoriesLoading={categoriesLoading}
+        categoriesError={categoriesError}
+        onRetryCategories={() => setCategoryRetry(n => n + 1)}
         value={filters}
         onChange={(f) => { setFilters(f); setPage(0); }}
         resultCount={totalProducts}
@@ -401,7 +431,7 @@ export default function ProductCatalog({
         onToggleColor={toggleColor}
         onToggleSize={toggleSize}
         onReset={clearFilters}
-      />}
+      />
     </>
   );
 }
