@@ -12,7 +12,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.filter.OncePerRequestFilter;
-import com.huit.zella.common.exception.BusinessException;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -25,13 +24,11 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
     );
 
     private final RefreshSessionRepository sessions;
-    private final UserRepository users;
     private final JwtAccessTokenService tokenService;
     private final UserService appUserService;
 
-    public JwtCookieAuthenticationFilter(JwtAccessTokenService tokenService, UserService appUserService, UserRepository users, RefreshSessionRepository sessions) {
+    public JwtCookieAuthenticationFilter(JwtAccessTokenService tokenService, UserService appUserService, RefreshSessionRepository sessions) {
         this.sessions = sessions;
-        this.users = users;
         this.tokenService = tokenService;
         this.appUserService = appUserService;
     }
@@ -70,9 +67,8 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
                     || !session.getUser().getId().equals(userId.longValue())
                     || session.isRoleSelectionRequired()!=pending
                     || !java.util.Objects.equals(session.getActiveRole(),jwt.getClaimAsString("activeRole"))) throw new JwtException("Session revoked");
-            CurrentUser user = userId == null ? appUserService.requireByEmail(jwt.getSubject()) : appUserService.requireById(userId.longValue());
             Number version = jwt.getClaim("authVersion");
-            if (version == null || version.longValue() != users.findById(user.id()).orElseThrow().getAuthVersion()) throw new JwtException("Session revoked");
+            CurrentUser user = appUserService.requireForAccessToken(userId.longValue(), version);
             user = pending ? user.pendingRoleSelection() : user.withActiveRole(jwt.getClaimAsString("activeRole"));
             if (pending && !Set.of("/api/v1/auth/me", "/api/v1/auth/select-role").contains(request.getRequestURI())) {
                 response.setStatus(403); response.setContentType("application/json;charset=UTF-8");
