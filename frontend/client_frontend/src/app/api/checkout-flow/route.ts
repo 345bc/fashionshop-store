@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signWorkflow, verifyWorkflow, WORKFLOW_COOKIE } from "@/utils/server/workflowCookie";
 
-const backend = (process.env.NEXT_PUBLIC_API_BASE_URL || `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080"}/api/v1`).replace(/\/$/, "");
+const backend = (process.env.BACKEND_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080"}/api/v1`).replace(/\/$/, "");
 function sameOrigin(request: NextRequest) { return request.headers.get("origin") === request.nextUrl.origin; }
 function result(status: number, message: string) { return NextResponse.json({ message }, { status, headers: { "Cache-Control": "no-store" } }); }
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 3600 };

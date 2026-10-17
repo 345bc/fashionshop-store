@@ -1,160 +1,157 @@
+"use client";
+
+import { useEffect, useState, type FormEvent } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { trackPostView } from "@/service/postViewTracker";
+import PostContent from "@/components/PostContent";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Link from "next/link";
-import Image from "next/image";
+import { readPost, listPosts, popularPosts, postDate, PostRequestError, type Post } from "@/service/postService";
+import styles from "./article.module.css";
+
+type SidebarPost = Pick<Post, "id" | "slug" | "thumbnail" | "title" | "categoryName" | "publishedAt">;
 
 export default function ArticleDetailPage() {
-  return (
-    <>
-      <Header />
-      <main className="main-content" style={{ minHeight: "80vh", paddingBottom: "80px" }}>
-        
-        <div className="breadcrumb">
-          <Link href="/">Trang chủ</Link>
-          <span className="divider">/</span>
-          <Link href="/blog">Zella Post</Link>
-          <span className="divider">/</span>
-          <span className="current">Phong cách</span>
-        </div>
+  const { id } = useParams<{ id: string }>();
+  return <Article key={id} id={id} />;
+}
 
-        {/* Cover Image & Header - Elegant full-width container */}
-        <section style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 0", textAlign: "center" }}>
-
-          <h1 style={{ 
-            fontSize: "clamp(2rem, 4vw, 3.2rem)", 
-            fontWeight: 400, 
-            lineHeight: 1.2, 
-            color: "var(--ink-primary)", 
-            maxWidth: "800px", 
-            margin: "0 auto 24px",
-            fontFamily: "var(--font-sans)",
-            letterSpacing: "-0.01em"
-          }}>
-            Linen - Hơi thở của tự nhiên trong thời trang đương đại
-          </h1>
-
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            gap: "16px", 
-            color: "var(--ink-secondary)", 
-            fontSize: "0.9rem",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px"
-          }}>
-            <span>By Zella Team</span>
-            <span>—</span>
-            <span>12 Tháng 9, 2026</span>
-            <span>—</span>
-            <span>5 phút đọc</span>
-          </div>
-          
-        </section>
-
-        {/* Big Cover Image */}
-        <div style={{ maxWidth: "1280px", margin: "0 auto 64px", padding: "0 24px" }}>
-          <div style={{ borderRadius: "4px", overflow: "hidden", aspectRatio: "21/9", position: "relative" }}>
-             <Image 
-               src="https://images.unsplash.com/photo-1515347619252-8bbfa678d407?w=1600&q=80" 
-               alt="Linen - Hơi thở của tự nhiên" 
-               fill
-               style={{ objectFit: "cover" }} 
-               priority
-             />
-          </div>
-        </div>
-
-        {/* Article Body - Full width container */}
-        <article style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 24px", color: "var(--ink-primary)", fontSize: "1.1rem", lineHeight: 1.8 }}>
-          
-          <p style={{ marginBottom: "24px", fontSize: "1.2rem", color: "var(--ink-secondary)" }}>
-            Giữa nhịp sống hối hả, con người ngày càng có xu hướng tìm về những gì mộc mạc và nguyên bản nhất. Trong thời trang, Linen (vải lanh) chính là đại diện tiêu biểu cho tinh thần &quot;back to nature&quot; ấy – một chất liệu thô mộc nhưng chứa đựng sự thanh lịch vượt thời gian.
-          </p>
-
-          <h2 style={{ fontSize: "1.8rem", fontWeight: 500, margin: "48px 0 24px", fontFamily: "var(--font-sans)", letterSpacing: "-0.01em" }}>
-            Chất liệu mang dòng chảy thời gian
-          </h2>
-          <p style={{ marginBottom: "24px" }}>
-            Linen là một trong những loại vải lâu đời nhất trên thế giới, được dệt từ sợi của thân cây lanh. Phải mất rất nhiều công sức và thời gian để thu hoạch, xử lý, kéo sợi và dệt nên những thước vải Linen. Chính quy trình thủ công tỉ mỉ này khiến Linen mang trong mình vẻ đẹp của sự nguyên bản.
-          </p>
-          <p style={{ marginBottom: "24px" }}>
-            Không phẳng phiu hoàn hảo như vải nhân tạo, Linen sở hữu bề mặt thô mộc đặc trưng. Từng sợi vải không đồng đều tạo nên một kết cấu tự nhiên, mang lại cảm giác dễ chịu và gần gũi vô cùng khi chạm vào.
-          </p>
-
-          {/* Elegant Quote Block */}
-          <div style={{ 
-            margin: "56px 0", 
-            padding: "40px 0", 
-            borderTop: "1px solid var(--border-light)", 
-            borderBottom: "1px solid var(--border-light)",
-            textAlign: "center" 
-          }}>
-            <p style={{ 
-              fontSize: "1.5rem", 
-              fontStyle: "italic", 
-              fontWeight: 300, 
-              color: "var(--ink-primary)", 
-              lineHeight: 1.5,
-              margin: 0
-            }}>
-              &quot;Mặc Linen không chỉ là khoác lên mình một bộ trang phục, mà là đang ôm vào lòng hơi thở của tự nhiên, của sự tự do và thanh thản.&quot;
-            </p>
-          </div>
-
-          <h2 style={{ fontSize: "1.8rem", fontWeight: 500, margin: "48px 0 24px", fontFamily: "var(--font-sans)", letterSpacing: "-0.01em" }}>
-            Đặc tính vượt trội của Linen
-          </h2>
-          <p style={{ marginBottom: "24px" }}>
-            Vượt xa vẻ đẹp bên ngoài, Linen thực sự chinh phục người mặc bởi những đặc tính ưu việt:
-          </p>
-          <ul style={{ paddingLeft: "24px", marginBottom: "32px", color: "var(--ink-primary)" }}>
-            <li style={{ marginBottom: "16px", paddingLeft: "8px" }}>
-              <strong style={{ fontWeight: 500 }}>Thoáng mát tuyệt đối:</strong> Kết cấu sợi thưa giúp Linen thấm hút mồ hôi nhanh và bay hơi cũng rất nhanh, lý tưởng cho những ngày hè rực nắng.
-            </li>
-            <li style={{ marginBottom: "16px", paddingLeft: "8px" }}>
-              <strong style={{ fontWeight: 500 }}>Bền bỉ với thời gian:</strong> Khác với nhiều loại vải dễ bị sờn cũ, Linen càng giặt lại càng trở nên mềm mại và bền chắc hơn.
-            </li>
-            <li style={{ marginBottom: "16px", paddingLeft: "8px" }}>
-              <strong style={{ fontWeight: 500 }}>Thân thiện với môi trường:</strong> Việc trồng cây lanh cần rất ít nước và hoàn toàn không sử dụng hóa chất độc hại. Vải Linen cũng có khả năng phân hủy sinh học 100%.
-            </li>
-          </ul>
-
-          <div style={{ marginBottom: "48px", borderRadius: "4px", overflow: "hidden" }}>
-             <Image 
-               src="https://images.unsplash.com/photo-1596755094514-f87e32f85e23?w=800&q=80" 
-               alt="Áo sơ mi Linen" 
-               width={800} 
-               height={500} 
-               style={{ width: "100%", height: "auto", objectFit: "cover" }} 
-             />
-             <p style={{ textAlign: "center", fontSize: "0.85rem", color: "var(--ink-secondary)", marginTop: "12px", fontStyle: "italic" }}>
-               Thiết kế sơ mi Linen với phom dáng suông rộng, thoải mái.
-             </p>
-          </div>
-
-          <h2 style={{ fontSize: "1.8rem", fontWeight: 500, margin: "48px 0 24px", fontFamily: "var(--font-sans)", letterSpacing: "-0.01em" }}>
-            Nét quyến rũ từ những nếp nhăn
-          </h2>
-          <p style={{ marginBottom: "24px" }}>
-            Nhiều người e ngại Linen vì chúng dễ nhăn. Nhưng với những ai đã phải lòng chất liệu này, nếp nhăn tự nhiên ấy lại chính là nét duyên ngầm, là dấu ấn cá nhân của người mặc. Nó phản ánh sự chuyển động chân thực, sự tự do không bị gò bó bởi những khuôn mẫu cứng nhắc.
-          </p>
-          <p style={{ marginBottom: "48px" }}>
-            Tại Zella, chúng tôi trân trọng vẻ đẹp nguyên sơ đó. Bộ sưu tập Linen mới nhất được thiết kế với những đường cắt tối giản, tôn lên chất liệu và mang lại cho bạn một phong thái thanh lịch, hiện đại nhưng vẫn đầy thư thái.
-          </p>
-
-          {/* Social Share or Tags */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-light)", paddingTop: "24px", marginTop: "48px" }}>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <span style={{ padding: "6px 12px", background: "var(--bg-subtle)", borderRadius: "99px", fontSize: "0.85rem", color: "var(--ink-secondary)" }}>#Linen</span>
-              <span style={{ padding: "6px 12px", background: "var(--bg-subtle)", borderRadius: "99px", fontSize: "0.85rem", color: "var(--ink-secondary)" }}>#ThoiTrangBenVung</span>
-              <span style={{ padding: "6px 12px", background: "var(--bg-subtle)", borderRadius: "99px", fontSize: "0.85rem", color: "var(--ink-secondary)" }}>#Minimalism</span>
+function Article({ id }: { id: string }) {
+  const [post, setPost] = useState<Post | null>(null);
+  const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [copyStatus, setCopyStatus] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    readPost(id, controller.signal).then(data => { if (!controller.signal.aborted) setPost(data); })
+      .catch(reason => {
+        if (controller.signal.aborted) return;
+        setError(reason instanceof Error ? reason.message : "Không tải được bài viết.");
+        setNotFound(reason instanceof PostRequestError && reason.status === 404);
+      });
+    return () => controller.abort();
+  }, [id, retry]);
+  const loadedSlug = post?.slug;
+  useEffect(() => {
+    if (!loadedSlug) return;
+    return trackPostView(loadedSlug, views => setPost(current => current?.slug === loadedSlug ? { ...current, viewCount: views } : current));
+  }, [loadedSlug]);
+  async function copyLink() {
+    try { await navigator.clipboard.writeText(window.location.href); setCopyStatus("Đã sao chép liên kết"); }
+    catch { setCopyStatus("Bạn có thể sao chép địa chỉ trên thanh trình duyệt."); }
+  }
+  return <><Header /><main className={styles.main} aria-busy={!post && !error}>
+    <div className={`container mx-auto ${styles.container}`}>
+      {error ? <section className={styles.error} role="alert">
+        <h1>{notFound ? "Không tìm thấy bài viết" : "Chưa tải được bài viết"}</h1><p>{error}</p>
+        <Link href="/blog">← Tất cả bài viết</Link>
+        {!notFound && <button type="button" onClick={() => { setError(""); setNotFound(false); setPost(null); setRetry(n => n + 1); }}>Thử lại</button>}
+      </section> : !post ? <ArticleSkeleton /> : <div className={styles.layout}>
+        <article className={styles.article}>
+          <header className={styles.articleHeader}>
+            <h1 className={styles.title}>{post.title}</h1>
+            <div className={styles.meta}><span>{post.categoryName}</span><span aria-hidden="true">•</span>
+              <span>Ngày đăng: <time dateTime={post.publishedAt}>{postDate(post.publishedAt)}</time></span>
             </div>
-          </div>
-
+          </header>
+          <figure className={styles.cover}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={post.thumbnail} alt={post.title} fetchPriority="high" />
+          </figure>
+          {post.summary && <p className={styles.summary}>{post.summary}</p>}
+          <PostContent content={post.content ?? ""} />
+          <footer className={styles.articleFooter}>
+            <div className={styles.footerActions}>
+              <Link href="/blog">← Tất cả bài viết</Link>
+              <button type="button" onClick={copyLink}><span className="material-symbols-outlined" aria-hidden="true">link</span> Sao chép liên kết</button>
+            </div><p className={styles.copyStatus} role="status">{copyStatus}</p>
+          </footer>
         </article>
-      </main>
-      <Footer />
-    </>
-  );
+        <ArticleSidebar currentSlug={post.slug} />
+      </div>}
+    </div>
+  </main><Footer /></>;
+}
+
+function ArticleSidebar({ currentSlug }: { currentSlug: string }) {
+  const [popular, setPopular] = useState<SidebarPost[]>([]);
+  const [latest, setLatest] = useState<SidebarPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [popularError, setPopularError] = useState(false);
+  const [latestError, setLatestError] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [input, setInput] = useState("");
+  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState<{ query: string; posts: SidebarPost[]; total: number; error: boolean } | null>(null);
+  const [searchRetry, setSearchRetry] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.allSettled([popularPosts(controller.signal, 4), listPosts("", "", 0, 4, controller.signal)])
+      .then(([popularResult, latestResult]) => {
+        if (controller.signal.aborted) return;
+        if (popularResult.status === "fulfilled") setPopular(popularResult.value.filter(post => post.slug !== currentSlug).slice(0, 3));
+        else setPopularError(true);
+        if (latestResult.status === "fulfilled") setLatest(latestResult.value.content.filter(post => post.slug !== currentSlug).slice(0, 3));
+        else setLatestError(true);
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [currentSlug, retry]);
+  useEffect(() => {
+    if (!query) return;
+    const controller = new AbortController();
+    listPosts(query, "", 0, 5, controller.signal)
+      .then(data => { if (!controller.signal.aborted) setSearch({ query, posts: data.content, total: data.totalElements, error: false }); })
+      .catch(() => { if (!controller.signal.aborted) setSearch({ query, posts: [], total: 0, error: true }); });
+    return () => controller.abort();
+  }, [query, searchRetry]);
+  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setQuery(input.trim()); setSearch(null); setSearchRetry(n => n + 1); }
+  function reload() { setPopularError(false); setLatestError(false); setLoading(true); setRetry(n => n + 1); }
+  const searching = Boolean(query && search?.query !== query);
+  return <aside className={styles.aside} aria-label="Tìm kiếm và khám phá bài viết">
+    <form className={styles.searchForm} role="search" onSubmit={submit}>
+      <label htmlFor="article-search" className="sr-only">Tìm kiếm bài viết</label>
+      <input id="article-search" value={input} onChange={event => setInput(event.target.value)} placeholder="Tìm kiếm bài viết" maxLength={255} />
+      <button type="submit" aria-label="Tìm kiếm"><span className="material-symbols-outlined" aria-hidden="true">search</span></button>
+    </form>
+    {query ? <section className={styles.sideSection} aria-live="polite">
+      <div className={styles.searchHeading}><h2>Kết quả tìm kiếm</h2><button type="button" onClick={() => { setInput(""); setQuery(""); setSearch(null); }}>Xóa</button></div>
+      {searching ? <SideSkeleton /> : search?.error ? <SideError onRetry={() => { setSearch(null); setSearchRetry(n => n + 1); }} /> : <>
+        <p className={styles.searchCount}>{search?.total ?? 0} kết quả cho “{query}”</p>
+        <SideList posts={search?.posts ?? []} />
+      </>}
+    </section> : <>
+      {(loading || popularError || popular.length > 0) && <section className={styles.sideSection}>
+        <h2>Bài đọc nhiều nhất</h2>
+        {loading ? <SideSkeleton /> : popularError ? <SideError onRetry={reload} /> : <SideList posts={popular} ranked />}
+      </section>}
+      {(loading || latestError || latest.length > 0) && <section className={styles.sideSection}>
+        <h2>Bài viết mới nhất</h2>
+        {loading ? <SideSkeleton /> : latestError ? <SideError onRetry={reload} /> : <SideList posts={latest} />}
+      </section>}
+    </>}
+  </aside>;
+}
+
+function SideList({ posts, ranked = false }: { posts: SidebarPost[]; ranked?: boolean }) {
+  return <div className={styles.sideList}>{posts.map((post, index) => <Link key={post.id} href={`/blog/${post.slug}`} className={styles.sideCard}>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img src={post.thumbnail} alt={post.title} loading="lazy" />
+    <div className={styles.sideCopy}>
+      {ranked && <span className={styles.rank}>{index + 1}</span>}
+      <time dateTime={post.publishedAt}>{postDate(post.publishedAt)}</time>
+      <p className={styles.sideCategory}>{post.categoryName}</p>
+      <h3>{post.title}</h3>
+    </div>
+  </Link>)}</div>;
+}
+function SideSkeleton() { return <div aria-label="Đang tải bài viết">{[1, 2, 3].map(item => <div key={item} className={`${styles.sideSkeleton} ${styles.shimmer}`} />)}</div>; }
+function SideError({ onRetry }: { onRetry: () => void }) { return <div className={styles.sideError} role="alert"><p>Chưa tải được bài viết.</p><button type="button" onClick={onRetry}>Thử lại</button></div>; }
+function ArticleSkeleton() {
+  return <div className={styles.layout} role="status" aria-label="Đang tải bài viết"><span className="sr-only">Đang tải bài viết…</span>
+    <div aria-hidden="true"><div className={`${styles.skeletonTitle} ${styles.shimmer}`} /><div className={`${styles.skeletonMeta} ${styles.shimmer}`} /><div className={`${styles.skeletonCover} ${styles.shimmer}`} /></div>
+    <div aria-hidden="true"><SideSkeleton /></div>
+  </div>;
 }

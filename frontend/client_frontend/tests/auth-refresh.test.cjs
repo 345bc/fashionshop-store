@@ -114,3 +114,47 @@ test('logout waits for an in-flight refresh before clearing the session', async 
   });
   assert.deepEqual(events, ['refresh', 'logout']);
 });
+
+test('API, CSRF and refresh requests are marked AJAX to avoid native Basic Auth dialogs', async () => {
+  const api = client(); let refreshed = false; const calls = [];
+  await withFetch(async (url, options) => {
+    assert.equal(new Headers(options.headers).get('X-Requested-With'), 'XMLHttpRequest');
+    calls.push(url);
+    if (url.endsWith('/auth/csrf')) return csrf();
+    if (url.endsWith('/auth/refresh')) { refreshed = true; return Response.json({ data: {} }); }
+    return refreshed ? Response.json({ data: { id: 1 } }) : Response.json({}, { status: 401 });
+  }, async () => { await api.apiRequest('/auth/me'); });
+  assert.ok(calls.some(url => url.endsWith('/auth/csrf')));
+  assert.ok(calls.some(url => url.endsWith('/auth/refresh')));
+});
+
+test('network and unavailable server errors notify the global overlay on any API route', async () => {
+  const previous = global.window;
+  const events = new EventTarget(); global.window = events;
+  let failures = 0; events.addEventListener('zella:connection-error', () => failures++);
+  try {
+    await withFetch(async () => { throw new TypeError('Failed to fetch'); }, async () => {
+      await assert.rejects(client().apiRequest('/posts/categories'));
+    });
+    for (const status of [502,503,504]) await withFetch(async () => Response.json({}, { status }), async () => {
+      await assert.rejects(client().apiRequest('/product/cards'));
+    });
+    assert.equal(failures, 4);
+  } finally { if (previous === undefined) delete global.window; else global.window = previous; }
+});
+
+test('validation errors, forbidden responses and cancelled navigation do not trigger connection overlay', async () => {
+  const previous = global.window;
+  const events = new EventTarget(); global.window = events;
+  let failures = 0; events.addEventListener('zella:connection-error', () => failures++);
+  try {
+    for (const status of [400,401,403,404,500]) await withFetch(async () => Response.json({}, { status }), async () => {
+      await assert.rejects(client().apiRequest('/auth/login'));
+    });
+    const controller = new AbortController(); controller.abort();
+    await withFetch(async () => { throw new DOMException('Cancelled', 'AbortError'); }, async () => {
+      await assert.rejects(client().apiRequest('/posts', { signal: controller.signal }));
+    });
+    assert.equal(failures, 0);
+  } finally { if (previous === undefined) delete global.window; else global.window = previous; }
+});

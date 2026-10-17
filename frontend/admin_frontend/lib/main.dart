@@ -1,3 +1,10 @@
+import 'features/home_appearance/home_appearance_screen.dart';
+
+import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+import 'features/posts/posts_screen.dart';
+import 'features/posts/post_categories_screen.dart';
 import 'core/security/role_access.dart';
 import 'screens/role_selection_screen.dart';
 
@@ -38,7 +45,6 @@ import 'features/suppliers/presentation/providers/suppliers_provider.dart';
 import 'features/sizeguides/presentation/providers/size_guides_provider.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 import 'screens/login_screen.dart';
-// import 'features/products/presentation/screens/product_detail_screen.dart';
 import 'features/products/presentation/screens/product_variants_screen.dart';
 import 'features/categories/presentation/screens/categories_screen.dart';
 import 'features/product_attributes/data/attribute_kind.dart';
@@ -94,6 +100,13 @@ class ZellaAdminApp extends StatelessWidget {
           ApiClient().onSessionExpired = authProvider.expireSession;
           return MaterialApp(
             title: 'Zella Admin',
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              FlutterQuillLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('vi'), Locale('en')],
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             scaffoldMessengerKey: adminScaffoldMessengerKey,
@@ -142,8 +155,9 @@ class MainScreenState extends State<MainScreen> {
     if (!RoleAccess.canOpen(
       context.read<AuthProvider>().user?.activeRole,
       route,
-    ))
+    )) {
       return;
+    }
     setState(() {
       _currentRoute = route;
       _currentArgs = args;
@@ -170,7 +184,7 @@ class MainScreenState extends State<MainScreen> {
     }
     switch (_currentRoute) {
       case '/':
-        return const DashboardScreen();
+        return DashboardScreen(onNavigate: (route) => navigate(route));
       case '/categories':
         return const CategoriesScreen();
       case '/product-attributes':
@@ -189,6 +203,12 @@ class MainScreenState extends State<MainScreen> {
         return ProductVariantsScreen(product: _currentArgs);
       case '/inventory':
         return const InventoryScreen();
+      case '/home-appearance':
+        return const HomeAppearanceScreen();
+      case '/posts':
+        return const PostsScreen();
+      case '/post-categories':
+        return const PostCategoriesScreen();
       case '/promotions':
         return const PromotionsScreen();
       case '/vouchers':

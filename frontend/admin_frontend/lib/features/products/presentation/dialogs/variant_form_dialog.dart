@@ -296,10 +296,6 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'SKU được tạo tự động từ slug sản phẩm, mã màu và tên size.',
-                      ),
-                      const SizedBox(height: 20),
                       Row(
                         children: [
                           Expanded(

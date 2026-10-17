@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../auth/AuthContext";
@@ -8,6 +8,14 @@ import FieldError from "@/utils/FieldError";
 import FieldSuccess from "@/utils/FieldSuccess";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<p role="status">Đang tải trang đăng nhập…</p>}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const auth = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();

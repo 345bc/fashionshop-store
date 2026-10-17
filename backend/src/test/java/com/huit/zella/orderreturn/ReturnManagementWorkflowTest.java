@@ -25,6 +25,7 @@ class ReturnManagementWorkflowTest extends WarehouseFixture {
     @Autowired OrderService orders;
     @Autowired ReturnService returns;
     @Autowired WebApplicationContext context;
+    @Autowired com.huit.zella.payment.vnpay.PaymentRefundRepository paymentRefunds;
 
     private OrderResponse delivered() {
         var order = orders.create(new CreateOrderRequest(actor.getId(), "Khách quản lý", "0900000000", "Test", null,
@@ -72,5 +73,35 @@ class ReturnManagementWorkflowTest extends WarehouseFixture {
         mvc.perform(get("/api/v1/order-return/management").with(user("customer").roles("USER"))).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/order-return/management").with(user("admin").roles("ADMIN"))).andExpect(status().isOk());
         mvc.perform(get("/api/v1/order-return/management").with(user("employee").roles("CUSTOMER_SUPPORT"))).andExpect(status().isOk());
+    }
+
+    @Test void timelyRequestCanBeProcessedAfterFourteenDays() {
+        var order = delivered();
+        var document = request(order);
+        var persisted = em.find(Order.class, order.id());
+        persisted.getHistories().stream().filter(h -> "DELIVERED".equals(h.getNewStatus()))
+            .forEach(h -> h.setCreatedAt(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).minusDays(15)));
+        returns.approve(document.id(), actor.getId());
+        var received = returns.receive(document.id(), new ReceiveReturnRequest(document.items().stream()
+            .map(i -> new ReceiveReturnRequest.Item(i.id(), "INTACT")).toList()), actor.getId());
+        assertEquals("RECEIVED", received.status());
+        assertEquals("COMPLETED", returns.complete(document.id(), new CompleteReturnRequest("BANK_TRANSFER", "Đã chuyển khoản"), actor.getId()).status());
+    }
+
+    @Test void refundLedgerPersistsRequestMetadataAndUnicodeWithoutGatewayCall() {
+        var order = delivered();
+        var refund = new com.huit.zella.payment.vnpay.PaymentRefund();
+        refund.setOrderId(order.id()); refund.setRequestId(UUID.randomUUID().toString().replace("-", ""));
+        refund.setTarget("ORDER-" + order.id()); refund.setAmount(order.totalAmount());
+        refund.setState("UNKNOWN"); refund.setMerchantCode("TEST1234"); refund.setTransactionType("02");
+        refund.setTransactionDate("20261015150000"); refund.setTransactionNo("12345");
+        refund.setNote("Hoàn tiền sau khi nhận hàng trả"); refund.setActorId(actor.getId());
+        var now = java.time.LocalDateTime.of(2026,10,15,8,0);
+        refund.setCreatedAt(now); refund.setUpdatedAt(now);
+        paymentRefunds.saveAndFlush(refund); em.clear();
+        var saved = paymentRefunds.findFirstByTargetOrderByIdDesc(refund.getTarget()).orElseThrow();
+        assertEquals("UNKNOWN", saved.getState()); assertEquals(refund.getNote(), saved.getNote());
+        assertEquals(now, saved.getCreatedAt());
+        assertEquals(order.id(), paymentRefunds.findOrderIdById(saved.getId()).orElseThrow());
     }
 }

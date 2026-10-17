@@ -10,6 +10,7 @@ class FeatureToolbar extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;
   final Widget? filterWidget;
   final String? initialSearchText;
+  final int? maxSearchLength;
 
   const FeatureToolbar({
     super.key,
@@ -17,6 +18,7 @@ class FeatureToolbar extends StatefulWidget {
     required this.onSearchChanged,
     this.filterWidget,
     this.initialSearchText,
+    this.maxSearchLength,
   });
 
   @override
@@ -73,11 +75,13 @@ class _FeatureToolbarState extends State<FeatureToolbar> {
                 preferBelow: true,
                 waitDuration: const Duration(milliseconds: 600),
                 child: TextField(
+                  maxLength: widget.maxSearchLength,
                   controller: _searchController,
                   onChanged: _onSearchChanged,
                   style: const TextStyle(fontSize: 13, color: AppTheme.text),
                   textAlignVertical: TextAlignVertical.center,
                   decoration: InputDecoration(
+                    counterText: '',
                     isDense: true,
                     hintText: widget.searchHint,
                     hintStyle: const TextStyle(

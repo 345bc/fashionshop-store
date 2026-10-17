@@ -12,6 +12,7 @@ interface ProductCardProps {
   discountPercent?: number | null;
   image: string;
   badge?: string;
+  showBadges?: boolean;
   rating?: number;
   reviewsCount?: number;
   colors?: {
@@ -22,11 +23,11 @@ interface ProductCardProps {
   }[];
 }
 
-export default function ProductCard({ slug, name, price, originalPrice, discountPercent, image, badge, rating, reviewsCount, colors = [] }: ProductCardProps) {
+export default function ProductCard({ slug, name, price, originalPrice, discountPercent, image, badge, showBadges = true, rating, reviewsCount, colors = [] }: ProductCardProps) {
   const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
   const selectedColor = colors.find((color) => color.id === selectedColorId) ?? colors[0];
   const displayImage = selectedColor?.imageUrl || image;
-  const displayBadge = badge === "NEW" ? "Mới" : badge;
+  const displayBadge = badge?.toLowerCase() === "new" ? "Mới" : badge;
   const saleBadge = discountPercent ? `-${discountPercent}%` : null;
 
   return (
@@ -42,18 +43,9 @@ export default function ProductCard({ slug, name, price, originalPrice, discount
             </div>
           )}
         </Link>
-        {displayBadge && <span className="product-badge modern-badge" style={{ zIndex: 2, pointerEvents: "none" }}>{displayBadge}</span>}
-        {saleBadge && (
-          <span className="product-badge modern-badge" 
-            style={{ 
-              zIndex: 2, 
-              pointerEvents: "none", 
-              left: 'auto', 
-              right: '11px', 
-              background: '#e00', 
-              color: '#fff' 
-            }}
-          >
+        {showBadges && displayBadge && <span className="product-badge modern-badge" style={{ zIndex: 2, pointerEvents: "none" }}>{displayBadge}</span>}
+        {showBadges && saleBadge && (
+          <span className="sale-badge-bookmark" aria-label={`Giảm giá ${saleBadge}`}>
             {saleBadge}
           </span>
         )}

@@ -27,13 +27,17 @@ public class PromotionPricingService {
         Instant now=orderClock.instant();
         var campaigns=repository.effective(now);
         Map<Long,Offer> result=new HashMap<>();
+        for(var product:products) {
+            if(product.isActive() && product.getCategory()!=null && Boolean.TRUE.equals(product.getCategory().getIsActive())
+                    && product.getCreatedAt()!=null && product.getCreatedAt().isAfter(now.minus(7,ChronoUnit.DAYS)) && !product.getCreatedAt().isAfter(now))
+                result.put(product.getId(), new Offer(null,new BigDecimal("5")));
+        }
         for(var campaign:campaigns) {
+            if(!"SELECTED".equals(campaign.getTargetMode())) continue;
             Set<Long> selected=new HashSet<>();
             campaign.getProducts().forEach(p->selected.add(p.getId()));
             for(var product:products) {
-                boolean matches="NEW_PRODUCTS".equals(campaign.getTargetMode())
-                    ? product.getCreatedAt()!=null && product.getCreatedAt().isAfter(now.minus(7,ChronoUnit.DAYS)) && !product.getCreatedAt().isAfter(now)
-                    : selected.contains(product.getId());
+                boolean matches=selected.contains(product.getId());
                 if(!matches || !product.isActive() || !Boolean.TRUE.equals(product.getCategory().getIsActive())) continue;
                 Offer old=result.get(product.getId());
                 if(old==null || campaign.getDiscountPercent().compareTo(old.percent())>0)

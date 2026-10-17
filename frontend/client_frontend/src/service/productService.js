@@ -4,6 +4,7 @@ import { apiRequest } from "../api/apiClient";
  * @param {Object} params
  * @param {string} [params.q=""]
  * @param {number|null} [params.categoryId=null]
+ * @param {number[]} [params.categoryIds]
  * @param {number} [params.page=0]
  * @param {number} [params.size=12]
  * @param {AbortSignal} [params.signal]
@@ -16,6 +17,7 @@ import { apiRequest } from "../api/apiClient";
 export function getProductCards({
   q = "",
   categoryId = null,
+  categoryIds = [],
   page = 0,
   size = 12,
   sort = "featured",
@@ -31,6 +33,7 @@ export function getProductCards({
     size: String(size),
     sort,
   });
+  categoryIds.forEach(id => params.append("categoryIds", String(id)));
   colorIds.forEach((id) => {
     params.append("colorIds", String(id));
   });
@@ -54,18 +57,6 @@ export function getProductCards({
 
 export function getProductDetail(slug, { signal } = {}) {
   return apiRequest(`/product/detail/${slug}`, { signal });
-}
-
-/**
- * @param {{page?: number, size?: number, signal?: AbortSignal}} [options]
- * @returns {Promise<import("../type/api").ApiResponse<import("../type/api").PageResponse<import("../type/product").ProductCardData>>>}
- */
-export function getNewArrivals({ page = 0, size = 12, signal } = {}) {
-  const params = new URLSearchParams({
-    page: String(page),
-    size: String(size),
-  });
-  return apiRequest(`/product/new-arrivals?${params}`, { signal });
 }
 
 /**

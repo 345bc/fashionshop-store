@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import Link from "next/link";
 
 interface BlogCardProps {
@@ -15,7 +14,8 @@ export default function BlogCard({ href, title, image, date, category, descripti
   return (
     <div className="blog-card-wrapper">
       <Link href={href} className="blog-card-link">
-        <Image src={image} alt={title} fill style={{ objectFit: "cover" }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image} alt={title} loading="lazy" style={{ objectFit: "cover", position: "absolute", width: "100%", height: "100%" }} />
         <div className="blog-card-date">{date}</div>
         <div className="blog-card-content">
           <div className="blog-card-category"><span className="material-symbols-outlined" style={{ fontSize: 14 }}>sell</span>{category}</div>

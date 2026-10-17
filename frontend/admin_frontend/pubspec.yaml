@@ -42,6 +42,9 @@ dependencies:
   fluttertoast: ^10.0.0
   intl: ^0.20.3
   material_symbols_icons: ^4.2960.0
+  flutter_quill: ^11.6.0
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

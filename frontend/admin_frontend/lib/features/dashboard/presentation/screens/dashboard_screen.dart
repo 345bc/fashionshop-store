@@ -1,23 +1,16 @@
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../theme/app_theme.dart';
-import '../../../../widgets/common/feature_toolbar.dart';
-import '../../../../widgets/common/filter_dropdown.dart';
 import '../../data/models/analytics_models.dart';
-import '../../data/repositories/analytics_repository.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/analytics_filters.dart';
-import '../widgets/analytics_cards.dart';
-import '../widgets/analytics_panels.dart';
-import '../widgets/analytics_table.dart';
 import '../widgets/revenue_chart.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final AnalyticsSection? initialSection;
-  const DashboardScreen({super.key, this.initialSection});
+  final ValueChanged<String>? onNavigate;
+  const DashboardScreen({super.key, this.onNavigate});
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -26,185 +19,509 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialSection != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.read<DashboardProvider>().setSection(widget.initialSection!);
-        }
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final p = context.read<DashboardProvider>();
+      // Reports share this provider: always clear their filters on returning.
+      if (p.section != AnalyticsSection.overview ||
+          p.query.isNotEmpty ||
+          p.category != null ||
+          p.orderStatus != null) {
+        p.setSection(AnalyticsSection.overview);
+      } else {
+        p.load();
+      }
+    });
   }
+
+  Widget _panel({required Widget child}) => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      side: const BorderSide(color: AppTheme.border),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Padding(padding: const EdgeInsets.all(24), child: child),
+  );
+
+  Widget _title(String title, String subtitle) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
+      ),
+      const SizedBox(height: 6),
+      Text(
+        subtitle,
+        style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
     final p = context.watch<DashboardProvider>();
-    final chart =
-        p.section == AnalyticsSection.overview ||
-        p.section == AnalyticsSection.revenue;
+    final s = p.summary, old = p.previous;
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        key: PageStorageKey('analytics-${p.section.name}'),
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              spacing: 24,
-              runSpacing: 16,
-              children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Dashboard & Báo cáo',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Theo dõi kinh doanh, vận hành và đi sâu vào từng báo cáo.',
-                    ),
-                  ],
-                ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: p.csv));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Đã sao chép CSV của toàn bộ dòng trong bộ lọc hiện tại',
-                          ),
+      backgroundColor: const Color(0xFFF5F6F8),
+      body: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          key: const PageStorageKey('dashboard-overview'),
+          padding: EdgeInsets.all(constraints.maxWidth < 700 ? 20 : 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 24,
+                runSpacing: 16,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Tổng quan kinh doanh',
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w600,
                         ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Symbols.content_copy, size: 18),
-                  label: const Text('Sao chép CSV'),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        p.isDemo
+                            ? 'Dữ liệu mẫu • Không phải số liệu vận hành thực tế'
+                            : 'Kết quả kinh doanh và những việc cần theo dõi trong cửa hàng.',
+                        style: const TextStyle(color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: p.loading ? null : p.load,
+                        icon: const Icon(Symbols.refresh, size: 18),
+                        label: const Text('Làm mới'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: widget.onNavigate == null
+                            ? null
+                            : () => widget.onNavigate!('/reports'),
+                        icon: const Icon(Symbols.analytics, size: 18),
+                        label: const Text('Xem báo cáo'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              _panel(child: AnalyticsFilters(provider: p)),
+              const SizedBox(height: 24),
+              if (p.loading) ...[
+                const LinearProgressIndicator(minHeight: 2),
+                const SizedBox(height: 20),
+                const Text(
+                  'Đang cập nhật số liệu…',
+                  style: TextStyle(color: AppTheme.textSecondary),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Tooltip(
-              message:
-                  'Dữ liệu mẫu • ${reportDate(p.data.today.subtract(const Duration(days: 89)))} – ${reportDate(p.data.today)}. '
-                  'Chưa kết nối backend; các số liệu không phải hoạt động thực tế.',
-              child: const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Dữ liệu mẫu',
+              ] else if (p.error != null)
+                _panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _title('Chưa tải được tổng quan', p.error!),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: p.load,
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
+                ),
+              if (p.ready && p.section == AnalyticsSection.overview) ...[
+                LayoutBuilder(
+                  builder: (context, box) {
+                    final columns = box.maxWidth >= 1100
+                        ? 4
+                        : box.maxWidth >= 580
+                        ? 2
+                        : 1;
+                    final cards = [
+                      (
+                        label: 'Doanh thu thuần',
+                        value: reportMoney(s.netRevenue),
+                        note: p.compare
+                            ? p.growth(s.netRevenue, old.netRevenue)
+                            : 'Theo ngày giao / nhận trả',
+                        help: 'Tiền hàng đã giao trừ giảm giá và hàng trả nhận trong kỳ. Không gồm vận chuyển.',
+                        accent: true,
+                      ),
+                      (
+                        label: 'Lợi nhuận gộp',
+                        value: reportMoney(s.grossProfit),
+                        note: p.compare
+                            ? p.growth(s.grossProfit, old.grossProfit)
+                            : 'Chưa trừ chi phí vận hành',
+                        help: 'Doanh thu thuần trừ giá vốn; chưa phải lợi nhuận ròng.',
+                        accent: false,
+                      ),
+                      (
+                        label: 'Đơn giao thành công',
+                        value: '${s.deliveredOrders}',
+                        note: p.compare
+                            ? p.growth(s.deliveredOrders, old.deliveredOrders)
+                            : 'Theo ngày giao thành công',
+                        help: 'Đơn giao thành công trong kỳ, có thể được đặt ở kỳ trước.',
+                        accent: false,
+                      ),
+                      (
+                        label: 'Giá trị đơn giao TB',
+                        value: reportMoney(s.averageOrder),
+                        note: 'Tiền hàng sau giảm giá, trước trả hàng',
+                        help: 'Tiền hàng của đơn giao trong kỳ / số đơn giao; không gồm phí vận chuyển.',
+                        accent: false,
+                      ),
+                    ];
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: [
+                        for (final card in cards)
+                          SizedBox(
+                            width:
+                                (box.maxWidth - (columns - 1) * 16) / columns,
+                            child: Container(
+                              padding: const EdgeInsets.all(22),
+                              decoration: BoxDecoration(
+                                color: card.accent
+                                    ? const Color(0xFF243E39)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: card.accent
+                                      ? const Color(0xFF243E39)
+                                      : AppTheme.border,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          card.label,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: card.accent
+                                                ? Colors.white70
+                                                : AppTheme.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                      Tooltip(
+                                        message: card.help,
+                                        child: Icon(
+                                          Symbols.info,
+                                          size: 16,
+                                          color: card.accent
+                                              ? Colors.white70
+                                              : AppTheme.textMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      card.value,
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w600,
+                                        color: card.accent
+                                            ? Colors.white
+                                            : AppTheme.text,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    card.note,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: card.accent
+                                          ? Colors.white70
+                                          : AppTheme.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                RevenueChart(provider: p),
+                const SizedBox(height: 24),
+                LayoutBuilder(
+                  builder: (context, box) {
+                    final operations = _operations(p);
+                    final orders = _orders(p);
+                    return box.maxWidth >= 960
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 5, child: operations),
+                              const SizedBox(width: 24),
+                              Expanded(flex: 4, child: orders),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              operations,
+                              const SizedBox(height: 24),
+                              orders,
+                            ],
+                          );
+                  },
+                ),
+                if (p.warnings.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _panel(
+                    child: ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Lưu ý chất lượng dữ liệu',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      leading: const Icon(
+                        Symbols.info,
+                        color: AppTheme.warning,
+                      ),
+                      children: [
+                        for (final warning in p.warnings)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              warning,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                const Text(
+                  'Doanh thu ghi nhận khi giao hàng; hoàn trả ghi nhận khi nhận hàng trả. Múi giờ Việt Nam.',
                   style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            AnalyticsFilters(provider: p),
-            const SizedBox(height: 20),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final section in AnalyticsSection.values)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(section.label),
-                        selected: p.section == section,
-                        onSelected: (_) => p.setSection(section),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (p.section == AnalyticsSection.overview) ...[
-              AnalyticsCards(provider: p),
-              const SizedBox(height: 24),
+              ],
             ],
-            if (chart) ...[
-              RevenueChart(provider: p),
-              const SizedBox(height: 24),
-            ],
-            if (p.section != AnalyticsSection.overview) ...[
-              ExpansionTile(
-                key: PageStorageKey('analytics-summary-${p.section.name}'),
-                title: const Text('Xem chỉ số tổng hợp & cách tính'),
-                tilePadding: EdgeInsets.zero,
-                childrenPadding: const EdgeInsets.symmetric(vertical: 16),
-                children: [
-                  AnalyticsCards(provider: p),
-                  const SizedBox(height: 16),
-                  AnalyticsPanels(provider: p),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Chi tiết ${p.section.label.toLowerCase()}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FeatureToolbar(
-                searchHint:
-                    'Tìm trong bảng ${p.section.label.toLowerCase()}',
-                initialSearchText: p.query,
-                onSearchChanged: p.setQuery,
-                filterWidget: _filter(p),
-              ),
-              const SizedBox(height: 16),
-              AnalyticsTable(provider: p),
-            ],
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget? _filter(DashboardProvider p) {
-    if (p.section == AnalyticsSection.products ||
-        p.section == AnalyticsSection.inventory) {
-      return FilterDropdown<String?>(
-        label: 'Danh mục',
-        searchHint: 'Tìm danh mục',
-        value: p.category,
-        defaultValue: null,
-        options: [
-          for (final category
-              in AnalyticsRepository.products.map((r) => r.category).toSet())
-            FilterOption(value: category, label: category),
-        ],
-        onChanged: p.setCategory,
-      );
-    }
-    if (p.section == AnalyticsSection.orders ||
-        p.section == AnalyticsSection.overview) {
-      return FilterDropdown<String?>(
-        label: 'Trạng thái',
-        searchHint: 'Tìm trạng thái',
-        value: p.orderStatus,
-        defaultValue: null,
-        options: [
-          for (final status in [
-            'PENDING',
-            'CONFIRMED',
-            'SHIPPED',
-            'DELIVERED',
-            'CANCELLED',
-          ])
-            FilterOption(
-              value: status,
-              label: orderStatusLabel(status),
+  Widget _operations(DashboardProvider p) => _panel(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _title(
+          'Cần theo dõi',
+          'Trạng thái hiện tại • Không phụ thuộc khoảng ngày',
+        ),
+        const SizedBox(height: 20),
+        for (final item in [
+          (
+            title: 'Đơn chờ xuất giao',
+            detail: 'Đơn đã xác nhận, chưa bàn giao vận chuyển',
+            value: '${p.awaitingShipment}',
+            route: '/orders',
+            icon: Symbols.local_shipping,
+            urgent: p.awaitingShipment > 0,
+          ),
+          (
+            title: 'Phiếu trả chờ hoàn tiền',
+            detail: 'Đã nhận hàng trả và có số tiền cần hoàn',
+            value: '${p.pendingRefunds}',
+            route: '/orders',
+            icon: Symbols.assignment_return,
+            urgent: p.pendingRefunds > 0,
+          ),
+          (
+            title: 'SKU sắp hết / hết hàng',
+            detail: 'Số lượng có thể bán ≤ 5, gồm SKU tạm ngừng',
+            value: '${p.lowStock}',
+            route: '/inventory',
+            icon: Symbols.inventory_2,
+            urgent: p.lowStock > 0,
+          ),
+          (
+            title: 'Công nợ nhà cung cấp',
+            detail: 'Số tiền còn nợ trên phiếu nhập đã ghi sổ',
+            value: reportMoney(p.currentDebt),
+            route: '/purchases',
+            icon: Symbols.account_balance_wallet,
+            urgent: false,
+          ),
+        ])
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: item.urgent
+                      ? const Color(0xFFFFF4E5)
+                      : AppTheme.surface,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  item.icon,
+                  size: 20,
+                  color: item.urgent
+                      ? AppTheme.warning
+                      : AppTheme.textSecondary,
+                ),
+              ),
+              title: Text(
+                item.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  item.detail,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item.value,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: item.urgent ? AppTheme.warning : AppTheme.text,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Symbols.chevron_right,
+                    size: 18,
+                    color: AppTheme.textMuted,
+                  ),
+                ],
+              ),
+              onTap: widget.onNavigate == null
+                  ? null
+                  : () => widget.onNavigate!(item.route),
+            ),
+          ),
+      ],
+    ),
+  );
+
+  Widget _orders(DashboardProvider p) {
+    final distribution = p.distribution;
+    final total = distribution.values.fold<int>(0, (a, b) => a + b);
+    const colors = {
+      'PENDING': Color(0xFFD4A24C),
+      'CONFIRMED': Color(0xFF6489A5),
+      'SHIPPED': Color(0xFF8E82AE),
+      'DELIVERED': Color(0xFF508876),
+      'CANCELLED': Color(0xFFB77A78),
+      'RETURNED': Color(0xFF9299A3),
+    };
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _title(
+            'Đơn đặt trong kỳ',
+            'Trạng thái hiện tại của nhóm đơn tạo trong kỳ',
+          ),
+          const SizedBox(height: 20),
+          Text(
+            '$total đơn',
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 18),
+          if (total == 0)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                'Chưa có đơn đặt trong khoảng thời gian này.',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+            ),
+          if (total > 0)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Row(
+                children: [
+                  for (final status in colors.keys)
+                    if ((distribution[status] ?? 0) > 0)
+                      Expanded(
+                        flex: distribution[status]!,
+                        child: Container(height: 9, color: colors[status]),
+                      ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 16),
+          for (final status in colors.keys)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: colors[status],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      orderStatusLabel(status),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${distribution[status] ?? 0}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
         ],
-        onChanged: p.setOrderStatus,
-      );
-    }
-    return null;
+      ),
+    );
   }
 }

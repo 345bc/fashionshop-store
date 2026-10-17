@@ -44,6 +44,8 @@ abstract class CampaignModel {
   final String name, description;
   final DateTime startsAt, endsAt;
   final bool enabled;
+  final String? imageUrl;
+  final bool isDisplay;
   final List<CampaignHistoryModel> history;
   const CampaignModel({
     required this.id,
@@ -52,6 +54,8 @@ abstract class CampaignModel {
     required this.startsAt,
     required this.endsAt,
     required this.enabled,
+    this.imageUrl,
+    this.isDisplay = false,
     this.history = const [],
   });
   CampaignKind get kind;
@@ -99,6 +103,8 @@ class VoucherModel extends CampaignModel {
     required super.startsAt,
     required super.endsAt,
     required super.enabled,
+    super.imageUrl,
+    super.isDisplay,
     super.history,
     required this.code,
     required this.discountType,
@@ -138,6 +144,8 @@ class VoucherModel extends CampaignModel {
         startsAt: startsAt,
         endsAt: endsAt,
         enabled: enabled,
+        imageUrl: imageUrl,
+        isDisplay: isDisplay,
         history: history,
         code: code,
         discountType: discountType,
@@ -155,7 +163,14 @@ class VoucherModel extends CampaignModel {
 class PromotionProductModel {
   final int id;
   final String name;
-  const PromotionProductModel(this.id, this.name);
+  final int? categoryId;
+  final String? categoryName;
+  const PromotionProductModel(
+    this.id,
+    this.name, {
+    this.categoryId,
+    this.categoryName,
+  });
 }
 
 class PromotionModel extends CampaignModel {
@@ -169,6 +184,8 @@ class PromotionModel extends CampaignModel {
     required super.startsAt,
     required super.endsAt,
     required super.enabled,
+    super.imageUrl,
+    super.isDisplay,
     super.history,
     required this.discountPercent,
     required this.products,
@@ -187,6 +204,8 @@ class PromotionModel extends CampaignModel {
         startsAt: startsAt,
         endsAt: endsAt,
         enabled: enabled,
+        imageUrl: imageUrl,
+        isDisplay: isDisplay,
         history: history,
         discountPercent: discountPercent,
         products: products,

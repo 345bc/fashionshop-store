@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/auth/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,6 +8,14 @@ import FieldError from "@/utils/FieldError";
 import FieldSuccess from "@/utils/FieldSuccess";
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={<p role="status">Đang tải trang đăng ký…</p>}>
+      <RegisterContent />
+    </Suspense>
+  );
+}
+
+function RegisterContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 

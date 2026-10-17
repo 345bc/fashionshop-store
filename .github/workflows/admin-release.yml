@@ -1,0 +1,70 @@
+name: Admin Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: 'Successful Admin CI run ID on main (from the Actions run URL)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: admin-production-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Promote tested build
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    timeout-minutes: 15
+    environment: admin-production
+    permissions:
+      contents: write
+      actions: read
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CI_RUN_ID: ${{ inputs.ci_run_id }}
+    steps:
+      - name: Verify source workflow and successful main build
+        run: |
+          if ($env:CI_RUN_ID -notmatch '^\d+$') { throw 'CI run ID must be numeric.' }
+          $workflow = gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/admin-ci.yml" | ConvertFrom-Json
+          if ($LASTEXITCODE) { throw 'Cannot read CI workflow.' }
+          $run = gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:CI_RUN_ID" | ConvertFrom-Json
+          if ($LASTEXITCODE) { throw 'Cannot read CI run.' }
+          if ($run.workflow_id -ne $workflow.id -or $run.head_branch -ne 'main' -or $run.event -ne 'push' -or $run.status -ne 'completed' -or $run.conclusion -ne 'success' -or $run.head_repository.full_name -ne $env:GITHUB_REPOSITORY) { throw 'Only successful Admin CI push runs from main in this repository can be released.' }
+          $comparison = gh api "repos/$env:GITHUB_REPOSITORY/compare/$($run.head_sha)...main" | ConvertFrom-Json
+          if ($LASTEXITCODE -or $comparison.status -notin @('ahead', 'identical')) { throw 'Source commit is not in main history.' }
+          "SOURCE_SHA=$($run.head_sha)" >> $env:GITHUB_ENV
+      - name: Download the original CI artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: admin-windows-build
+          path: candidate
+          run-id: ${{ inputs.ci_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify artifact and publish versioned release
+        run: |
+          $manifest = Get-Content candidate/manifest.json -Raw | ConvertFrom-Json
+          if ($manifest.sourceSha -ne $env:SOURCE_SHA -or $manifest.runId -ne $env:CI_RUN_ID) { throw 'Artifact provenance does not match the approved CI run.' }
+          if ($manifest.version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid application version.' }
+          if (([Uri]$manifest.apiBaseUrl).Scheme -ne 'https') { throw 'Public releases require an HTTPS backend. HTTP candidates are for internal testing only.' }
+          $actual = (Get-FileHash candidate/zella-admin-windows-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $manifest.sha256) { throw 'Artifact checksum mismatch.' }
+          $tag = "admin-v$($manifest.version)"
+          gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/$tag" *> $null
+          if ($LASTEXITCODE -eq 0) { throw 'This version tag already exists. Increase pubspec.yaml version and build a new candidate.' }
+          gh api --method POST "repos/$env:GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$tag" -f "sha=$env:SOURCE_SHA" *> $null
+          if ($LASTEXITCODE) { throw 'Cannot create a new tag for the verified source commit.' }
+          $notes = "Windows x64 portable release.`n`nSource: $env:SOURCE_SHA`nCI run: $env:CI_RUN_ID`nBuild: $($manifest.buildNumber)`nSHA256: $actual`n`nExtract the entire ZIP and run the executable. This package is not Authenticode-signed and does not include automatic updates."
+          [IO.File]::WriteAllText((Join-Path $PWD 'release-notes.md'), $notes)
+          gh release create $tag candidate/zella-admin-windows-x64.zip candidate/manifest.json candidate/SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --verify-tag --title "Zella Admin $($manifest.version)" --notes-file release-notes.md
+          if ($LASTEXITCODE) { throw 'Release publication failed. Check repository permissions and tag rules.' }

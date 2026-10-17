@@ -46,7 +46,8 @@ public class ProductController {
             @RequestParam(defaultValue = "15") int size,
             @RequestParam(defaultValue = "featured") String sort,
             @RequestParam(required = false) List<Integer> colorIds,
-            @RequestParam(required = false) List<Integer> sizeIds
+            @RequestParam(required = false) List<Integer> sizeIds,
+            @RequestParam(required = false) List<Long> categoryIds
     ) {
         int safeSize = Math.max(1, Math.min(size, 100));
         Sort cardSort = switch (sort) {
@@ -68,9 +69,10 @@ public class ProductController {
         }
 
         return ApiResponse.success(PageResponse.from(
-                productService.listCards(
+                productService.listCardsByCategories(
                         q,
                         categoryId,
+                        categoryIds,
                         colorIds,
                         sizeIds,
                         minPrice,

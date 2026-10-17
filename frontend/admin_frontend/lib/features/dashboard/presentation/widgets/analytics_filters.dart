@@ -41,7 +41,7 @@ class AnalyticsFilters extends StatelessWidget {
       Tooltip(
         message:
             'Kỳ trước: ${reportDate(provider.previousStart)} – ${reportDate(provider.previousEnd)}.'
-            '${provider.previousCovered ? '' : ' Kỳ trước chưa đủ dữ liệu mẫu.'}',
+            '${provider.previousCovered ? '' : ' Kỳ trước chưa đủ dữ liệu.'}',
         child: FilterChip(
           label: const Text('So sánh kỳ trước'),
           selected: provider.compare,

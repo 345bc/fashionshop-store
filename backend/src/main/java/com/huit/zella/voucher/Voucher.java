@@ -8,6 +8,8 @@ import lombok.Setter;
 import org.hibernate.annotations.Nationalized;
 @Entity @Table(name="vouchers") @Getter @Setter
 public class Voucher {
+    @Column(name="image_url",length=500) private String imageUrl;
+    @Column(name="is_display",nullable=false) private boolean display;
     @Column(name="source_reward_id") private Long sourceRewardId;
     @Nationalized @Column(length=200) private String name;
     @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;

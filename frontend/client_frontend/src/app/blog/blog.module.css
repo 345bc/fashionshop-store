@@ -1,0 +1,188 @@
+.main {
+  width: 100%;
+  max-width: 1240px;
+  min-height: 80vh;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+  color: #171714;
+}
+
+/* Ẩn scrollbar cho category rail nhưng vẫn scroll mượt */
+.noScrollbar::-webkit-scrollbar {
+  display: none;
+}
+.noScrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Category Slider Nav Buttons */
+.navButton {
+  position: absolute;
+  top: 40%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  color: #262626;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.navButton:hover {
+  background: #ffffff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  transform: translateY(-50%) scale(1.06);
+}
+
+.navButton:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.navPrev {
+  left: 6px;
+}
+
+.navNext {
+  right: 6px;
+}
+
+/* Search Bar */
+.searchWrapper {
+  display: flex;
+  justify-content: center;
+  margin: 28px 0 44px;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  height: 48px;
+  background: #ffffff;
+  border: 1px solid #e2e2dc;
+  border-radius: 9999px;
+  padding: 0 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s ease;
+}
+
+.searchBar:focus-within {
+  border-color: #171714;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14.5px;
+  color: #171714;
+}
+
+.searchInput::-webkit-search-cancel-button,
+.searchInput::-webkit-search-decoration,
+.searchInput::-webkit-search-results-button,
+.searchInput::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.searchInput::placeholder {
+  color: #8c8c84;
+}
+
+/* Image zoom on card hover */
+.cardImgWrapper {
+  overflow: hidden;
+  position: relative;
+  border-radius: 16px;
+  background: #f4f3ef;
+}
+
+.cardImg {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.group:hover .cardImg {
+  transform: scale(1.04);
+}
+
+/* Category item card in rail */
+.categoryCard {
+  flex-shrink: 0;
+  width: 180px;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+  transition: transform 0.25s ease;
+}
+
+.categoryCard:hover {
+  transform: translateY(-4px);
+}
+
+.categoryImage {
+  width: 100%;
+  height: 175px;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  background: #f4f3ef;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Xem thêm Button */
+.seeMoreBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 18px;
+  border-radius: 9999px;
+  border: 1px solid #d4d4cc;
+  background: #ffffff;
+  color: #2c2c27;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.seeMoreBtn:hover {
+  border-color: #171714;
+  color: #171714;
+  background: #fafaf8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 640px) {
+  .categoryCard {
+    width: 140px;
+  }
+  .categoryImage {
+    height: 135px;
+    border-radius: 14px;
+  }
+  .navButton {
+    display: none;
+  }
+  .searchBar {
+    height: 44px;
+    padding: 0 16px;
+  }
+}

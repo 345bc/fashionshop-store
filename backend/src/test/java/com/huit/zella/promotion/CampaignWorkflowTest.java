@@ -35,7 +35,7 @@ class CampaignWorkflowTest extends WarehouseFixture {
     }
     @Test void newProductsExpireAndBestOfferWinsWithoutChangingStoredPrices() {
         var p=variant.getProduct();
-        campaigns.save("promotion",null,promotion("NEW_PRODUCTS",5,List.of()));
+        // New-product 5% discount is automatic; no managed campaign is created.
         assertEquals(0,pricing.price(p,new BigDecimal("300"),pricing.offers(List.of(p))).compareTo(new BigDecimal("285")));
         var second=campaigns.save("promotion",null,promotion("SELECTED",10,List.of(p.getId())));
         assertEquals(0,pricing.price(p,new BigDecimal("300"),pricing.offers(List.of(p))).compareTo(new BigDecimal("270")));
@@ -55,7 +55,7 @@ class CampaignWorkflowTest extends WarehouseFixture {
         var saved=em.find(Order.class,order.id());
         assertEquals(0,saved.getSubtotal().compareTo(new BigDecimal("570")));
         assertEquals(0,saved.getOriginalSubtotal().compareTo(new BigDecimal("600")));
-        assertEquals(0,carts.quote(List.of(new CartItemRequest(variant.getId(),2))).subtotal().compareTo(new BigDecimal("600")));
+        assertEquals(0,carts.quote(List.of(new CartItemRequest(variant.getId(),2))).subtotal().compareTo(new BigDecimal("570")));
     }
     @Test void rewardManagementRedeemsExactlyOnceAndEnforcesQuotaAndOwnership() {
         var request=voucher(true,100,1);
