@@ -10,7 +10,7 @@ import { money } from "@/cart/types";
 import Footer from "@/components/Footer";
 import Image from "next/image";
 import ProductAccordion from "@/components/ProductAccordion";
-import ProductRail from "@/components/ProductRail";
+import ProductBoughtTogether from "@/components/ui/ProductBoughtTogether";
 import ProductSimilar from "@/components/ui/ProductSimilar";
 
 import ProductDetailSkeleton from "@/components/skeleton-ui/ProductDetailSkeleton";
@@ -359,19 +359,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       <ProductSimilar key={product.id} productId={product.id} />
 
       {/* ── FREQUENTLY BOUGHT TOGETHER ── */}
-      <div className="product-related-rails" style={{ marginTop: 64, marginBottom: 80 }}>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="slider-section-title" style={{ marginBottom: 12, fontSize: "1.5rem" }}>Thường được mua kèm</h2>
-        </div>
-        <ProductRail
-          products={[
-            { id: "6", name: "Quần Jogger Cotton", price: "399.000 VND", image: "/assets/images/v7_1916.png", rating: 4.7, reviewsCount: 52 },
-            { id: "7", name: "Áo Thun Unisex", price: "279.000 VND", image: "/assets/images/v7_1923.png", badge: "Mới", rating: 4.5, reviewsCount: 19 },
-            { id: "8", name: "Áo Khoác Gió Nhẹ", price: "499.000 VND", image: "/assets/images/v7_1930.png", rating: 4.8, reviewsCount: 67 },
-            { id: "9", name: "Quần Short Thể Thao", price: "329.000 VND", image: "/assets/images/v7_1909.png", rating: 4.4, reviewsCount: 33 },
-          ]}
-        />
-      </div>
+      <ProductBoughtTogether key={`bought-${product.id}`} productId={product.id} />
       <Footer />
 
       {/* Size Guide Modal */}
@@ -447,4 +435,3 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     </>
   );
 }
-

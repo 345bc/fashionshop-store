@@ -71,3 +71,11 @@ export function getSimilars({ productId, page = 0, size = 8, signal }) {
   });
   return apiRequest(`/product/similars?${params}`, { signal });
 }
+
+/**
+ * @param {{productId: number, size?: number, signal?: AbortSignal}} options
+ * @returns {Promise<import("../type/api").ApiResponse<{computedAt: string, totalTransactions: number, products: {product: import("../type/product").ProductCardData, transactions: number, support: number, confidence: number, lift: number}[]}>>}
+ */
+export function getBoughtTogether({ productId, size = 8, signal }) {
+  return apiRequest(`/product/${productId}/bought-together?size=${size}`, { signal });
+}
