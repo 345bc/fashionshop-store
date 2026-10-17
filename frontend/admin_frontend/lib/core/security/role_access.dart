@@ -26,6 +26,9 @@ class RoleAccess {
         '/feedback',
       ].contains(route),
       'MARKETING' => [
+        '/home-appearance',
+        '/posts',
+        '/post-categories',
         '/promotions',
         '/vouchers',
         '/promotion-programs',

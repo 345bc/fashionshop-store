@@ -26,7 +26,6 @@ app.auth.jwt.cookie-secure=false
 # spring.mail.username=CHANGE_ME
 # spring.mail.password=CHANGE_ME
 
-# VNPay sandbox: xem backend/docs/vnpay.md. Dien thong tin VNPay cap truoc khi bat.
 app.payment.vnpay.enabled=false
 app.payment.vnpay.ipn-required=false
 app.payment.vnpay.tmn-code=

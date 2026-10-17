@@ -3603,8 +3603,8 @@
   /* ── Product Rail — no heading, just cards + controls ── */
   .product-rail-section {
     background: var(--bg-subtle);
-    border-top: 1px solid var(--border-light);
-    border-bottom: 1px solid var(--border-light);
+    border-top: none;
+    border-bottom: none;
     padding: 52px 24px 52px;
     margin: 0;
   }
@@ -3851,6 +3851,41 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-weight: 650;
+  }
+  .sale-badge-bookmark {
+    position: absolute;
+    top: 0;
+    right: 12px;
+    z-index: 2;
+    pointer-events: none;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 38px;
+    height: 44px;
+    padding: 6px 4px 12px;
+    background: linear-gradient(165deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+    font-size: 11.5px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-align: center;
+    clip-path: polygon(
+      0 0, 
+      100% 0, 
+      100% 100%, 
+      68% calc(100% - 8px), 
+      32% calc(100% - 8px), 
+      0 100%
+    );
+    filter: drop-shadow(0 2px 4px rgba(220, 38, 38, 0.35));
+    transition: transform 0.2s ease, filter 0.2s ease;
+  }
+  .modern-product-card:hover .sale-badge-bookmark {
+    transform: translateY(1px);
+    filter: drop-shadow(0 3px 6px rgba(220, 38, 38, 0.45));
   }
   .modern-product-info {
     padding: 14px 4px 10px;
