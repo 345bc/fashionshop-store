@@ -58,4 +58,21 @@ class ProductImageFileStorageTest {
                 () -> storage.store(new MockMultipartFile("file", "photo.png", "image/png", "not an image".getBytes())));
         verifyNoInteractions(s3Client);
     }
+    @Test
+    void storesPostCoverInCloudWithDetectedMimeType() {
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 13, 10, 0x1a, 10, 0, 0, 0, 0};
+        var stored = storage.storePost(new MockMultipartFile("file", "cover.exe", "text/plain", png));
+        assertEquals("https://images.example.com/post-images/" + stored.fileName(), stored.url());
+        verify(s3Client).putObject(argThat((PutObjectRequest request) ->
+                request.key().equals("post-images/" + stored.fileName())
+                        && request.contentType().equals("image/png")), any(RequestBody.class));
+    }
+
+    @Test
+    void rejectsEmptyOversizedAndNonImagePostCoversBeforeCloudWrite() {
+        assertThrows(BusinessException.class, () -> storage.storePost(new MockMultipartFile("file", new byte[0])));
+        assertThrows(BusinessException.class, () -> storage.storePost(new MockMultipartFile("file", new byte[1025])));
+        assertThrows(BusinessException.class, () -> storage.storePost(new MockMultipartFile("file", "fake.png", "image/png", "not an image".getBytes())));
+        verifyNoInteractions(s3Client);
+    }
 }
