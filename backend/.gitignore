@@ -41,3 +41,5 @@ src/main/resources/application-product.properties
 
 # Local database trust store
 /.local-certs/
+
+/docs
