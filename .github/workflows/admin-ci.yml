@@ -28,11 +28,23 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
-        with:
-          flutter-version: '3.47.0'
-          channel: stable
-          cache: true
+      - name: Install verified Flutter SDK
+        env:
+          FLUTTER_VERSION: '3.47.0'
+        run: |
+          $manifest = Invoke-RestMethod 'https://storage.googleapis.com/flutter_infra_release/flutter/releases/releases_windows.json'
+          $release = $manifest.releases | Where-Object { $_.version -eq $env:FLUTTER_VERSION -and $_.channel -eq 'stable' } | Select-Object -First 1
+          if (-not $release -or -not $release.sha256) { throw "Stable Flutter $env:FLUTTER_VERSION with SHA256 was not found in the official release manifest." }
+          $archive = Join-Path $env:RUNNER_TEMP 'flutter-sdk.zip'
+          $sdkRoot = Join-Path $env:RUNNER_TEMP 'admin-flutter-sdk'
+          Invoke-WebRequest "$($manifest.base_url)/$($release.archive)" -OutFile $archive
+          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash
+          if ($actual -ne $release.sha256) { throw 'Flutter SDK checksum mismatch.' }
+          Expand-Archive -LiteralPath $archive -DestinationPath $sdkRoot
+          $flutterBin = Join-Path $sdkRoot 'flutter/bin'
+          $flutterBin >> $env:GITHUB_PATH
+          & (Join-Path $flutterBin 'flutter.bat') --version
+          if ($LASTEXITCODE) { throw 'Flutter SDK initialization failed.' }
       - name: Create isolated test configuration
         run: |
           [IO.File]::WriteAllText((Join-Path $PWD '.env'), "API_BASE_URL=http://127.0.0.1:8080/api/v1`n")

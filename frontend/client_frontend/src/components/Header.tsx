@@ -164,7 +164,7 @@ export default function Header() {
             className="justify-self-center whitespace-nowrap text-[18px] font-bold tracking-[0.25em] text-black lg:justify-self-start lg:text-[22px]"
             aria-label="Zella Studio - Trang chủ"
           >
-            ZELLA<span className="ml-2 hidden align-middle text-[9px] font-medium tracking-[0.2em] text-black/60 lg:inline">STUDIO</span>
+            ZELLA
           </Link>
 
           <nav className="hidden h-full items-center justify-center gap-8 lg:flex" aria-label="Điều hướng chính">
@@ -181,7 +181,16 @@ export default function Header() {
               Sản phẩm
               <span className={`material-symbols-outlined transition-transform duration-300 ${catalogOpen ? "rotate-180" : ""}`} style={{ fontSize: 16 }}>expand_more</span>
             </button>
-            <Link href="/blog" onClick={closeNavigation} className="relative flex h-full items-center text-[13.5px] font-bold uppercase tracking-[0.06em] text-black/90 transition-colors after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-black after:transition-all hover:text-black hover:after:w-full">Journal</Link>
+            <Link
+              href="/blog"
+              onClick={closeNavigation}
+              className={`relative flex h-full items-center text-[13.5px] font-bold uppercase tracking-[0.06em] transition-colors after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-black after:transition-all ${pathname.startsWith("/blog")
+                  ? "text-black after:w-full"
+                  : "text-black/90 after:w-0 hover:text-black hover:after:w-full"
+                }`}
+            >
+              Bài viết
+            </Link>
           </nav>
 
           {/* Tìm kiếm */}
@@ -307,7 +316,7 @@ export default function Header() {
                 <Link key={item.id}
                   href={`/products?cat=${item.id}&categoryName=${encodeURIComponent(item.name)}`}
                   onClick={closeNavigation} className="group min-w-0">
-                  <div className="relative aspect-4/3 overflow-hidden rounded-[10px] bg-[#eeece6]">
+                  <div className="relative aspect-[3/4] overflow-hidden rounded-[12px] bg-[#eeece6]">
                     <Image src={item.imageUrl || "/assets/images/v7_1795.png"} alt={item.name || ""} fill sizes="(max-width: 1280px) 25vw, 160px" className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]" />
                   </div>
                   <div className="mt-2.5 flex items-center justify-between gap-2">
@@ -318,12 +327,8 @@ export default function Header() {
               ))}
             </div>
 
-            <div className="mt-6 flex items-center justify-between border-t border-black/10 pt-4 text-[10px] text-[#777a72]">
+            <div className="mt-6 border-t border-black/10 pt-4 text-[10px] text-[#777a72]">
               <p>Thiết kế có chủ đích · Chất liệu được tuyển chọn</p>
-              <div className="flex items-center gap-5 font-medium text-[#3d403a]">
-                <Link href="/products?cat=new" onClick={closeNavigation} className="hover:text-black">Hàng mới về</Link>
-                <Link href="/products" onClick={closeNavigation} className="hover:text-black">Tất cả sản phẩm <GoogleSymbol name="arrow_forward" size={16} /></Link>
-              </div>
             </div>
           </div>
         </section>
@@ -352,9 +357,8 @@ export default function Header() {
             Sản phẩm
             <span className={`material-symbols-outlined transition-transform ${mobileProductsOpen ? "rotate-180" : ""}`} style={{ fontSize: 16 }}>expand_more</span>
           </button>
-          <Link href="/products?cat=nu" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Thời trang nữ</Link>
-          <Link href="/products?cat=nam" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Thời trang nam</Link>
-          <Link href="/blog" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Journal</Link>
+          {categoryParent?.map(item => <Link key={item.id} href={`/products?cat=${item.id}&categoryName=${encodeURIComponent(item.name)}`} onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">{item.name}</Link>)}
+          <Link href="/blog" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Bài viết</Link>
 
           <Link href="/loyalty" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Điểm thưởng</Link>
         </nav>

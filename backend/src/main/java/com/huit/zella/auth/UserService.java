@@ -45,6 +45,16 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public CurrentUser requireForAccessToken(Long id, Number authVersion) {
+        User user = user_repository.findById(id).orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED,
+                "USER_NOT_FOUND", "Tài khoản chưa được cấp quyền"));
+        if (!user.isActive()) throw new BusinessException(HttpStatus.FORBIDDEN, "USER_DISABLED", "Tài khoản đã bị khóa");
+        if (authVersion == null || authVersion.longValue() != user.getAuthVersion())
+            throw new org.springframework.security.oauth2.jwt.JwtException("Session revoked");
+        return toCurrentUser(user);
+    }
+
+    @Transactional(readOnly = true)
     public CurrentUser requireByEmail(String email) {
         User user = user_repository.findByEmailIgnoreCase(normalizeEmail(email))
                 .orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED,

@@ -68,7 +68,7 @@ export default function ProductSimilar({ productId }: { productId: number }) {
                 discountPercent: product.discountPercent,
                 image: product.imageUrl ?? "",
                 colors: product.colors,
-                badge: product.badge ?? "",
+                showBadges: false,
                 rating: product.averageRating,
                 reviewsCount: product.reviewsCount,
             }))} />

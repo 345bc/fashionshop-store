@@ -44,6 +44,13 @@ public class ProductImageFileStorage {
     public StoredImage storeSizeGuide(MultipartFile file) {
         return store(file, "size-guide-images");
     }
+    public StoredImage storePost(MultipartFile file) {
+        return store(file, "post-images");
+    }
+    public StoredImage storeCampaign(MultipartFile file) {
+        return store(file, "campaign-images");
+    }
+
     public StoredImage storeCategory(MultipartFile file) {
         return store(file, "category-images");
     }

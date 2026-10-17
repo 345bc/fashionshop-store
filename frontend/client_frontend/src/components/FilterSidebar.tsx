@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { ApiResponse } from "../type/api";
 import { getColorOptions, type ColorOption } from "../service/colorService";
 import { getSize } from "@/service/sizeServive";
@@ -12,6 +12,12 @@ type FilterState = {
 };
 
 interface FilterSidebarProps {
+  showCategoryTypes?: boolean;
+  categoryOptions?: { id: number; name: string; parentName: string | null }[];
+  categoryParentName?: string;
+  categoriesLoading?: boolean;
+  categoriesError?: string;
+  onRetryCategories?: () => void;
   isOpen: boolean;
   onClose: () => void;
   value?: FilterState;
@@ -43,7 +49,18 @@ const priceOptions: Array<[string, string]> = [
   ["over999", "Trên 999.000 VND"],
 ];
 
+function FilterGroup({ title, count = 0, children }: { title: string; count?: number; children: ReactNode }) {
+  return <details open className="group/filter border-b border-neutral-100 pb-6">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-2 text-[14px] font-semibold text-neutral-800 outline-offset-4 [&::-webkit-details-marker]:hidden">
+      <span className="flex items-center gap-2">{title}{count > 0 && <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">{count}</span>}</span>
+      <span aria-hidden="true" className="flex size-7 items-center justify-center text-xl font-normal text-neutral-500"><span className="group-open/filter:hidden">+</span><span className="hidden group-open/filter:inline">−</span></span>
+    </summary>
+    <div className="pt-4">{children}</div>
+  </details>;
+}
+
 export default function FilterSidebar({
+  showCategoryTypes = true, categoryOptions = [], categoryParentName = "", categoriesLoading = false, categoriesError = "", onRetryCategories,
   isOpen, onClose, value, onChange, resultCount = 0, resultsLoading = false,
   selectedColorIds = [], selectedSizeIds = [], onToggleColor, onToggleSize, onReset,
 }: FilterSidebarProps) {
@@ -132,8 +149,8 @@ export default function FilterSidebar({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-black/10 px-7 py-6">
           <div>
-            <p className="mb-1 text-[11px] font-extrabold tracking-[0.15em] text-black/40 uppercase">Tinh chỉnh kết quả</p>
-            <h2 className="text-2xl font-bold tracking-tight text-black">Bộ lọc</h2>
+            <p className="mb-1 text-[11px] font-medium tracking-[0.15em] text-neutral-400 uppercase">Tinh chỉnh kết quả</p>
+            <h2 className="text-[22px] font-semibold tracking-tight text-neutral-900">Bộ lọc</h2>
           </div>
           <button
             className="flex size-11 items-center justify-center rounded-full bg-black/5 text-black transition-colors hover:bg-black/10 active:scale-95"
@@ -145,45 +162,42 @@ export default function FilterSidebar({
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-10">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 
-          {/* Types Section */}
-          {/* <section>
-            <div className="mb-5 flex items-center justify-between border-b border-black/5 pb-3">
-              <span className="text-[14px] font-bold uppercase tracking-wider text-black">Loại sản phẩm</span>
-              {current.types.length > 0 && (
-                <span className="flex size-6 items-center justify-center rounded-full bg-black text-[12px] font-bold text-white">{current.types.length}</span>
-              )}
+          {(current.types.length > 0 || selectedSizeIds.length > 0 || selectedColorIds.length > 0 || current.price !== "all") && <FilterGroup title="Đang dùng bộ lọc">
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                ...current.types.map(id => ({ key: `category-${id}`, label: categoryOptions.find(c => String(c.id) === id)?.name ?? "Danh mục đã chọn", remove: () => emit({ ...current, types: current.types.filter(v => v !== id) }) })),
+                ...selectedSizeIds.map(id => ({ key: `size-${id}`, label: `Cỡ ${sizesResponse?.data.find(s => s.id === id)?.name ?? id}`, remove: () => onToggleSize?.(id) })),
+                ...selectedColorIds.map(id => ({ key: `color-${id}`, label: colorOptions.find(c => c.id === id)?.name ?? `Màu ${id}`, remove: () => onToggleColor?.(id) })),
+                ...(current.price === "all" ? [] : [{ key: "price", label: priceOptions.find(([id]) => id === current.price)?.[1] ?? current.price, remove: () => emit({ ...current, price: "all" }) }]),
+              ].map(chip => <button key={chip.key} type="button" onClick={chip.remove} aria-label={`Bỏ bộ lọc ${chip.label}`} className="flex items-center gap-3 rounded-full border border-black/15 px-3 py-2 text-sm hover:bg-black/5">{chip.label}<span aria-hidden="true">×</span></button>)}
+              <button type="button" className="px-2 py-2 text-sm text-blue-600 hover:underline" onClick={onReset}>Xóa tất cả</button>
             </div>
-            <div className="space-y-4">
-              {typeOptions.map((item) => (
-                <label key={item} className="group flex cursor-pointer items-center space-x-3.5">
-                  <div className={`flex size-5 items-center justify-center rounded-[4px] border transition-colors ${current.types.includes(item) ? "border-black bg-black text-white" : "border-black/20 bg-white group-hover:border-black/50"}`}>
-                    {current.types.includes(item) && <span className="material-symbols-outlined" style={{ fontSize: 14, strokeWidth: 4 }}>check</span>}
-                  </div>
-                  <span className={`text-[15px] transition-colors ${current.types.includes(item) ? "font-semibold text-black" : "font-medium text-black/70 group-hover:text-black"}`}>{item}</span>
-                  <input type="checkbox" className="hidden" checked={current.types.includes(item)} onChange={() => toggleArray("types", item)} />
-                </label>
-              ))}
-            </div>
-          </section> */}
+          </FilterGroup>}
+          {showCategoryTypes && <FilterGroup title="Loại sản phẩm" count={current.types.length}>
+            {categoryParentName && <p className="mb-4 text-xs text-neutral-400">Danh mục thuộc {categoryParentName}</p>}
+            {categoriesLoading ? <div className="space-y-3" aria-label="Đang tải loại sản phẩm">{[1,2,3].map(i => <div key={i} className="h-5 w-3/4 rounded bg-black/5 motion-safe:animate-pulse" />)}</div>
+              : categoriesError ? <div role="alert" className="text-sm text-red-700">{categoriesError} <button type="button" className="underline" onClick={onRetryCategories}>Thử lại</button></div>
+              : <div className="space-y-4">{categoryOptions.map(category => <label key={category.id} className="flex cursor-pointer items-center gap-3 text-[15px] text-black/75">
+                <input type="checkbox" className="size-5 shrink-0 accent-black" checked={current.types.includes(String(category.id))} onChange={() => {
+                  const id = String(category.id);
+                  emit({ ...current, types: current.types.includes(id) ? current.types.filter(v => v !== id) : [...current.types, id] });
+                }} />
+                <span className={current.types.includes(String(category.id)) ? "font-medium text-neutral-900" : "text-neutral-600"}>{category.name}</span>
+              </label>)}{!categoryOptions.length && <p className="text-sm text-black/50">Chưa có loại sản phẩm.</p>}</div>}
+          </FilterGroup>}
 
           {/* Sizes Section */}
-          <section>
-            <div className="mb-5 flex items-center justify-between border-b border-black/5 pb-3">
-              <span className="text-[14px] font-bold uppercase tracking-wider text-black">Kích cỡ</span>
-              {selectedSizeIds.length > 0 && (
-                <span className="flex size-6 items-center justify-center rounded-full bg-black text-[12px] font-bold text-white">{selectedSizeIds.length}</span>
-              )}
-            </div>
+          <FilterGroup title="Kích cỡ" count={selectedSizeIds.length}>
             <div className="grid grid-cols-3 gap-3">
               {sizesResponse?.data ? (
                 sizesResponse.data.map((sizeItem) => (
                   <button
                     key={sizeItem.id}
                     onClick={() => onToggleSize?.(sizeItem.id)}
-                    className={`flex h-10.5 items-center justify-center rounded-xl border text-[14px] font-bold transition-all ${selectedSizeIds.includes(sizeItem.id)
-                      ? "border-black bg-black text-white shadow-md shadow-black/20"
+                    className={`flex h-10.5 items-center justify-center rounded-lg border text-[14px] font-medium transition-all ${selectedSizeIds.includes(sizeItem.id)
+                      ? "border-neutral-900 bg-neutral-900 text-white"
                       : "border-black/15 bg-transparent text-black/70 hover:border-black/40 hover:bg-black/5 hover:text-black"
                       }`}
                   >
@@ -200,16 +214,10 @@ export default function FilterSidebar({
                 </>
               )}
             </div>
-          </section>
+          </FilterGroup>
 
           {/* Colors Section */}
-          <section>
-            <div className="mb-5 flex items-center justify-between border-b border-black/5 pb-3">
-              <span className="text-[14px] font-bold uppercase tracking-wider text-black">Màu sắc</span>
-              {selectedColorIds.length > 0 && (
-                <span className="flex size-6 items-center justify-center rounded-full bg-black text-[12px] font-bold text-white">{selectedColorIds.length}</span>
-              )}
-            </div>
+          <FilterGroup title="Màu sắc" count={selectedColorIds.length}>
             <div className="grid grid-cols-2 gap-y-4 gap-x-6">
               {colorError ? (
                 <div role="alert" className="col-span-2 text-sm text-red-700">
@@ -230,7 +238,7 @@ export default function FilterSidebar({
                           </span>
                         )}
                       </div>
-                      <span className={`text-[15px] transition-colors ${selectedColorIds.includes(item.id) ? "font-semibold text-black" : "font-medium text-black/70 group-hover:text-black"}`}>
+                      <span className={`text-[15px] transition-colors ${selectedColorIds.includes(item.id) ? "font-medium text-neutral-900" : "font-normal text-neutral-600 group-hover:text-neutral-900"}`}>
                         {item.name}
                       </span>
                       <input
@@ -252,39 +260,36 @@ export default function FilterSidebar({
                 </>
               )}
             </div>
-          </section>
+          </FilterGroup>
 
           {/* Price Section */}
-          <section>
-            <div className="mb-5 flex items-center justify-between border-b border-black/5 pb-3">
-              <span className="text-[14px] font-bold uppercase tracking-wider text-black">Giá</span>
-            </div>
+          <FilterGroup title="Giá" count={current.price === "all" ? 0 : 1}>
             <div className="grid grid-cols-2 gap-y-4 gap-x-2">
               {priceOptions.map(([id, label]) => (
                 <label key={id} className="group flex cursor-pointer items-center space-x-2">
                   <div className={`flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${current.price === id ? "border-black bg-white" : "border-black/20 bg-white group-hover:border-black/50"}`}>
                     <div className={`size-2.5 rounded-full bg-black transition-transform ${current.price === id ? "scale-100" : "scale-0"}`} />
                   </div>
-                  <span className={`text-[13px] leading-tight transition-colors ${current.price === id ? "font-semibold text-black" : "font-medium text-black/70 group-hover:text-black"}`}>{label}</span>
+                  <span className={`text-[13px] leading-tight transition-colors ${current.price === id ? "font-medium text-neutral-900" : "font-normal text-neutral-600 group-hover:text-neutral-900"}`}>{label}</span>
                   <input type="radio" className="hidden" name="catalog-price" checked={current.price === id} onChange={() => emit({ ...current, price: id })} />
                 </label>
               ))}
             </div>
-          </section>
+          </FilterGroup>
 
         </div>
 
         {/* Footer */}
-        <div className="border-t border-black/10 bg-gray-50/80 px-7 py-6 backdrop-blur-lg">
+        <div className="border-t border-black/10 bg-white px-6 py-5">
           <div className="flex items-center gap-4">
             <button
-              className="flex-1 rounded-xl bg-[#e5e5e5] py-4 text-[15px] font-bold text-black transition-colors hover:bg-[#d4d4d4] active:scale-[0.98]"
+              className="flex-1 rounded-lg bg-neutral-100 py-3.5 text-[14px] font-medium text-black transition-colors hover:bg-[#d4d4d4] active:scale-[0.98]"
               onClick={() => onReset ? onReset() : emit({ types: [], sizes: [], price: "all" })}
             >
               Đặt lại
             </button>
             <button
-              className="flex-2 rounded-xl bg-black py-4 text-[15px] font-bold text-white shadow-xl shadow-black/20 transition-all hover:bg-[#1a1a1a] active:scale-[0.98] disabled:opacity-70"
+              className="flex-2 rounded-lg bg-neutral-900 py-3.5 text-[14px] font-semibold text-white transition-all hover:bg-[#1a1a1a] active:scale-[0.98] disabled:opacity-70"
               onClick={onClose}
               disabled={resultsLoading}
             >

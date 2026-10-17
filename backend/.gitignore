@@ -36,4 +36,8 @@ build/
 target/
 uploads/
 src/main/resources/application-local.properties
+src/main/resources/application-product.properties
 
+
+# Local database trust store
+/.local-certs/

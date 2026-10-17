@@ -8,7 +8,7 @@ import 'package:zella_admin_flutter/features/dashboard/data/models/analytics_mod
 import 'package:zella_admin_flutter/features/dashboard/data/repositories/analytics_repository.dart';
 import 'package:zella_admin_flutter/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:zella_admin_flutter/features/dashboard/presentation/screens/dashboard_screen.dart';
-import 'package:zella_admin_flutter/features/dashboard/presentation/widgets/analytics_cards.dart';
+import 'package:zella_admin_flutter/features/dashboard/presentation/screens/analytics_report_screen.dart';
 
 void main() {
   final today = DateTime(2026, 10, 1);
@@ -131,6 +131,8 @@ void main() {
     WidgetTester tester,
     DashboardProvider p, {
     double width = 1600,
+    bool overview = false,
+    ValueChanged<String>? onNavigate,
   }) async {
     tester.view.physicalSize = Size(width, 1200);
     tester.view.devicePixelRatio = 1;
@@ -139,7 +141,11 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [ChangeNotifierProvider.value(value: p)],
-        child: const MaterialApp(home: DashboardScreen()),
+        child: MaterialApp(
+          home: overview
+              ? DashboardScreen(onNavigate: onNavigate)
+              : const AnalyticsReportScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -183,28 +189,55 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   testWidgets(
-    'Overview stays compact and KPI opens detail tab with the same dates',
+    'Overview clears report filters and opens management without changing dates',
     (tester) async {
       final p = provider();
-      await mount(tester, p);
-      expect(find.byType(DataTable), findsNothing);
-      expect(find.text('Cần xử lý hiện tại'), findsNothing);
+      p.setSection(AnalyticsSection.products);
+      p.setCategory('Áo nữ');
+      p.setQuery('Oxford');
       final start = p.start, end = p.end;
-      await tester.tap(find.text('Doanh thu thuần'));
-      await tester.pumpAndSettle();
-      expect(p.section, AnalyticsSection.revenue);
+      String? destination;
+      await mount(
+        tester,
+        p,
+        overview: true,
+        onNavigate: (route) => destination = route,
+      );
+      expect(p.section, AnalyticsSection.overview);
+      expect(p.category, isNull);
+      expect(p.query, isEmpty);
+      expect(find.byType(DataTable), findsNothing);
+      expect(find.byType(ChoiceChip), findsNothing);
+      await tester.tap(find.text('Xem báo cáo'));
+      expect(destination, '/reports');
+      await tester.ensureVisible(find.text('Đơn chờ xuất giao'));
+      await tester.tap(find.text('Đơn chờ xuất giao'));
+      expect(destination, '/orders');
       expect(p.start, start);
       expect(p.end, end);
-      expect(find.byType(DataTable), findsOneWidget);
-      expect(find.byType(AnalyticsCards), findsNothing);
-      expect(find.text('Thực thu từ khách'), findsNothing);
-      await tester.ensureVisible(find.text('Xem chỉ số tổng hợp & cách tính'));
-      await tester.tap(find.text('Xem chỉ số tổng hợp & cách tính'));
-      await tester.pumpAndSettle();
-      expect(find.byType(AnalyticsCards), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('Overview fits narrow screens and shows empty order state', (
+    tester,
+  ) async {
+    final p = provider();
+    p.setRange(
+      DateTimeRange(
+        start: today.subtract(const Duration(days: 200)),
+        end: today.subtract(const Duration(days: 195)),
+      ),
+    );
+    await mount(tester, p, width: 540, overview: true);
+    await tester.ensureVisible(
+      find.text('Chưa có đơn đặt trong khoảng thời gian này.'),
+    );
+    expect(
+      find.text('Chưa có đơn đặt trong khoảng thời gian này.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'All report sections render at narrow width; empty orders have empty state',
     (tester) async {

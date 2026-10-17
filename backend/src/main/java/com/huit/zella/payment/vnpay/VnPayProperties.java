@@ -16,4 +16,7 @@ public class VnPayProperties {
     private String hashSecret = "";
     private String paymentUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
     private String returnUrl = "http://localhost:3000/checkout";
+    private boolean refundEnabled;
+    private String apiUrl = "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction";
+    private String serverIp = "127.0.0.1";
 }

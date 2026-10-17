@@ -8,6 +8,26 @@ const API_BASE_URL = trimTrailingSlash(
     process.env.NEXT_PUBLIC_API_BASE_URL || `${BACKEND_URL}/api/v1`,
 );
 
+export function reportConnectionFailure() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("zella:connection-error"));
+}
+
+async function backendFetch(url, options = {}) {
+  const timeout = new AbortController();
+  const timer = setTimeout(() => timeout.abort(), 20000);
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout.signal]) : timeout.signal;
+  try {
+    const response = await fetch(url, { ...options, signal });
+    if ([502, 503, 504].includes(response.status)) reportConnectionFailure();
+    return response;
+  } catch (error) {
+    if (!options.signal?.aborted && (error instanceof TypeError || timeout.signal.aborted)) reportConnectionFailure();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 let csrf = null;
 let refreshInFlight = null;
 let loggingOut = false;
@@ -18,9 +38,9 @@ async function refreshSession() {
     refreshInFlight = (async () => {
       for (let attempt = 0; attempt < 2; attempt++) {
         const token = await getCsrf();
-        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        const response = await backendFetch(`${API_BASE_URL}/auth/refresh`, {
           method: "POST", credentials: "include", cache: "no-store",
-          headers: { Accept: "application/json", [token.headerName]: token.token },
+          headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest", [token.headerName]: token.token },
         });
         if (response.ok) return true;
         if (response.status === 401) { clearCsrfToken(); return false; }
@@ -35,15 +55,18 @@ async function refreshSession() {
 }
 
 async function fetchWithRefresh(path, options) {
+  const requestHeaders = new Headers(options.headers);
+  requestHeaders.set("X-Requested-With", "XMLHttpRequest");
+  options = { ...options, headers: requestHeaders };
   const excluded = ["/auth/login", "/auth/register", "/auth/logout", "/auth/refresh", "/auth/csrf"];
-  const response = await fetch(`${API_BASE_URL}${path}`, options);
+  const response = await backendFetch(`${API_BASE_URL}${path}`, options);
   if (response.status !== 401 || excluded.includes(path.split("?")[0]) || loggingOut) return response;
   if (!await refreshSession()) return response;
   const headers = new Headers(options.headers);
   if (isUnsafeMethod((options.method ?? "GET").toUpperCase())) {
     const token = await getCsrf(); headers.set(token.headerName, token.token);
   }
-  return fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  return backendFetch(`${API_BASE_URL}${path}`, { ...options, headers });
 }
 
 export class ApiClientError extends Error {
@@ -74,9 +97,9 @@ function isUnsafeMethod(method) {
 async function getCsrf() {
   if (csrf) return csrf;
 
-  const response = await fetch(`${API_BASE_URL}/auth/csrf`, {
+  const response = await backendFetch(`${API_BASE_URL}/auth/csrf`, {
     credentials: "include",
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
   });
   const payload = await response.json().catch(() => null);
 

@@ -34,6 +34,8 @@ class CampaignRepository {
         PromotionProductModel(
           (json['id'] as num).toInt(),
           json['name'] as String,
+          categoryId: (json['categoryId'] as num?)?.toInt(),
+          categoryName: json['categoryName'] as String?,
         ),
     ];
     _items
@@ -54,6 +56,8 @@ class CampaignRepository {
           'startsAt': item.startsAt.toUtc().toIso8601String(),
           'endsAt': item.endsAt.toUtc().toIso8601String(),
           'enabled': item.enabled,
+          'imageUrl': item.imageUrl,
+          'isDisplay': item.isDisplay,
           if (item is VoucherModel) ...{
             'code': item.code,
             'discountType': item.discountType == DiscountType.percent
@@ -69,6 +73,7 @@ class CampaignRepository {
             'pointsRequired': item.pointsRequired,
           },
           if (item is PromotionModel) ...{
+            'redeemable': false,
             'discountPercent': item.discountPercent,
             'targetMode': item.targetMode,
             'productIds': item.products.map((p) => p.id).toList(),
@@ -101,6 +106,8 @@ class CampaignRepository {
         startsAt: start,
         endsAt: end,
         enabled: j['enabled'],
+        imageUrl: j['imageUrl'],
+        isDisplay: j['isDisplay'] == true,
         code: j['code'],
         discountType: j['discountType'] == 'PERCENT'
             ? DiscountType.percent
@@ -137,6 +144,8 @@ class CampaignRepository {
       startsAt: start,
       endsAt: end,
       enabled: j['enabled'],
+      imageUrl: j['imageUrl'],
+      isDisplay: j['isDisplay'] == true,
       discountPercent: (j['discountPercent'] as num).toInt(),
       targetMode: j['targetMode'] ?? 'SELECTED',
       products: [

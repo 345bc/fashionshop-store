@@ -14,7 +14,6 @@ import '../../../../widgets/common/zella_checkbox.dart';
 import '../../data/models/category_response_model.dart';
 import '../dialogs/category_create_dialog.dart';
 import '../dialogs/category_delete_dialog.dart';
-import '../dialogs/category_detail_dialog.dart';
 import '../dialogs/category_edit_dialog.dart';
 import '../providers/categories_provider.dart';
 
@@ -196,7 +195,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     child: InkWell(
       onTap: () => showDialog(
         context: context,
-        builder: (_) => CategoryDetailDialog(categoryId: category.id),
+        builder: (_) => CategoryEditDialog(category: category),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -279,11 +278,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               child: ActionMenu(
                 items: const [
                   ActionMenuItem(
-                    value: 'view',
-                    label: 'Xem chi tiết',
-                    icon: Symbols.visibility,
-                  ),
-                  ActionMenuItem(
                     value: 'edit',
                     label: 'Chỉnh sửa',
                     icon: Symbols.edit,
@@ -296,13 +290,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   ),
                 ],
                 onSelected: (value) {
-                  if (value == 'view') {
-                    showDialog(
-                      context: context,
-                      builder: (_) =>
-                          CategoryDetailDialog(categoryId: category.id),
-                    );
-                  } else if (value == 'edit') {
+                  if (value == 'edit') {
                     showDialog(
                       context: context,
                       builder: (_) => CategoryEditDialog(category: category),

@@ -32,61 +32,16 @@ public class SecurityConfig {
             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
             "/api/v1/product/**", "/api/v1/product-image/files/*",
             "/api/v1/category/**", "/api/v1/checkout/orders/*", "/api/v1/payment/vnpay/ipn",
-            "/api/v1/size/**","/api/v1/color/**",
+            "/api/v1/size/**","/api/v1/color/**", "/api/v1/posts/**",
     };
 
-//    @Bean
-//    @Profile("oidc & !mock-auth & !jwt-auth")
-//    SecurityFilterChain oidcSecurityFilterChain(
-//            HttpSecurity http,
-//            OidcUserService oidcUserService,
-//            UserService userService,
-//            ApiSecurityErrorHandler apiSecurityErrorHandler,
-//            @Value("${app.auth.frontend-success-url:http://localhost:5173/auth/callback}") String successUrl,
-//            @Value("${app.auth.frontend-failure-url:http://localhost:5173/auth/callback?error=oidc}") String failureUrl
-//    ) throws Exception {
-//        configureCookieSecurity(http, apiSecurityErrorHandler)
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-//                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
-//                        .anyRequest().authenticated())
-//                .exceptionHandling(errors -> errors
-//                        .authenticationEntryPoint(apiSecurityErrorHandler)
-//                        .accessDeniedHandler(apiSecurityErrorHandler))
-//                .oauth2Login(oauth -> oauth
-//                        .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUserService))
-//                        .defaultSuccessUrl(successUrl, true)
-//                        .failureUrl(failureUrl))
-//                .addFilterBefore(new SessionPrincipalRefreshFilter(userService), AuthorizationFilter.class);
-//        return http.build();
-//    }
-//
-//    @Bean
-//    @Profile("mock-auth & !oidc & !jwt-auth")
-//    SecurityFilterChain mockSecurityFilterChain(
-//            HttpSecurity http,
-//            UserService userService,
-//            ApiSecurityErrorHandler apiSecurityErrorHandler
-//    ) throws Exception {
-//        configureCookieSecurity(http, apiSecurityErrorHandler)
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-//                        .requestMatchers(HttpMethod.POST, "/api/auth/mock-login").permitAll()
-//                        .anyRequest().authenticated())
-//                .exceptionHandling(errors -> errors
-//                        .authenticationEntryPoint(apiSecurityErrorHandler)
-//                        .accessDeniedHandler(apiSecurityErrorHandler))
-//                .addFilterBefore(new SessionPrincipalRefreshFilter(userService), AuthorizationFilter.class);
-//        return http.build();
-//    }
 
     @Bean
-    @Profile("jwt-auth & !oidc & !mock-auth")
+    @Profile("jwt-auth")
     SecurityFilterChain jwtSecurityFilterChain(
             HttpSecurity http,
             JwtAccessTokenService jwtAccessTokenService,
             UserService userService,
-            UserRepository users,
             RefreshSessionRepository sessions,
             ApiSecurityErrorHandler apiSecurityErrorHandler
     ) throws Exception {
@@ -96,11 +51,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/admin/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout",
                                 "/api/v1/checkout/orders", "/api/v1/checkout/orders/lookup", "/api/v1/checkout/orders/voucher", "/api/v1/checkout/orders/quote", "/api/v1/checkout/orders/*/cancel", "/api/v1/cart/quote",
-                                "/api/v1/checkout/orders/*/payment", "/api/v1/checkout/orders/*/payment/verify").permitAll()
+                                "/api/v1/checkout/orders/*/payment", "/api/v1/checkout/orders/*/payment/verify", "/api/v1/posts/*/view-session", "/api/v1/posts/*/views").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/supplier/**", "/api/v1/sizeguide/**", "/api/v1/product-variant/**", "/api/v1/product-image/**", "/api/v1/variant-image/**")
                             .hasAnyRole("ADMIN", "SALES", "WAREHOUSE", "MARKETING")
                         .requestMatchers("/api/v1/role", "/api/v1/role/**", "/api/v1/user/**", "/api/v1/staff/**", "/api/v1/dashboard/**", "/api/v1/settings/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/inventory/**", "/api/v1/goods-receipt/**", "/api/v1/supplier/**").hasAnyRole("ADMIN", "WAREHOUSE")
+                        .requestMatchers("/api/v1/admin/home/**").hasAnyRole("ADMIN", "MARKETING")
+                        .requestMatchers("/api/v1/admin/posts/**").hasAnyRole("ADMIN", "MARKETING")
                         .requestMatchers("/api/v1/campaigns/**").hasAnyRole("ADMIN", "MARKETING")
                         .requestMatchers(HttpMethod.GET, "/api/v1/order/**").hasAnyRole("ADMIN", "SALES", "CUSTOMER_SUPPORT", "WAREHOUSE")
                         .requestMatchers("/api/v1/order/**").hasAnyRole("ADMIN", "SALES", "CUSTOMER_SUPPORT")
@@ -109,24 +66,7 @@ public class SecurityConfig {
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(apiSecurityErrorHandler)
                         .accessDeniedHandler(apiSecurityErrorHandler))
-                .addFilterBefore(new JwtCookieAuthenticationFilter(jwtAccessTokenService, userService, users, sessions), AuthorizationFilter.class)
-                .build();
-    }
-
-    @Bean
-    @Profile("!oidc & !mock-auth & !jwt-auth")
-    SecurityFilterChain lockedSecurityFilterChain(
-            HttpSecurity http,
-            ApiSecurityErrorHandler apiSecurityErrorHandler
-    ) throws Exception {
-        return configureCookieSecurity(http, apiSecurityErrorHandler)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .anyRequest().denyAll())
-                .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint(apiSecurityErrorHandler)
-                        .accessDeniedHandler(apiSecurityErrorHandler))
+                .addFilterBefore(new JwtCookieAuthenticationFilter(jwtAccessTokenService, userService, sessions), AuthorizationFilter.class)
                 .build();
     }
 
@@ -173,7 +113,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(allowedOrigin));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Checkout-Token"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Checkout-Token", "X-Requested-With"));
         config.setExposedHeaders(List.of("Content-Disposition"));
         config.setAllowCredentials(true);
 

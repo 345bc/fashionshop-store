@@ -91,12 +91,44 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    public Page<ProductCardResponse> listCardsByCategories(String query, Long categoryId, List<Long> categoryIds,
+            List<Integer> colorIds, List<Integer> sizeIds, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+        if (categoryIds == null || categoryIds.isEmpty())
+            return listCards(query, categoryId, colorIds, sizeIds, minPrice, maxPrice, pageable);
+        var ids = categoryIds.stream().filter(Objects::nonNull).filter(id -> id > 0).distinct().toList();
+        if (ids.isEmpty()) return Page.empty(pageable);
+        boolean colors = colorIds != null && !colorIds.isEmpty();
+        boolean sizes = sizeIds != null && !sizeIds.isEmpty();
+        return toCardPage(productRepository.searchCardsByCategories(query == null ? "" : query.trim(), ids,
+                colors, colors ? colorIds : List.of(-1), sizes, sizes ? sizeIds : List.of(-1), minPrice, maxPrice, pageable), null);
+    }
+
+    @Transactional(readOnly = true)
     public Page<ProductCardResponse> listNewArrivals(Pageable pageable) {
-        Instant now = Instant.now();
+        return listNewArrivalsAt(Instant.now(), pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductCardResponse> listNewArrivalsAt(Instant now, Pageable pageable) {
         Page<Product> page = productRepository.findNewArrivals(
-                now.minus(7, ChronoUnit.DAYS), now, pageable
+                now.minus(7, ChronoUnit.DAYS).plusNanos(1), now, pageable
         );
         return toCardPage(page,null);
+    }
+
+    @Transactional(readOnly=true)
+    public List<ProductCardResponse> featuredCards(List<Long> ids) {
+        if(ids.isEmpty()) return List.of();
+        List<ProductCardResponse> result=new ArrayList<>();
+        for(int offset=0;offset<ids.size();offset+=500)
+            result.addAll(toCardPage(new PageImpl<>(productRepository.findVisibleFeaturedProducts(ids.subList(offset,Math.min(offset+500,ids.size())))),null).getContent());
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductCardResponse> listSelectedCampaignProducts(List<Long> ids, Pageable pageable) {
+        if(ids.isEmpty()) return Page.empty(pageable);
+        return toCardPage(productRepository.findVisibleCampaignProducts(ids,pageable),null);
     }
 
     @Transactional(readOnly = true)

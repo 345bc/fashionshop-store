@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.Clock;
 import java.util.*;
 
 @Service
@@ -25,6 +26,7 @@ public class ReturnService {
     private final UserRepository userRepository;
     private final InventoryService inventoryService;
     private final com.huit.zella.loyalty.LoyaltyService loyalty;
+    private final Clock orderClock;
 
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<ReturnOrderSummaryResponse> management(String query, String status,
@@ -52,16 +54,18 @@ public class ReturnService {
         if (order.getStatus() != OrderStatus.SHIPPED && order.getStatus() != OrderStatus.DELIVERED)
             throw error("ORDER_NOT_SHIPPED", "Chỉ lập phiếu trả cho đơn đã xuất kho");
         if (order.getStatus() == OrderStatus.DELIVERED) {
-            order.getHistories().stream()
+            var deliveredAt = order.getHistories().stream()
                 .filter(h -> "DELIVERED".equals(h.getNewStatus()))
-                .max(Comparator.comparing(OrderHistory::getCreatedAt))
-                .ifPresent(h -> {
-                    if (h.getCreatedAt().plusDays(14).isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
-                        throw error("RETURN_EXPIRED", "Đã quá 14 ngày kể từ khi nhận hàng, không thể yêu cầu trả hàng");
-                    }
-                });
+                .map(OrderHistory::getCreatedAt).filter(Objects::nonNull)
+                .min(Comparator.naturalOrder())
+                .orElseThrow(() -> error("DELIVERY_DATE_MISSING", "Thiếu thời điểm giao thành công, cần đối soát trước khi trả hàng"));
+            var now = LocalDateTime.now(orderClock);
+            if (deliveredAt.isAfter(now)) throw error("INVALID_DELIVERY_DATE", "Thời điểm giao hàng không hợp lệ");
+            if (deliveredAt.plusDays(14).isBefore(now))
+                throw error("RETURN_EXPIRED", "Đã quá 14 ngày kể từ khi nhận hàng, không thể yêu cầu trả hàng");
         }
         ReturnRequest document = new ReturnRequest();
+        document.setCreatedAt(LocalDateTime.now(orderClock)); document.setUpdatedAt(document.getCreatedAt());
         document.setCode("RET-" + UUID.randomUUID().toString().replace("-", "").substring(0, 28).toUpperCase(Locale.ROOT));
         document.setOrder(order); document.setCustomer(order.getCustomer()); document.setNote(request.reason().trim());
         Set<Long> ids = new HashSet<>();
@@ -89,7 +93,7 @@ public class ReturnService {
         ReturnRequest document = lock(id);
         requireStatus(document, ReturnStatus.PENDING);
         transition(document, ReturnStatus.APPROVED, "Duyệt nhận hàng trả", actorId);
-        document.setApprovedAt(LocalDateTime.now(ZoneOffset.UTC));
+        document.setApprovedAt(LocalDateTime.now(orderClock));
         return ReturnResponse.from(document);
     }
 
@@ -98,7 +102,7 @@ public class ReturnService {
         ReturnRequest document = lock(id);
         requireStatus(document, ReturnStatus.PENDING);
         transition(document, ReturnStatus.REJECTED, note, actorId);
-        document.setRejectedAt(LocalDateTime.now(ZoneOffset.UTC));
+        document.setRejectedAt(LocalDateTime.now(orderClock));
         return ReturnResponse.from(document);
     }
 
@@ -108,7 +112,7 @@ public class ReturnService {
         if (document.getStatus() != ReturnStatus.PENDING && document.getStatus() != ReturnStatus.APPROVED)
             throw error("INVALID_RETURN_STATUS", "Chỉ hủy phiếu chưa nhận hàng");
         transition(document, ReturnStatus.CANCELLED, note, actorId);
-        document.setCancelledAt(LocalDateTime.now(ZoneOffset.UTC));
+        document.setCancelledAt(LocalDateTime.now(orderClock));
         return ReturnResponse.from(document);
     }
 
@@ -156,7 +160,7 @@ public class ReturnService {
         }
         document.setRefundAmount("PAID".equals(document.getOrder().getPaymentStatus()) ? refund : BigDecimal.ZERO);
         transition(document, ReturnStatus.RECEIVED, "Đã nhận và kiểm tra hàng trả", actorId);
-        document.setReceivedAt(LocalDateTime.now(ZoneOffset.UTC));
+        document.setReceivedAt(LocalDateTime.now(orderClock));
         loyalty.reverse(document.getOrder(),document.getId(),document.getRefundAmount());
         Order order = document.getOrder();
         boolean fullReturn=order.getItems().stream().allMatch(item -> returnRepository.receivedQuantity(item.getId()) >= item.getQuantity());
@@ -165,7 +169,7 @@ public class ReturnService {
             entry.setOrder(order); entry.setOldStatus(order.getStatus().name()); entry.setNewStatus("RETURNED");
             entry.setNote("Đã nhận lại toàn bộ hàng của đơn: " + document.getCode());
             entry.setCreatedBy(actor);
-            order.getHistories().add(entry); order.setStatus(OrderStatus.RETURNED); order.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
+            order.getHistories().add(entry); order.setStatus(OrderStatus.RETURNED); order.setUpdatedAt(LocalDateTime.now(orderClock));
             if("PAID".equals(order.getPaymentStatus())) order.setPaymentStatus("REFUND_PENDING");
         }
         return ReturnResponse.from(document);
@@ -173,8 +177,21 @@ public class ReturnService {
 
     @Transactional
     public ReturnResponse complete(Long id, CompleteReturnRequest request, Long actorId) {
+        return complete(id, request, actorId, false);
+    }
+
+    /** Called only after an authenticated gateway refund has been confirmed. */
+    @Transactional
+    public ReturnResponse completeVnPay(Long id, String note, Long actorId) {
+        return complete(id, new CompleteReturnRequest("VNPAY", note), actorId, true);
+    }
+
+    private ReturnResponse complete(Long id, CompleteReturnRequest request, Long actorId, boolean gatewayConfirmed) {
         ReturnRequest document = lock(id);
         requireStatus(document, ReturnStatus.RECEIVED);
+        if (document.getRefundAmount().signum() > 0 && document.getOrder().getOnlineTransactionId() != null
+                && document.getOrder().getOnlineTransactionId().startsWith("VNPAY-") && !gatewayConfirmed)
+            throw error("VNPAY_REFUND_REQUIRED", "Giao dịch VNPay phải hoàn qua API VNPay và được xác nhận trước khi hoàn tất");
         if (document.getRefundAmount().signum() > 0 && "NO_REFUND".equals(request.refundMethod()))
             throw error("REFUND_REQUIRED", "Phiếu có số tiền cần hoàn, phải xác nhận phương thức hoàn");
         if (document.getRefundAmount().signum() == 0 && !"NO_REFUND".equals(request.refundMethod()))
@@ -182,7 +199,7 @@ public class ReturnService {
         document.setRefundMethod(request.refundMethod());
         document.setAdminNote(request.note());
         transition(document, ReturnStatus.COMPLETED, "Đã xử lý hoàn tiền: " + request.note(), actorId);
-        document.setCompletedAt(LocalDateTime.now(ZoneOffset.UTC));
+        document.setCompletedAt(LocalDateTime.now(orderClock));
         if (document.getOrder().getStatus() == OrderStatus.RETURNED && document.getRefundAmount().signum() > 0
                 && returnRepository.pendingRefundCount(document.getOrder().getId())==0)
             document.getOrder().setPaymentStatus("REFUNDED");
@@ -201,13 +218,14 @@ public class ReturnService {
 
     private void transition(ReturnRequest document, ReturnStatus status, String note, Long actorId) {
         addHistory(document, document.getStatus(), status, note, actorId);
-        document.setStatus(status); document.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
+        document.setStatus(status); document.setUpdatedAt(LocalDateTime.now(orderClock));
     }
 
     private void addHistory(ReturnRequest document, ReturnStatus before, ReturnStatus after, String note, Long actorId) {
         ReturnHistory entry = new ReturnHistory();
         entry.setRequest(document); entry.setOldStatus(before == null ? null : before.name());
         entry.setNewStatus(after.name()); entry.setNote(note); entry.setChangedBy(userRepository.getReferenceById(actorId));
+        entry.setCreatedAt(LocalDateTime.now(orderClock));
         document.getHistories().add(entry);
     }
 

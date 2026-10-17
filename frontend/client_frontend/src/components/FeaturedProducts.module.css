@@ -1,0 +1,30 @@
+.section { margin: 0; padding: 64px 0 20px; background: #fff; }
+.container { padding-inline: 28px; }
+.header { display: flex; justify-content: space-between; align-items: flex-end; gap: 28px; margin-bottom: 32px; }
+.eyebrow { color: #8a8d86; font-size: 10px; font-weight: 500; letter-spacing: .17em; margin: 0 0 12px; }
+.title { color: #20241f; font-size: clamp(25px, 2.4vw, 34px); font-weight: 500; line-height: 1.25; letter-spacing: -.025em; margin: 0; }
+.description { color: #82857d; font-size: 14px; line-height: 1.6; margin: 12px 0 0; }
+.navigation { display: flex; align-items: center; gap: 8px; padding-bottom: 3px; }
+.count { white-space: nowrap; color: #8a8d86; font-size: 12px; margin-right: 16px; }
+.navigation button { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #dedfd9; border-radius: 50%; background: white; color: #30372e; font-size: 23px; cursor: pointer; transition: background .2s, color .2s; }
+.navigation button:hover:not(:disabled) { background: #30372e; border-color: #30372e; color: #fff; }
+.navigation button:disabled { opacity: .3; cursor: default; }
+.track { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 72px) / 4); align-items: stretch; gap: 24px; overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 0 16px; margin: 0; list-style: none; }
+.track::-webkit-scrollbar { display: none; }
+.item { min-width: 0; scroll-snap-align: start; }
+.navigation button:focus-visible, .track:focus-visible, .error button:focus-visible { outline: 2px solid #647563; outline-offset: 4px; }
+.error { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: #f7f7f4; padding: 24px; color: #73776f; font-size: 14px; border-radius: 8px; }
+.error p { margin: 0; }
+.error button { color: #30372e; border-bottom: 1px solid #b9c0b4; padding-bottom: 3px; }
+@media (max-width: 1023px) { .track { grid-auto-columns: calc((100% - 40px) / 3); gap: 20px; } }
+@media (max-width: 767px) {
+  .section { padding-top: 40px; }
+  .container { padding-inline: 16px; }
+  .header { align-items: flex-start; flex-direction: column; gap: 18px; margin-bottom: 24px; }
+  .description { font-size: 13px; }
+  .navigation { width: 100%; justify-content: flex-end; }
+  .count { margin-right: auto; }
+  .navigation button { width: 36px; height: 36px; font-size: 20px; }
+  .track { grid-auto-columns: calc((100% - 14px) / 2); gap: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .navigation button { transition: none; } }

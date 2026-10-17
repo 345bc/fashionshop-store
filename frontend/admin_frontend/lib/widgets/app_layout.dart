@@ -25,7 +25,8 @@ class NavGroup {
 
 final List<NavGroup> navGroups = [
   NavGroup('TỔNG QUAN', [
-    NavItem('Dashboard & Báo cáo', Symbols.dashboard, '/'),
+    NavItem('Tổng quan', Symbols.dashboard, '/'),
+    NavItem('Báo cáo', Symbols.analytics, '/reports'),
   ]),
   NavGroup('QUẢN LÝ BÁN HÀNG', [
     NavItem('Đơn hàng', Symbols.shopping_cart, '/orders'),
@@ -46,6 +47,13 @@ final List<NavGroup> navGroups = [
     NavItem('Tài khoản', Symbols.security, '/users'),
     NavItem('Nhân sự', Symbols.badge, '/staff'),
     NavItem('Cài đặt', Symbols.settings, '/settings'),
+  ]),
+  NavGroup('BÀI VIẾT', [
+    NavItem('Bài viết', Symbols.article, '/posts'),
+    NavItem('Danh mục bài viết', Symbols.folder_open, '/post-categories'),
+  ]),
+  NavGroup('GIAO DIỆN', [
+    NavItem('Giao diện trang chủ', Symbols.web, '/home-appearance'),
   ]),
 ];
 
@@ -316,105 +324,32 @@ class _AppLayoutState extends State<AppLayout> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Search and Collapse
-                        Row(
-                          children: [
-                            // Collapse Button
-                            InkWell(
-                              onTap: () =>
-                                  setState(() => _sidebarOpen = !_sidebarOpen),
+                        // Collapse Button
+                        InkWell(
+                          onTap: () =>
+                              setState(() => _sidebarOpen = !_sidebarOpen),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppTheme.borderLight,
-                                  ),
-                                ),
-                                child: Tooltip(
-                                  message: _sidebarOpen
-                                      ? 'Thu gọn sidebar'
-                                      : 'Mở sidebar',
-                                  child: Icon(
-                                    _sidebarOpen
-                                        ? Symbols.left_panel_close
-                                        : Symbols.left_panel_open,
-                                    size: 20,
-                                    color: AppTheme.primary,
-                                  ),
-                                ),
+                              border: Border.all(color: AppTheme.borderLight),
+                            ),
+                            child: Tooltip(
+                              message: _sidebarOpen
+                                  ? 'Thu gọn sidebar'
+                                  : 'Mở sidebar',
+                              child: Icon(
+                                _sidebarOpen
+                                    ? Symbols.left_panel_close
+                                    : Symbols.left_panel_open,
+                                size: 20,
+                                color: AppTheme.primary,
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            Container(
-                              width: 1,
-                              height: 20,
-                              color: AppTheme.borderLight,
-                            ),
-                            const SizedBox(width: 16),
-                            // Search Input
-                            Container(
-                              width: 320,
-                              height: 36,
-                              padding: const EdgeInsets.only(
-                                left: 12,
-                                right: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppTheme.borderLight),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Symbols.search,
-                                    size: 18,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Expanded(
-                                    child: TextField(
-                                      decoration: InputDecoration(
-                                        hintText: 'Search',
-                                        border: InputBorder.none,
-                                        isDense: true,
-                                        contentPadding: EdgeInsets.zero,
-                                        hintStyle: TextStyle(
-                                          color: AppTheme.textMuted,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.surface,
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(
-                                        color: AppTheme.borderLight,
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      '⌘ K',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppTheme.textSecondary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                         // Actions
                         Row(

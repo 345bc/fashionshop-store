@@ -20,10 +20,14 @@ final class VnPaySignature {
     }
 
     static String sign(Map<String, String> fields, String secret) {
+        return signRaw(query(fields), secret);
+    }
+
+    static String signRaw(String data, String secret) {
         try {
             Mac mac = Mac.getInstance("HmacSHA512");
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA512"));
-            return HexFormat.of().formatHex(mac.doFinal(query(fields).getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of().formatHex(mac.doFinal(data.getBytes(StandardCharsets.UTF_8)));
         } catch (java.security.GeneralSecurityException ex) { throw new IllegalStateException("Cannot sign VNPay request", ex); }
     }
 
