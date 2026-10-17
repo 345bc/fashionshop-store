@@ -14,5 +14,10 @@ void main() {
     expect(RoleAccess.canOpen('USER', '/orders'), isFalse);
     expect(RoleAccess.canOpen(null, '/'), isFalse);
     expect(RoleAccess.canOpen('ADMIN', '/users'), isTrue);
+    expect(RoleAccess.canOpen('ADMIN', '/bought-together'), isTrue);
+    expect(RoleAccess.canOpen('MARKETING', '/bought-together'), isTrue);
+    for (final role in ['USER', 'SALES', 'WAREHOUSE', 'CUSTOMER_SUPPORT']) {
+      expect(RoleAccess.canOpen(role, '/bought-together'), isFalse);
+    }
   });
 }

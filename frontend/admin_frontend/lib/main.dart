@@ -1,4 +1,5 @@
 import 'features/home_appearance/home_appearance_screen.dart';
+import 'features/bought_together/bought_together_screen.dart';
 
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -205,6 +206,8 @@ class MainScreenState extends State<MainScreen> {
         return const InventoryScreen();
       case '/home-appearance':
         return const HomeAppearanceScreen();
+      case '/bought-together':
+        return const BoughtTogetherScreen();
       case '/posts':
         return const PostsScreen();
       case '/post-categories':
