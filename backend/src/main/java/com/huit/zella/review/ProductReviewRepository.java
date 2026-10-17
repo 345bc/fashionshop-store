@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 public interface ProductReviewRepository extends JpaRepository<ProductReview, Long> {
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from ProductReview r where r.id = :id")
+    Optional<ProductReview> findForUpdate(@Param("id") Long id);
     Optional<ProductReview> findByOrderItemId(Long id);
     List<ProductReview> findByOrderIdIn(List<Long> ids);
     Page<ProductReview> findByProductIdAndHiddenFalse(Long productId, Pageable pageable);

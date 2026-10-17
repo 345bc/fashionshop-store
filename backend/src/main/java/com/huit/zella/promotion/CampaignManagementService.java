@@ -27,14 +27,14 @@ public class CampaignManagementService {
     public List<CampaignResponse> list(String kind) {
         checkKind(kind);
         return "voucher".equals(kind) ? vouchers.findByOwnerIsNullOrderByIdDesc().stream().map(v -> response(v, false)).toList()
-                : promotions.findAllByOrderByIdDesc().stream().map(this::response).toList();
+                : promotions.findAllByOrderByIdDesc().stream().filter(p -> "SELECTED".equals(p.getTargetMode())).map(this::response).toList();
     }
 
     @Transactional(readOnly = true)
     public List<CampaignResponse.ProductOption> catalog() {
         return products.findAll(org.springframework.data.domain.Sort.by("id").descending()).stream()
                 .filter(p -> p.isActive() && Boolean.TRUE.equals(p.getCategory().getIsActive()))
-                .map(p -> new CampaignResponse.ProductOption(p.getId(), p.getName())).toList();
+                .map(p -> new CampaignResponse.ProductOption(p.getId(), p.getName(), p.getCategory().getId(), p.getCategory().getName())).toList();
     }
 
     @Transactional(readOnly = true)
@@ -49,6 +49,9 @@ public class CampaignManagementService {
         if (!request.endsAt().isAfter(request.startsAt())) throw error("Thời gian kết thúc phải sau thời gian bắt đầu");
         if ("voucher".equals(kind)) {
             Voucher v = id == null ? new Voucher() : voucher(id, true);
+            if(request.imageUrl()!=null) v.setImageUrl(request.imageUrl());
+            if(request.isDisplay()!=null) v.setDisplay(request.isDisplay());
+            if(v.isDisplay() && (v.getImageUrl()==null || v.getImageUrl().isBlank())) throw error("Vui lòng chọn ảnh để hiển thị chương trình");
             String code = request.code() == null ? "" : request.code().trim().toUpperCase(Locale.ROOT);
             if (!code.matches("[A-Z0-9_-]{3,50}")) throw error("Mã voucher cần 3–50 ký tự A–Z, 0–9, _ hoặc -");
             if (id != null && v.getUsedCount() > 0 && !code.equals(v.getCode()))
@@ -86,11 +89,14 @@ public class CampaignManagementService {
             return response(vouchers.saveAndFlush(v), false);
         }
         Promotion p = id == null ? new Promotion() : promotion(id, true);
+        if(request.imageUrl()!=null) p.setImageUrl(request.imageUrl());
+        if(request.isDisplay()!=null) p.setDisplay(request.isDisplay());
+        if(p.isDisplay() && (p.getImageUrl()==null || p.getImageUrl().isBlank())) throw error("Vui lòng chọn ảnh để hiển thị chương trình");
         positive(request.discountPercent());
         if (request.discountPercent().compareTo(new BigDecimal("100")) > 0 || request.discountPercent().stripTrailingZeros().scale() > 0)
             throw error("Phần trăm giảm cần là số nguyên từ 1–100");
         String mode = request.targetMode() == null ? "SELECTED" : request.targetMode();
-        if (!Set.of("SELECTED", "NEW_PRODUCTS").contains(mode)) throw error("Phạm vi sản phẩm không hợp lệ");
+        if (!"SELECTED".equals(mode)) throw error("Ưu đãi sản phẩm mới là chương trình tự động, không quản lý tại đây");
         Set<Long> ids = new LinkedHashSet<>(request.productIds() == null ? List.of() : request.productIds());
         if ("SELECTED".equals(mode) && ids.isEmpty()) throw error("Cần chọn ít nhất một sản phẩm");
         var selected = products.findAllById(ids);
@@ -132,7 +138,9 @@ public class CampaignManagementService {
     }
 
     private Promotion promotion(Long id, boolean lock) {
-        return (lock ? promotions.lock(id) : promotions.findById(id)).orElseThrow(() -> error("Không tìm thấy chương trình"));
+        var promotion=(lock ? promotions.lock(id) : promotions.findById(id)).orElseThrow(() -> error("Không tìm thấy chương trình"));
+        if(!"SELECTED".equals(promotion.getTargetMode())) throw error("Ưu đãi sản phẩm mới là chương trình tự động, không quản lý tại đây");
+        return promotion;
     }
 
     private CampaignResponse response(Voucher v, boolean detail) {
@@ -148,12 +156,12 @@ public class CampaignManagementService {
             status = "exhausted";
         return new CampaignResponse(v.getId(), "voucher", v.getName() == null ? v.getCode() : v.getName(), v.getDescription(),
                 v.getStartDate().toInstant(ZoneOffset.UTC), v.getEndDate().toInstant(ZoneOffset.UTC), v.isActive(), status,
-                v.getCode(), v.getDiscountType(), v.getDiscountValue(), v.getMinOrderAmount(), v.getDiscountAmount(), v.getUsageLimit(), v.getUsedCount(), null, null, List.of(), usages, v.isRedeemable(), v.getPointsRequired());
+                v.getCode(), v.getDiscountType(), v.getDiscountValue(), v.getMinOrderAmount(), v.getDiscountAmount(), v.getUsageLimit(), v.getUsedCount(), null, null, List.of(), usages, v.isRedeemable(), v.getPointsRequired(),v.getImageUrl(),v.isDisplay());
     }
 
     private CampaignResponse response(Promotion p) {
         return new CampaignResponse(p.getId(), "promotion", p.getName(), p.getDescription(), p.getStartsAt(), p.getEndsAt(), p.isActive(), status(p.isActive(), p.getStartsAt(), p.getEndsAt()),
-                null, null, null, null, null, null, null, p.getDiscountPercent(), p.getTargetMode(), p.getProducts().stream().map(product -> new CampaignResponse.ProductOption(product.getId(), product.getName())).toList(), List.of(), false, null);
+                null, null, null, null, null, null, null, p.getDiscountPercent(), p.getTargetMode(), p.getProducts().stream().map(product -> new CampaignResponse.ProductOption(product.getId(), product.getName())).toList(), List.of(), false, null,p.getImageUrl(),p.isDisplay());
     }
 
     private String status(boolean active, Instant start, Instant end) {

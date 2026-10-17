@@ -1,9 +1,9 @@
-export default function ProductCardSkeleton() {
+export default function ProductCardSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div role="status" aria-label="Đang tải sản phẩm">
       <span className="sr-only">Đang tải sản phẩm...</span>
       <div className="modern-products-grid" aria-hidden="true">
-        {Array.from({ length: 8 }, (_, index) => (
+        {Array.from({ length: count }, (_, index) => (
           <div key={index} className={`modern-product-card flex h-full flex-col motion-safe:animate-pulse ${index >= 4 ? "max-[820px]:hidden" : ""}`}>
             <div className="modern-product-media w-full bg-neutral-200" style={{ aspectRatio: "3/4" }} />
             <div className="modern-product-info flex-1">

@@ -277,6 +277,8 @@ public class OrderService {
     @Transactional
     public OrderResponse refunded(Long id, String note, Long actorId) {
         Order order = lock(id);
+        if (order.getOnlineTransactionId() != null && order.getOnlineTransactionId().startsWith("VNPAY-"))
+            throw error("VNPAY_REFUND_REQUIRED", "Giao dịch VNPay phải hoàn qua API VNPay, không thể xác nhận thủ công");
         requireStatus(order, OrderStatus.CANCELLED);
         if (!"REFUND_PENDING".equals(order.getPaymentStatus()))
             throw error("INVALID_PAYMENT_STATUS", "Đơn không có khoản cần hoàn");

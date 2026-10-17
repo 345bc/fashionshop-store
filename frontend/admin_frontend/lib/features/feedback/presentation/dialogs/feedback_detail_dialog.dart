@@ -23,8 +23,12 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
   void initState() {
     super.initState();
     _reply = TextEditingController(
-      text: context.read<FeedbackProvider>().detail(widget.reviewId).adminReply,
+      text:
+          context.read<FeedbackProvider>().drafts[widget.reviewId] ??
+          context.read<FeedbackProvider>().detail(widget.reviewId).adminReply,
     );
+    final provider = context.read<FeedbackProvider>();
+    _reply.addListener(() => provider.drafts[widget.reviewId] = _reply.text);
   }
 
   @override
@@ -116,8 +120,7 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
                       maxLines: 6,
                       maxLength: 1000,
                       decoration: const InputDecoration(
-                        hintText:
-                            'Nhập câu trả lời sẽ hiển thị cùng đánh giá',
+                        hintText: 'Nhập câu trả lời sẽ hiển thị cùng đánh giá',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) =>
@@ -125,6 +128,8 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
                           ? 'Vui lòng nhập câu trả lời'
                           : value.trim().length > 1000
                           ? 'Tối đa 1000 ký tự'
+                          : value.trim().length > 500
+                          ? 'Tối đa 500 ký tự'
                           : null,
                     ),
                   ),
@@ -132,15 +137,29 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        if (!_form.currentState!.validate()) return;
-                        provider.reply(r.id, _reply.text, 'CSKH (mẫu)');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Đã lưu câu trả lời mẫu'),
-                          ),
-                        );
-                      },
+                      onPressed: provider.saving || provider.loading
+                          ? null
+                          : () async {
+                              if (!_form.currentState!.validate()) return;
+                              final messenger = ScaffoldMessenger.of(context);
+                              try {
+                                await provider.reply(r.id, _reply.text, 'CSKH');
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Đã lưu câu trả lời'),
+                                  ),
+                                );
+                              } catch (_) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      provider.error ??
+                                          'Không thể lưu câu trả lời',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
                       icon: const Icon(Symbols.send, size: 18),
                       label: Text(
                         r.adminReply == null
@@ -158,7 +177,9 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: OutlinedButton.icon(
-                      onPressed: () => _moderate(provider, r),
+                      onPressed: provider.saving || provider.loading
+                          ? null
+                          : () => _moderate(provider, r),
                       icon: Icon(
                         r.visibility == ReviewVisibility.visible
                             ? Symbols.visibility_off
@@ -216,13 +237,24 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
           _ModerationDialog(hiding: value == ReviewVisibility.hidden),
     );
     if (reason == null || !mounted) return;
-    provider.moderate(review.id, value, reason, 'CSKH (mẫu)');
+    try {
+      await provider.moderate(review.id, value, reason, 'CSKH');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Không thể cập nhật đánh giá'),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           value == ReviewVisibility.hidden
-              ? 'Đã ẩn đánh giá mẫu'
-              : 'Đã hiển thị lại đánh giá mẫu',
+              ? 'Đã ẩn đánh giá'
+              : 'Đã hiển thị lại đánh giá',
         ),
       ),
     );
@@ -284,6 +316,8 @@ class _ModerationDialogState extends State<_ModerationDialog> {
           ),
           validator: (value) => value == null || value.trim().isEmpty
               ? 'Vui lòng nhập lý do'
+              : value.trim().length > 500
+              ? 'Tối đa 500 ký tự'
               : null,
         ),
       ),

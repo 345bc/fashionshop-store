@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/network/api_client.dart';
+
+import 'package:dio/dio.dart';
+
 import '../../data/models/product_review_model.dart';
 import '../../data/repositories/feedback_repository.dart';
 
@@ -28,6 +32,59 @@ class FeedbackProvider extends ChangeNotifier {
   FeedbackProvider({FeedbackRepository? repository})
     : _repository = repository ?? FeedbackRepository();
   final FeedbackRepository _repository;
+  bool loading = false, saving = false, initialized = false;
+  String? error;
+  bool get isDemo => _repository.isDemo;
+  List<
+    ({
+      int id,
+      String name,
+      int parentId,
+      String parent,
+      int categoryId,
+      String category,
+    })
+  >
+  get products => _repository.products;
+
+  Future<void> load() async {
+    if (loading || saving) return;
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      await _repository.load();
+      initialized = true;
+      if (!products.any((p) => p.id == selectedProductId)) {
+        selectedProductId = null;
+      }
+      for (final f in [_inbox, catalogFilters, ..._productReviews.values]) {
+        if (!products.any((p) => p.parentId == f.parentId)) f.parentId = null;
+        if (!products.any((p) => p.categoryId == f.categoryId)) {
+          f.categoryId = null;
+        }
+        f.page = 0;
+        f.selectedReviewId = null;
+      }
+      filters.selectedReviewId = null;
+      filters.page = 0;
+    } catch (e) {
+      error = _message(e);
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  String _message(Object e) {
+    if (e is DioException && e.response?.data is Map) {
+      return e.response!.data['message']?.toString() ??
+          'Không thể xử lý phản hồi';
+    }
+    if (e is ApiClientError) return e.message;
+    return 'Không thể xử lý phản hồi. Vui lòng thử lại.';
+  }
+
   FeedbackView view = FeedbackView.inbox;
   int? selectedProductId;
   final _inbox = FeedbackFilters(ReviewFilter.unanswered);
@@ -67,9 +124,15 @@ class FeedbackProvider extends ChangeNotifier {
   List<ProductReviewModel> get pageItems =>
       filteredItems.skip(currentPage * pageSize).take(pageSize).toList();
   int count(ReviewFilter value) => items.where((r) => matches(r, value)).length;
-  double get averageRating => items.isEmpty
-      ? 0
-      : items.fold<int>(0, (sum, r) => sum + r.rating) / items.length;
+  double get averageRating {
+    final visible = items
+        .where((r) => r.visibility == ReviewVisibility.visible)
+        .toList();
+    return visible.isEmpty
+        ? 0
+        : visible.fold<int>(0, (sum, r) => sum + r.rating) / visible.length;
+  }
+
   static bool matches(ProductReviewModel r, ReviewFilter value) =>
       switch (value) {
         ReviewFilter.all => true,
@@ -86,6 +149,9 @@ class FeedbackProvider extends ChangeNotifier {
   }
 
   void setRating(int? value) {
+    if (value != null && (value < 1 || value > 5)) {
+      throw ArgumentError('Số sao phải từ 1 đến 5');
+    }
     filters.rating = value;
     _reset();
   }
@@ -114,9 +180,7 @@ class FeedbackProvider extends ChangeNotifier {
   }
 
   bool _inCategory(int productId, FeedbackFilters f) {
-    final product = FeedbackRepository.products.firstWhere(
-      (p) => p.id == productId,
-    );
+    final product = _repository.products.firstWhere((p) => p.id == productId);
     return (f.parentId == null || product.parentId == f.parentId) &&
         (f.categoryId == null || product.categoryId == f.categoryId);
   }
@@ -138,7 +202,7 @@ class FeedbackProvider extends ChangeNotifier {
   }
 
   List<int> get catalogIds {
-    final ids = FeedbackRepository.products
+    final ids = _repository.products
         .where(
           (p) =>
               _inCategory(p.id, catalogFilters) &&
@@ -168,7 +232,7 @@ class FeedbackProvider extends ChangeNotifier {
   List<int> get catalogPage =>
       catalogIds.skip(catalogFilters.page * pageSize).take(pageSize).toList();
   ProductReviewModel? get selectedReview {
-    final reviews = filteredItems;
+    final reviews = pageItems;
     if (reviews.isEmpty) return null;
     return reviews.firstWhere(
       (r) => r.id == filters.selectedReviewId,
@@ -223,10 +287,10 @@ class FeedbackProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void replyAndNext(int id, String text) {
+  Future<void> replyAndNext(int id, String text) async {
     final before = filteredItems;
     final index = before.indexWhere((r) => r.id == id);
-    reply(id, text, 'CSKH (mẫu)');
+    await reply(id, text, 'CSKH');
     drafts.remove(id);
     final remaining = filteredItems;
     if (remaining.isNotEmpty) {
@@ -247,20 +311,43 @@ class FeedbackProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void reply(int id, String text, String actor) {
+  Future<void> reply(int id, String text, String actor) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || trimmed.length > 1000) {
       throw ArgumentError('Câu trả lời cần từ 1 đến 1000 ký tự');
     }
-    _save(detail(id).reply(trimmed, actor));
+    await _mutate(() => _repository.reply(id, trimmed, actor));
+    drafts.remove(id);
+    notifyListeners();
   }
 
-  void moderate(int id, ReviewVisibility value, String reason, String actor) {
+  Future<void> moderate(
+    int id,
+    ReviewVisibility value,
+    String reason,
+    String actor,
+  ) async {
     if (reason.trim().isEmpty || reason.trim().length > 500) {
       throw ArgumentError('Lý do cần từ 1 đến 500 ký tự');
     }
     if (detail(id).visibility == value) return;
-    _save(detail(id).moderate(value, reason.trim(), actor));
+    await _mutate(() => _repository.moderate(id, value, reason.trim(), actor));
+  }
+
+  Future<void> _mutate(Future<ProductReviewModel> Function() action) async {
+    if (saving || loading) throw StateError('Đang xử lý phản hồi');
+    saving = true;
+    error = null;
+    notifyListeners();
+    try {
+      _save(await action());
+    } catch (e) {
+      error = _message(e);
+      rethrow;
+    } finally {
+      saving = false;
+      notifyListeners();
+    }
   }
 
   void _save(ProductReviewModel r) {

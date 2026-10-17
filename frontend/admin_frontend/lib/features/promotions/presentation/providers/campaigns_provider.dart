@@ -44,8 +44,13 @@ class CampaignsProvider extends ChangeNotifier {
 
   int currentPage = 0;
   final int pageSize = 10;
-  List<CampaignModel> items(CampaignKind kind) =>
-      _repository.items.where((r) => r.kind == kind).toList();
+  List<CampaignModel> items(CampaignKind kind) => _repository.items
+      .where(
+        (r) =>
+            r.kind == kind &&
+            (r is! PromotionModel || r.targetMode == 'SELECTED'),
+      )
+      .toList();
   CampaignStatus status(CampaignModel item) => item.statusAt(_clock());
   List<CampaignModel> filtered(CampaignKind kind) => items(kind)
       .where(
@@ -127,6 +132,11 @@ class CampaignsProvider extends ChangeNotifier {
           (item.pointsRequired == null || item.pointsRequired! <= 0)) {
         throw ArgumentError('Điểm cần đổi phải là số nguyên dương.');
       }
+    }
+    if (item is PromotionModel && item.targetMode != 'SELECTED') {
+      throw ArgumentError(
+        'Ưu đãi sản phẩm mới được áp dụng tự động, không quản lý tại đây.',
+      );
     }
     if (item is PromotionModel &&
         (item.discountPercent < 1 ||

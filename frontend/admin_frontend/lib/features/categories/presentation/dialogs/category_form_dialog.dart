@@ -180,11 +180,6 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                     ? 'Vui lòng nhập tên danh mục'
                     : null,
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Slug sẽ được tạo tự động từ tên danh mục.',
-                style: TextStyle(color: AppTheme.textSecondary),
-              ),
               const SizedBox(height: 16),
               FutureBuilder<List<CategoryResponseModel>>(
                 future: _parentsFuture,

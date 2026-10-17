@@ -1,0 +1,26 @@
+.content { font-family: inherit; font-size: 17px; line-height: 1.95; letter-spacing: .005em; overflow-wrap: anywhere; white-space: pre-wrap; color: #393939; }
+.content p { margin: 0 0 1.35em; }
+.content h1, .content h2, .content h3, .content h4, .content h5, .content h6 { color: #171717; font-family: inherit; font-weight: 550; line-height: 1.4; letter-spacing: -.015em; margin: 1.8em 0 .8em; text-wrap: pretty; }
+.content h1 { font-size: 1.85em; }
+.content h2 { font-size: 1.55em; }
+.content h3 { font-size: 1.25em; }
+.content h4 { font-size: 1.1em; }
+.content strong { color: #242424; font-weight: 600; }
+.content img { display: block; max-width: 100%; height: auto; border-radius: 3px; margin: 2em auto; }
+.content blockquote { margin: 1.8em 0; padding: 20px 26px; border-left: 3px solid #c5c5c5; background: #f7f7f7; color: #626262; font-size: 1.08em; line-height: 1.8; font-style: italic; }
+.content blockquote p:last-child { margin-bottom: 0; }
+.content ul, .content ol { padding-left: 1.6em; margin: 0 0 1.4em; }
+.content ul { list-style: disc; }
+.content ol { list-style: decimal; }
+.content li { padding-left: .3em; margin-bottom: .5em; }
+.content li::marker { color: #888; }
+.content a { color: #454545; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: #b7b7b7; }
+.content a:hover { color: #111; text-decoration-color: currentColor; }
+.content a:focus-visible { outline: 2px solid #555; outline-offset: 3px; }
+@media (max-width: 640px) {
+  .content { font-size: 16px; line-height: 1.9; }
+  .content h1 { font-size: 1.65em; }
+  .content h2 { font-size: 1.4em; }
+  .content h3 { font-size: 1.2em; }
+  .content blockquote { padding: 16px 20px; }
+}

@@ -25,6 +25,7 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler({org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.web.method.annotation.HandlerMethodValidationException.class,
             org.springframework.web.bind.MissingServletRequestParameterException.class,
             org.springframework.http.converter.HttpMessageNotReadableException.class})
     ResponseEntity<ApiError> handleInvalidRequest(Exception ex, HttpServletRequest request) {
