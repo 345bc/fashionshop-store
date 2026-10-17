@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../data/repositories/feedback_repository.dart';
 import '../providers/feedback_provider.dart';
 
 class FeedbackCategoryFilters extends StatelessWidget {
@@ -14,11 +13,9 @@ class FeedbackCategoryFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final f = catalog ? provider.catalogFilters : provider.filters;
-    final parents = {
-      for (final p in FeedbackRepository.products) p.parentId: p.parent,
-    };
+    final parents = {for (final p in provider.products) p.parentId: p.parent};
     final children = {
-      for (final p in FeedbackRepository.products)
+      for (final p in provider.products)
         if (f.parentId == null || p.parentId == f.parentId)
           p.categoryId: p.category,
     };

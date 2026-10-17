@@ -163,6 +163,17 @@ class _InlineReplyState extends State<_InlineReply> {
   }
 
   @override
+  void didUpdateWidget(covariant _InlineReply oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.review.adminReply != widget.review.adminReply) {
+      _reply.text =
+          widget.provider.drafts[widget.review.id] ??
+          widget.review.adminReply ??
+          '';
+    }
+  }
+
+  @override
   void dispose() {
     _reply.dispose();
     super.dispose();
@@ -194,13 +205,20 @@ class _InlineReplyState extends State<_InlineReply> {
               ),
               ReviewStatusBadge(visibility: r.visibility),
               TextButton(
-                onPressed: () => showDialog(
-                  context: context,
-                  builder: (_) => ChangeNotifierProvider.value(
-                    value: widget.provider,
-                    child: FeedbackDetailDialog(reviewId: r.id),
-                  ),
-                ),
+                onPressed: () async {
+                  await showDialog(
+                    context: context,
+                    builder: (_) => ChangeNotifierProvider.value(
+                      value: widget.provider,
+                      child: FeedbackDetailDialog(reviewId: r.id),
+                    ),
+                  );
+                  if (!mounted) return;
+                  _reply.text =
+                      widget.provider.drafts[r.id] ??
+                      widget.provider.detail(r.id).adminReply ??
+                      '';
+                },
                 child: const Text('Lịch sử / xử lý nội dung'),
               ),
             ],
@@ -210,14 +228,20 @@ class _InlineReplyState extends State<_InlineReply> {
           ),
           const SizedBox(height: 8),
           Text('${r.orderCode} • ${r.sku}'),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => widget.provider.openProduct(r.productId),
-              icon: const Icon(Symbols.checkroom, size: 18),
-              label: Text(r.productName),
+          if (widget.provider.view == FeedbackView.products)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => widget.provider.openProduct(r.productId),
+                icon: const Icon(Symbols.checkroom, size: 18),
+                label: Text(r.productName),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(r.productName),
             ),
-          ),
           ReviewStars(rating: r.rating),
           const SizedBox(height: 16),
           SelectableText(r.comment),
@@ -245,6 +269,8 @@ class _InlineReplyState extends State<_InlineReply> {
               ),
               validator: (v) => v == null || v.trim().isEmpty
                   ? 'Vui lòng nhập câu trả lời'
+                  : v.trim().length > 1000
+                  ? 'Tối đa 1000 ký tự'
                   : null,
             ),
           ),
@@ -252,13 +278,27 @@ class _InlineReplyState extends State<_InlineReply> {
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton.icon(
-              onPressed: () {
-                if (!_form.currentState!.validate()) return;
-                widget.provider.replyAndNext(r.id, _reply.text);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã lưu câu trả lời mẫu')),
-                );
-              },
+              onPressed: widget.provider.saving || widget.provider.loading
+                  ? null
+                  : () async {
+                      if (!_form.currentState!.validate()) return;
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        await widget.provider.replyAndNext(r.id, _reply.text);
+                        messenger.showSnackBar(
+                          const SnackBar(content: Text('Đã lưu câu trả lời')),
+                        );
+                      } catch (_) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              widget.provider.error ??
+                                  'Không thể lưu câu trả lời',
+                            ),
+                          ),
+                        );
+                      }
+                    },
               icon: const Icon(Symbols.send, size: 18),
               label: Text(
                 r.adminReply == null ? 'Gửi & xem tiếp' : 'Cập nhật & xem tiếp',

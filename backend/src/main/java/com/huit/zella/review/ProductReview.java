@@ -12,6 +12,9 @@ import org.hibernate.annotations.Nationalized;
 
 @Entity @Table(name = "product_reviews") @Getter @Setter
 public class ProductReview {
+    @Nationalized @Column(name = "moderation_reason", length = 500) private String moderationReason;
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL) @OrderBy("id ASC")
+    private java.util.List<ReviewHistory> history = new java.util.ArrayList<>();
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "product_id") private Product product;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "customer_id") private Customer customer;

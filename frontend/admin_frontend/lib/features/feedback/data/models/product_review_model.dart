@@ -17,7 +17,7 @@ class ReviewHistoryModel {
   });
 }
 
-/// Frontend contract; backend integration will follow separately.
+/// Review response shared by the live API and explicit demo fixtures.
 class ProductReviewModel {
   final int id, productId, orderId, orderItemId, rating;
   final int? customerId;
@@ -31,6 +31,8 @@ class ProductReviewModel {
   final ReviewVisibility visibility;
   final String? adminReply, moderationReason;
   final DateTime? repliedAt;
+  final int parentId, categoryId;
+  final String parent, category;
   final List<ReviewHistoryModel> history;
 
   const ProductReviewModel({
@@ -51,8 +53,51 @@ class ProductReviewModel {
     this.adminReply,
     this.moderationReason,
     this.repliedAt,
+    this.parentId = 0,
+    this.categoryId = 0,
+    this.parent = '',
+    this.category = '',
     this.history = const [],
   });
+
+  factory ProductReviewModel.fromJson(Map<String, dynamic> j) =>
+      ProductReviewModel(
+        id: j['id'],
+        productId: j['productId'],
+        orderId: j['orderId'],
+        orderItemId: j['orderItemId'],
+        customerId: j['customerId'],
+        rating: j['rating'],
+        customerName: j['customerName'] ?? 'Khách hàng',
+        customerEmail: j['customerEmail'] ?? '',
+        productName: j['productName'] ?? '',
+        sku: j['sku'] ?? '',
+        orderCode: j['orderCode'] ?? '',
+        comment: j['comment'] ?? '',
+        createdAt: DateTime.parse(j['createdAt']),
+        visibility: j['hidden'] == true
+            ? ReviewVisibility.hidden
+            : ReviewVisibility.visible,
+        adminReply: j['adminReply'],
+        moderationReason: j['moderationReason'],
+        repliedAt: j['repliedAt'] == null
+            ? null
+            : DateTime.parse(j['repliedAt']),
+        parentId: j['parentId'],
+        categoryId: j['categoryId'],
+        parent: j['parent'] ?? '',
+        category: j['category'] ?? '',
+        history: (j['history'] as List? ?? [])
+            .map(
+              (h) => ReviewHistoryModel(
+                action: h['action'],
+                actor: h['actor'],
+                note: h['note'],
+                createdAt: DateTime.parse(h['createdAt']),
+              ),
+            )
+            .toList(),
+      );
 
   ProductReviewModel reply(String text, String actor) {
     final now = DateTime.now();
@@ -100,6 +145,10 @@ class ProductReviewModel {
     String? moderationReason,
     required List<ReviewHistoryModel> history,
   }) => ProductReviewModel(
+    parentId: parentId,
+    categoryId: categoryId,
+    parent: parent,
+    category: category,
     id: id,
     productId: productId,
     orderId: orderId,

@@ -1,3 +1,4 @@
+import 'package:zella_admin_flutter/features/feedback/data/repositories/feedback_repository.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,10 +29,30 @@ void main() {
   }
 
   final replyField = find.byKey(const ValueKey('inline-reply'));
+  testWidgets('Unsent dialog draft returns to inline reply', (tester) async {
+    final p = FeedbackProvider(repository: FeedbackRepository.demo());
+    await mount(tester, p, const FeedbackScreen());
+    await tester.tap(find.text('Lịch sử / xử lý nội dung'));
+    await tester.pumpAndSettle();
+    final field = find.descendant(
+      of: find.byType(FeedbackDetailDialog),
+      matching: find.byType(TextFormField),
+    );
+    await tester.enterText(field, 'Bản nháp từ chi tiết');
+    await tester.tap(find.byTooltip('Đóng'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextFormField>(replyField).controller!.text,
+      'Bản nháp từ chi tiết',
+    );
+    expect(p.detail(1).adminReply, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Inbox replies inline and moves to next pending review; drafts survive selection',
     (tester) async {
-      final p = FeedbackProvider();
+      final p = FeedbackProvider(repository: FeedbackRepository.demo());
       await mount(tester, p, const FeedbackScreen());
       expect(p.filter, ReviewFilter.unanswered);
       expect(p.selectedReview!.id, 1);
@@ -75,7 +96,7 @@ void main() {
   testWidgets(
     'Product catalog filters parent/child and preserves filters when returning',
     (tester) async {
-      final p = FeedbackProvider();
+      final p = FeedbackProvider(repository: FeedbackRepository.demo());
       await mount(tester, p, const FeedbackScreen());
       await tester.tap(find.text('Theo sản phẩm'));
       await tester.pumpAndSettle();
@@ -115,7 +136,7 @@ void main() {
   testWidgets(
     'Inbox pagination and search/rating filters select relevant review',
     (tester) async {
-      final p = FeedbackProvider();
+      final p = FeedbackProvider(repository: FeedbackRepository.demo());
       await mount(tester, p, const FeedbackScreen(), width: 700);
       await tester.ensureVisible(find.byIcon(Symbols.chevron_right));
       await tester.tap(find.byIcon(Symbols.chevron_right));
@@ -140,7 +161,7 @@ void main() {
   testWidgets(
     'Moderation still requires reason and preserves original review',
     (tester) async {
-      final p = FeedbackProvider();
+      final p = FeedbackProvider(repository: FeedbackRepository.demo());
       final original = p.detail(1);
       await mount(tester, p, const FeedbackDetailDialog(reviewId: 1));
       await tester.ensureVisible(find.text('Ẩn đánh giá'));
