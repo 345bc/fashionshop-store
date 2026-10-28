@@ -1,9 +1,18 @@
 import 'package:flutter/foundation.dart';
 
 import '../../data/models/campaign_model.dart';
+import '../../data/models/voucher_email_model.dart';
 import '../../data/repositories/campaign_repository.dart';
 
 class CampaignsProvider extends ChangeNotifier {
+  Future<VoucherEmailPreview> previewVoucherEmail(int id, Set<String> tiers) =>
+      _repository.previewVoucherEmail(id, tiers);
+
+  Future<VoucherEmailSendResult> sendVoucherEmail(
+    int id,
+    Set<String> tiers,
+    String audienceKey,
+  ) => _repository.sendVoucherEmail(id, tiers, audienceKey);
   CampaignsProvider({
     CampaignRepository? repository,
     DateTime Function()? clock,
