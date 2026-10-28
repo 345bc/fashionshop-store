@@ -10,7 +10,7 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { apiRequest, BACKEND_URL, clearCsrfToken } from "../api/apiClient";
+import { apiRequest, clearCsrfToken } from "../api/apiClient";
 import { useRouter } from "next/navigation";
 
 const RETURN_TO_KEY = "auth_return_to";
@@ -135,13 +135,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = useCallback((returnTo = "/") => {
     sessionStorage.setItem(RETURN_TO_KEY, safeReturnTo(returnTo));
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = `${BACKEND_URL}/oauth2/authorization/google`;
+    window.location.href = `/oauth2/authorization/google`;
   }, []);
 
   const loginWithMicrosoft = useCallback((returnTo = "/") => {
     sessionStorage.setItem(RETURN_TO_KEY, safeReturnTo(returnTo));
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = `${BACKEND_URL}/oauth2/authorization/google`;
+    window.location.href = `/oauth2/authorization/google`;
   }, []);
 
   const mockLogin = useCallback(

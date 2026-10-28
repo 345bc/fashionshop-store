@@ -42,8 +42,18 @@ jobs:
           fi
 
           mkdir -p ~/.ssh
-          printf "%s\n" "$SSH_KEY" > ~/.ssh/id_ed25519
+          
+          # Ho tro ca dang Base64 hoac dang Plaintext Private Key
+          if echo "$SSH_KEY" | grep -q "BEGIN"; then
+            printf "%s\n" "$SSH_KEY" > ~/.ssh/id_ed25519
+          else
+            echo "$SSH_KEY" | base64 -d > ~/.ssh/id_ed25519
+          fi
+          
           chmod 600 ~/.ssh/id_ed25519
+          
+          echo "Checking SSH key validity:"
+          ssh-keygen -l -f ~/.ssh/id_ed25519 || { echo "::error::Invalid SSH private key!"; exit 1; }
           
           ssh -i ~/.ssh/id_ed25519 \
               -o StrictHostKeyChecking=no \
