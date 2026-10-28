@@ -44,7 +44,7 @@ class OrderOnlinePaymentTest {
                 value.setStockQuantity(stock); value.setReservedQuantity(reserved);
             }
         };
-        service = new OrderService(repository, null, inventory, returns, clock, null, null, org.mockito.Mockito.mock(com.huit.zella.loyalty.LoyaltyService.class), org.mockito.Mockito.mock(com.huit.zella.voucher.VoucherService.class));
+        service = new OrderService(repository, null, inventory, returns, clock, null, null, org.mockito.Mockito.mock(com.huit.zella.loyalty.LoyaltyService.class), org.mockito.Mockito.mock(com.huit.zella.voucher.VoucherService.class), org.mockito.Mockito.mock(com.huit.zella.mail.OrderEmails.class));
     }
 
     @Test void paidOrderIsAutomaticallyConfirmedButStockIsNotShippedYet() {

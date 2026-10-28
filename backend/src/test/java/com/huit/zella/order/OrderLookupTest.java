@@ -15,7 +15,7 @@ class OrderLookupTest {
                 if (method.getName().equals("findByCode")) return order.getCode().equals(args[0]) ? Optional.of(order) : Optional.empty();
                 throw new AssertionError("Lookup must not change order or inventory: " + method.getName());
             });
-    private final OrderService service = new OrderService(repository, null, null, null, Clock.systemUTC(), null, null, org.mockito.Mockito.mock(com.huit.zella.loyalty.LoyaltyService.class), org.mockito.Mockito.mock(com.huit.zella.voucher.VoucherService.class));
+    private final OrderService service = new OrderService(repository, null, null, null, Clock.systemUTC(), null, null, org.mockito.Mockito.mock(com.huit.zella.loyalty.LoyaltyService.class), org.mockito.Mockito.mock(com.huit.zella.voucher.VoucherService.class), org.mockito.Mockito.mock(com.huit.zella.mail.OrderEmails.class));
 
     @Test void guestCanTrackWithMatchingCodeAndRecipientPhone() {
         var response = service.lookup(new OrderLookupRequest(" ord-test ", "0900000000"));

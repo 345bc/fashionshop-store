@@ -35,6 +35,7 @@ public class OrderService {
     private final CartService cartService;
     private final com.huit.zella.loyalty.LoyaltyService loyalty;
     private final com.huit.zella.voucher.VoucherService voucherService;
+    private final com.huit.zella.mail.OrderEmails orderEmails;
     private static final BigDecimal MAX_AMOUNT = new BigDecimal("9999999999999999.99");
 
     private OrderStatus parseListStatus(String value) {
@@ -59,6 +60,10 @@ public class OrderService {
 
     @Transactional
     public OrderResponse create(CreateOrderRequest request, Long actorId) {
+        return createInternal(request, actorId, true);
+    }
+
+    private OrderResponse createInternal(CreateOrderRequest request, Long actorId, boolean notify) {
         if (!"ONLINE".equals(request.paymentMethod()))
             throw error("ONLINE_PAYMENT_ONLY", "Chỉ hỗ trợ thanh toán online");
         User customer = request.customerUserId() == null ? null : userRepository.findById(request.customerUserId())
@@ -69,6 +74,7 @@ public class OrderService {
         Order order = new Order();
         order.setCode("ORD-" + UUID.randomUUID().toString().replace("-", "").substring(0, 28).toUpperCase(Locale.ROOT));
         order.setCustomer(customer);
+        order.setRecipientEmail(customer == null ? null : customer.getEmail());
         order.setRecipientName(request.recipientName().trim());
         order.setRecipientPhone(request.recipientPhone().trim());
         order.setAddress(request.address().trim());
@@ -111,6 +117,7 @@ public class OrderService {
             inventoryService.changeStockAndReservation(variant, variant.getStockQuantity(),
                 variant.getReservedQuantity() + item.getQuantity(), "ORDER_RESERVE", order.getCode(), "Giữ hàng cho đơn", actor);
         }
+        if (notify) orderEmails.enqueue(order, true);
         return response(order);
     }
 
@@ -129,15 +136,18 @@ public class OrderService {
         }
         // Customer identity comes from authentication, never from a user id in the public request.
         BigDecimal fee = BigDecimal.ZERO;
-        OrderResponse created = create(new CreateOrderRequest(actorId, request.recipientName(), request.recipientPhone(),
-            request.address(), request.note(), fee, "ONLINE", request.items()), actorId);
+        OrderResponse created = createInternal(new CreateOrderRequest(actorId, request.recipientName(), request.recipientPhone(),
+            request.address(), request.note(), fee, "ONLINE", request.items()), actorId, false);
         Order order = orderRepository.findById(created.id()).orElseThrow();
         voucherService.prepare(order,actorId,request.shippingMethod());
         voucherService.apply(order,actorId,request.voucherCode());
+        if (request.recipientEmail() != null && !request.recipientEmail().isBlank())
+            order.setRecipientEmail(request.recipientEmail().trim());
         String token = request.checkoutKey() == null ? UUID.randomUUID().toString() + UUID.randomUUID() : request.checkoutKey();
         order.setCheckoutTokenHash(hashToken(token));
         cartService.consume(actorId, request.items());
         orderRepository.flush();
+        orderEmails.enqueue(order, true);
         return checkoutResponse(order, token);
     }
 
@@ -199,6 +209,7 @@ public class OrderService {
             order.setPaymentStatus("REFUND_PENDING");
             history(order, order.getStatus(), order.getStatus(),
                 "Thanh toán về sau khi đơn bị hủy, cần hoàn tiền. Giao dịch: " + transactionId, null);
+            notifyUpdate(order);
         } else {
             order.setPaymentStatus("PAID");
             transition(order, OrderStatus.CONFIRMED, "Tự xác nhận sau thanh toán online. Giao dịch: " + transactionId, null);
@@ -212,8 +223,8 @@ public class OrderService {
         Order order = orderRepository.findByIdForUpdate(id).orElse(null);
         if (order == null || !order.isInventoryManaged() || order.getStatus() != OrderStatus.PENDING
                 || !"PENDING".equals(order.getPaymentStatus()) || !expired(order)) return false;
-        cancelOrder(order, "Hết 5 phút chờ thanh toán", null);
         order.setPaymentStatus("EXPIRED");
+        cancelOrder(order, "Hết 5 phút chờ thanh toán", null);
         return true;
     }
 
@@ -285,6 +296,7 @@ public class OrderService {
         order.setPaymentStatus("REFUNDED");
         history(order, order.getStatus(), order.getStatus(), "Đã hoàn " + order.getTotalAmount() + ": " + note,
             userRepository.getReferenceById(actorId));
+        orderEmails.enqueue(order, false);
         return response(order);
     }
 
@@ -294,6 +306,10 @@ public class OrderService {
         if (!order.isInventoryManaged())
             throw error("LEGACY_ORDER", "Đơn cũ chưa theo dõi giữ/xuất kho; không tự động thay đổi tồn");
         return order;
+    }
+
+    public void notifyUpdate(Order order) {
+        orderEmails.enqueue(order, false);
     }
 
     private OrderResponse response(Order order) {
@@ -323,6 +339,7 @@ public class OrderService {
         history(order, order.getStatus(), status, note, actorId == null ? null : userRepository.getReferenceById(actorId));
         order.setStatus(status);
         order.setUpdatedAt(LocalDateTime.now(orderClock));
+        orderEmails.enqueue(order, false);
     }
 
     private void history(Order order, OrderStatus before, OrderStatus after, String note, User actor) {
