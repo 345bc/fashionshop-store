@@ -1,0 +1,52 @@
+services:
+  rasa-actions:
+    build:
+      context: C:/Users/Tuan/Desktop/NLP Rasa
+      dockerfile: C:/Users/Tuan/Desktop/dacn_048/docs/rasa-docker/Dockerfile.actions
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8080}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:5055:5055"
+    restart: unless-stopped
+
+  rasa:
+    build:
+      context: C:/Users/Tuan/Desktop/NLP Rasa
+      dockerfile: C:/Users/Tuan/Desktop/dacn_048/docs/rasa-docker/Dockerfile.rasa
+    depends_on:
+      rasa-actions:
+        condition: service_started
+      rasa-model-sync:
+        condition: service_completed_successfully
+    environment:
+      RASA_MODEL: /models/model.tar.gz
+      RASA_MODEL_CHECKSUM: ${RASA_MODEL_CHECKSUM:-}
+    volumes:
+      - rasa-models:/models:ro
+      - ./docs/rasa-docker/endpoints.docker.yml:/runtime/endpoints.yml:ro
+    ports:
+      - "127.0.0.1:5005:5005"
+    restart: unless-stopped
+
+  rasa-model-sync:
+    build:
+      context: .
+      dockerfile: docs/rasa-docker/Dockerfile.sync
+    environment:
+      R2_ENABLED: ${R2_ENABLED:?set R2_ENABLED=true}
+      R2_ENDPOINT_URL: ${R2_ENDPOINT_URL:?set R2_ENDPOINT_URL}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:?set R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:?set R2_SECRET_ACCESS_KEY}
+      R2_BUCKET: ${R2_BUCKET:?set R2_BUCKET}
+      R2_PREFIX: ${R2_PREFIX:-models}
+      MODEL_DIR: /models
+      MODEL_READY_FILE: /models/model.tar.gz
+    volumes:
+      - rasa-models:/models
+    restart: "no"
+
+volumes:
+  rasa-models:
+

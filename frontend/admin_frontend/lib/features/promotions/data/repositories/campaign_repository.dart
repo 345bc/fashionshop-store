@@ -1,8 +1,33 @@
 import '../../../../core/network/api_client.dart';
 import '../../../inventory/data/api/inventory_repository.dart';
 import '../models/campaign_model.dart';
+import '../models/voucher_email_model.dart';
 
 class CampaignRepository {
+  Future<VoucherEmailPreview> previewVoucherEmail(int id, Set<String> tiers) =>
+      warehouseRequest(() async {
+        final response = await _api.post(
+          '/campaigns/voucher/$id/email/preview',
+          data: {'tiers': tiers.toList()..sort()},
+        );
+        return VoucherEmailPreview.fromJson(
+          Map<String, dynamic>.from(response.data['data']),
+        );
+      });
+
+  Future<VoucherEmailSendResult> sendVoucherEmail(
+    int id,
+    Set<String> tiers,
+    String audienceKey,
+  ) => warehouseRequest(() async {
+    final response = await _api.post(
+      '/campaigns/voucher/$id/email/send',
+      data: {'tiers': tiers.toList()..sort(), 'audienceKey': audienceKey},
+    );
+    return VoucherEmailSendResult.fromJson(
+      Map<String, dynamic>.from(response.data['data']),
+    );
+  });
   final _api = ApiClient();
   final List<CampaignModel> _items = [];
   List<CampaignModel> get items => List.unmodifiable(_items);

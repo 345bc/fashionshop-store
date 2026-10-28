@@ -22,7 +22,10 @@ function RegisterContent() {
   const auth = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = searchParams?.get("returnTo") ?? "/login";
+  const returnTo = searchParams?.get("returnTo");
+  const loginUrl = returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") && returnTo !== "/login"
+    ? `/login?returnTo=${encodeURIComponent(returnTo)}`
+    : "/login";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,18 +39,16 @@ function RegisterContent() {
     e.preventDefault();
     setSubmitted(true);
     setError(null);
+    setSuccess(null);
     try {
       const res = await auth.register(email, password, username, fullName, phone) as { message?: string };
-      setSuccess(res?.message || "Đăng ký thành công! Đang chuyển hướng...");
+      setSuccess(`${res?.message || "Đăng ký thành công!"} Vui lòng đăng nhập. Đang chuyển hướng...`);
       setTimeout(() => {
-        router.push(returnTo);
+        router.replace(loginUrl);
       }, 1500);
     } catch (requestError: unknown) {
       setError((requestError as Error).message || "Đăng ký thất bại");
-    } finally {
-      if (!success) {
-        setSubmitted(false);
-      }
+      setSubmitted(false);
     }
   };
 

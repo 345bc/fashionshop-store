@@ -1,0 +1,14 @@
+**/.git
+.idea
+.vscode
+.local-certs
+target
+uploads
+data
+.env
+.env.*
+*.pem
+*.key
+src/main/resources/application-local.properties
+src/main/resources/application-product.properties
+src/test

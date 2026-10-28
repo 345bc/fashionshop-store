@@ -35,6 +35,7 @@ final List<NavGroup> navGroups = [
   NavGroup('SẢN PHẨM & KHO', [
     NavItem('Danh mục sản phẩm', Symbols.category, '/categories'),
     NavItem('Sản phẩm', Symbols.inventory_2, '/products'),
+    NavItem('Gợi ý mua kèm', Symbols.shopping_bag, '/bought-together'),
     NavItem('Tồn kho', Symbols.storage, '/inventory'),
     NavItem('Nhập hàng', Symbols.local_shipping, '/purchases'),
     NavItem('Nhà cung cấp', Symbols.business_center, '/suppliers'),

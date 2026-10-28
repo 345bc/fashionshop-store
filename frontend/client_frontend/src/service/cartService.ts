@@ -19,7 +19,7 @@ export async function mutateCart(path: string, method: string, body?: object): P
   return response.data;
 }
 export async function createCheckout(body: {
-  recipientName: string; recipientPhone: string; address: string; note: string;
+  recipientName: string; recipientPhone: string; recipientEmail?: string; address: string; note: string;
   shippingMethod: string; items: CartLine[];
   checkoutKey: string; voucherCode?: string;
 }): Promise<PendingCheckout> {

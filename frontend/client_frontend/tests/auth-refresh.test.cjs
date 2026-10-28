@@ -158,3 +158,18 @@ test('validation errors, forbidden responses and cancelled navigation do not tri
     assert.equal(failures, 0);
   } finally { if (previous === undefined) delete global.window; else global.window = previous; }
 });
+
+test('model API errors can be handled locally without hiding chat behind the global overlay', async () => {
+  const previous = global.window;
+  const events = new EventTarget(); global.window = events;
+  let failures = 0; events.addEventListener('zella:connection-error', () => failures++);
+  try {
+    for (const status of [502,503,504]) await withFetch(async () => Response.json({}, { status }), async () => {
+      await assert.rejects(client().apiRequest('/chat/image-recognition', { localErrorHandling: true }));
+    });
+    await withFetch(async () => { throw new TypeError('Failed to fetch'); }, async () => {
+      await assert.rejects(client().apiRequest('/chat/image-recognition', { localErrorHandling: true }));
+    });
+    assert.equal(failures, 0);
+  } finally { if (previous === undefined) delete global.window; else global.window = previous; }
+});

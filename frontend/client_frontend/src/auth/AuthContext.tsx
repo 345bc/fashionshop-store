@@ -41,6 +41,7 @@ export interface AuthContextType extends AuthState {
   refresh: () => Promise<unknown>;
   login: (email?: string, password?: string) => Promise<unknown>;
   register: (email?: string, password?: string, username?: string, fullName?: string, phone?: string) => Promise<unknown>;
+  loginWithGoogle: (returnTo?: string) => void;
   loginWithMicrosoft: (returnTo?: string) => void;
   mockLogin: (email: string) => Promise<unknown>;
   logout: () => Promise<void>;
@@ -112,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body: { email, password },
       });
+      sessionStorage.removeItem("zella_chat_login_hint");
       await refresh();
       return response;
     },
@@ -124,16 +126,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body: { email, password, username, fullName, phone },
       });
-      await refresh();
+      sessionStorage.removeItem("zella_chat_login_hint");
       return response;
     },
-    [refresh],
+    [],
   );
+
+  const loginWithGoogle = useCallback((returnTo = "/") => {
+    sessionStorage.setItem(RETURN_TO_KEY, safeReturnTo(returnTo));
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = `${BACKEND_URL}/oauth2/authorization/google`;
+  }, []);
 
   const loginWithMicrosoft = useCallback((returnTo = "/") => {
     sessionStorage.setItem(RETURN_TO_KEY, safeReturnTo(returnTo));
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = `${BACKEND_URL}/oauth2/authorization/azure`;
+    window.location.href = `${BACKEND_URL}/oauth2/authorization/google`;
   }, []);
 
   const mockLogin = useCallback(
@@ -157,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authEpoch.current++;
     clearCsrfToken();
     sessionStorage.removeItem(RETURN_TO_KEY);
+    sessionStorage.removeItem("zella_chat_login_hint");
     setState({ status: "anonymous", user: null, error: null });
     router.replace("/");
     router.refresh();
@@ -179,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       login,
       register,
+      loginWithGoogle,
       loginWithMicrosoft,
       mockLogin,
       logout,
@@ -190,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       login,
       register,
+      loginWithGoogle,
       loginWithMicrosoft,
       mockLogin,
       logout,

@@ -24,7 +24,7 @@ class VnPayServiceTest {
                 if (method.getName().equals("flush")) return null;
                 throw new UnsupportedOperationException(method.getName());
             });
-    private final OrderService orders = new OrderService(repository, null, null, null, clock, null, null, org.mockito.Mockito.mock(com.huit.zella.loyalty.LoyaltyService.class), org.mockito.Mockito.mock(com.huit.zella.voucher.VoucherService.class)) {
+    private final OrderService orders = new OrderService(repository, null, null, null, clock, null, null, org.mockito.Mockito.mock(com.huit.zella.loyalty.LoyaltyService.class), org.mockito.Mockito.mock(com.huit.zella.voucher.VoucherService.class), org.mockito.Mockito.mock(com.huit.zella.mail.OrderEmails.class)) {
         @Override public CheckoutOrderResponse checkoutStatus(String code, String token) {
             if (!"checkout-token".equals(token)) throw new BusinessException(org.springframework.http.HttpStatus.FORBIDDEN, "TOKEN", "Invalid token");
             return new CheckoutOrderResponse(order.getId(), code, "PENDING", "PENDING", order.getTotalAmount(), null, null, List.of(), order.getSubtotal(), order.getShippingFee(), order.getDiscountAmount(), null);

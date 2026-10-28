@@ -34,7 +34,7 @@ class OrderCheckoutRecoveryTest {
             @Override public void prepareCheckout(Long userId) {}
             @Override public void consume(Long userId, List<CreateOrderRequest.Item> purchased) { fail("Retry must not consume the cart again"); }
         };
-        service = new OrderService(repository, null, null, null, Clock.systemUTC(), null, cartService, org.mockito.Mockito.mock(com.huit.zella.loyalty.LoyaltyService.class), org.mockito.Mockito.mock(com.huit.zella.voucher.VoucherService.class));
+        service = new OrderService(repository, null, null, null, Clock.systemUTC(), null, cartService, org.mockito.Mockito.mock(com.huit.zella.loyalty.LoyaltyService.class), org.mockito.Mockito.mock(com.huit.zella.voucher.VoucherService.class), org.mockito.Mockito.mock(com.huit.zella.mail.OrderEmails.class));
     }
 
     @Test void retryReturnsSameGuestOrderWithoutReservingOrConsumingAgain() {

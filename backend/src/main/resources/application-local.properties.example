@@ -22,9 +22,12 @@ app.auth.jwt.cookie-secure=false
 # M01 có thể dùng mock-auth để làm CRUD trước: local,mock-auth.
 # Microsoft 365 là bonus: thêm profile oidc cùng application-oidc.properties.
 
-# Bổ sung khi dự án triển khai email:
-# spring.mail.username=CHANGE_ME
-# spring.mail.password=CHANGE_ME
+# Gmail: bật xác minh 2 bước và tạo App Password (không dùng mật khẩu đăng nhập).
+# Chỉ bật sau khi điền tài khoản thật trong file local hoặc biến môi trường.
+app.mail.enabled=false
+spring.mail.username=${MAIL_USERNAME:}
+spring.mail.password=${MAIL_PASSWORD:}
+app.frontend-url=${FRONTEND_URL:http://localhost:3000}
 
 app.payment.vnpay.enabled=false
 app.payment.vnpay.ipn-required=false
@@ -33,3 +36,13 @@ app.payment.vnpay.hash-secret=
 app.payment.vnpay.payment-url=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
 app.payment.vnpay.return-url=http://localhost:3000/checkout
 app.order.payment-simulation.enabled=false
+
+# Chat thời trang: Spring Boot gọi Rasa Server, không dùng phiên quản trị AiModel.
+app.chat.rasa.base-url=${RASA_BASE_URL:http://127.0.0.1:5005}
+app.chat.rasa.auth-token=${RASA_AUTH_TOKEN:}
+app.chat.rasa.timeout-seconds=${RASA_TIMEOUT_SECONDS:60}
+
+# Google OAuth2 Login
+spring.security.oauth2.client.registration.google.client-id=${GOOGLE_CLIENT_ID:your-google-client-id}
+spring.security.oauth2.client.registration.google.client-secret=${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+spring.security.oauth2.client.registration.google.scope=openid,profile,email

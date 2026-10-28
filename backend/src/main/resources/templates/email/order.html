@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Đơn hàng ZELLA</title>
+  <style>
+    @media only screen and (max-width:600px) {
+      .page { padding:24px 20px !important; }
+      .heading { font-size:24px !important; }
+      .column { display:block !important; width:100% !important; padding:0 0 20px !important; }
+      .photo { width:52px !important; }
+      .photo img { width:40px !important; height:54px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#fff;color:#171717;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%">
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">{{PREHEADER}}</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="table-layout:fixed;background:#fff">
+    <tr><td align="center">
+      <!--[if mso]><table role="presentation" width="600" align="center"><tr><td><![endif]-->
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="table-layout:fixed;max-width:600px">
+        <tr><td class="page" style="padding:36px 28px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="table-layout:fixed"><tr>
+            <td style="font-size:23px;font-weight:700;letter-spacing:4px">ZELLA</td>
+            <td align="right" style="font-size:11px;color:#888;line-height:1.6">Thông tin đơn hàng</td>
+          </tr></table>
+          <h1 class="heading" style="margin:36px 0 14px;font-size:26px;line-height:1.3;font-weight:600;letter-spacing:-0.6px">{{TITLE}}</h1>
+          <p style="margin:0 0 6px;font-size:14px;line-height:1.7">Chào {{NAME}},</p>
+          <p style="margin:0;font-size:14px;line-height:1.7;color:#666">{{DESCRIPTION}}</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="table-layout:fixed;margin-top:26px;border-top:1px solid #e7e7e7;border-bottom:1px solid #e7e7e7"><tr><td style="padding:16px 0">
+            <p style="margin:0;font-size:12px;color:#777;line-height:1.7">Đơn hàng <span style="color:#333;word-break:break-all">{{CODE}}</span></p>
+            <p style="margin:5px 0 0;font-size:12px;line-height:1.7;color:#888">{{DATE}} <span style="color:#bbb">&nbsp; / &nbsp;</span> <span style="color:{{STATUS_COLOR}}">{{STATUS}}</span></p>
+          </td></tr></table>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="table-layout:fixed">{{ITEMS}}</table>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="table-layout:fixed;margin-top:14px;font-size:13px;line-height:1.7">
+            <tr><td style="padding:4px 0;color:#777">Tiền sản phẩm</td><td align="right" style="padding:4px 0;white-space:nowrap">{{SUBTOTAL}}</td></tr>
+            <tr><td style="padding:4px 0;color:#777">Vận chuyển</td><td align="right" style="padding:4px 0;white-space:nowrap">{{SHIPPING}}</td></tr>
+            <tr><td style="padding:4px 0;color:#777">Giảm giá</td><td align="right" style="padding:4px 0;white-space:nowrap">{{DISCOUNT}}</td></tr>
+            <tr><td colspan="2" style="height:12px;font-size:1px;line-height:1px">&nbsp;</td></tr>
+            <tr><td style="padding:16px 0;border-top:1px solid #222;font-size:14px;font-weight:600">{{TOTAL_LABEL}}</td><td align="right" style="padding:16px 0;border-top:1px solid #222;font-size:21px;font-weight:600;white-space:nowrap">{{TOTAL}}</td></tr>
+          </table>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="table-layout:fixed;margin-top:20px"><tr>
+            <td class="column" width="60%" style="padding:0 24px 0 0;vertical-align:top">
+              <p style="margin:0 0 10px;font-size:12px;color:#888">Thông tin nhận hàng</p>
+              <p style="margin:0;font-size:13px;line-height:1.8;font-weight:600">{{NAME}}</p>
+              <p style="margin:0;font-size:13px;line-height:1.8;color:#666">{{PHONE}}</p>
+              <p style="margin:2px 0 0;font-size:13px;line-height:1.8;color:#666;word-break:break-word">{{ADDRESS}}</p>
+            </td>
+            <td class="column" width="40%" style="padding:0;vertical-align:top">
+              <p style="margin:0 0 10px;font-size:12px;color:#888">Thanh toán</p>
+              <p style="margin:0;font-size:13px;line-height:1.8">{{PAYMENT}}</p>
+            </td>
+          </tr></table>
+          <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:28px"><tr><td bgcolor="#171717" style="mso-padding-alt:13px 22px">
+            <a href="{{TRACKING_URL}}" target="_blank" style="display:inline-block;padding:13px 22px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:500;text-decoration:none;color:#fff">Tra cứu đơn hàng</a>
+          </td></tr></table>
+          <p style="margin:10px 0 0;font-size:11px;line-height:1.7;color:#999">Tra cứu bằng mã đơn và số điện thoại nhận hàng.</p>
+          <p style="margin:28px 0 0;padding-top:18px;border-top:1px solid #e7e7e7;font-size:12px;line-height:1.7;color:#777">Cảm ơn bạn đã mua sắm tại ZELLA.</p>
+        </td></tr>
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td></tr>
+  </table>
+</body>
+</html>

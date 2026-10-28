@@ -9,6 +9,13 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where lower(u.email) = :email")
+    Optional<User> lockByEmail(@org.springframework.data.repository.query.Param("email") String email);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.id = :id")
+    Optional<User> lockById(@org.springframework.data.repository.query.Param("id") Long id);
     //    @EntityGraph: Chỉ định các quan hệ (relationship) cần load ngay cùng entity,
     //    giúp tránh phải query thêm khi truy cập quan hệ đó.
     //    EntityGraph = “Lấy entity này kèm những quan hệ mình chỉ định.”
