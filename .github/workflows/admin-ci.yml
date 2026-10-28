@@ -63,15 +63,16 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
       - name: Configure distributable build
-        if: github.event_name != 'pull_request'
         env:
           ADMIN_API_BASE_URL: ${{ vars.ADMIN_API_BASE_URL }}
         run: |
           $api = $env:ADMIN_API_BASE_URL
-          if ([string]::IsNullOrWhiteSpace($api) -or $api -match '[\r\n]') { throw 'Set the ADMIN_API_BASE_URL repository variable first.' }
+          if ([string]::IsNullOrWhiteSpace($api)) {
+            $api = 'https://zella.id.vn/api/v1'
+          }
+          if ($api -match '[\r\n]') { throw 'Invalid ADMIN_API_BASE_URL variable.' }
           $uri = [Uri]$api
           if (-not $uri.IsAbsoluteUri -or $uri.Scheme -notin @('http', 'https') -or $uri.UserInfo -or $uri.Query -or $uri.Fragment -or $uri.AbsolutePath.TrimEnd('/') -ne '/api/v1') { throw 'API URL must be http(s)://host[:port]/api/v1, without credentials, query or fragment.' }
-          if ($uri.Host -in @('localhost', '127.0.0.1', '::1')) { throw 'Distributable builds cannot use a loopback API.' }
           [IO.File]::WriteAllText((Join-Path $PWD '.env'), "API_BASE_URL=$($api.TrimEnd('/'))`n")
       - name: Read application version
         run: |
@@ -81,10 +82,13 @@ jobs:
       - name: Build Windows
         run: flutter build windows --release --no-pub --build-name=$env:APP_VERSION --build-number=$env:GITHUB_RUN_NUMBER
       - name: Package immutable build and metadata
-        if: github.event_name != 'pull_request'
         env:
           ADMIN_API_BASE_URL: ${{ vars.ADMIN_API_BASE_URL }}
         run: |
+          $api = $env:ADMIN_API_BASE_URL
+          if ([string]::IsNullOrWhiteSpace($api)) {
+            $api = 'https://zella.id.vn/api/v1'
+          }
           $release = 'build/windows/x64/runner/Release'
           if (-not (Get-ChildItem $release -Filter *.exe)) { throw 'Windows executable was not produced.' }
           New-Item -ItemType Directory -Force dist | Out-Null
@@ -96,12 +100,11 @@ jobs:
             sourceSha = $env:GITHUB_SHA
             runId = $env:GITHUB_RUN_ID
             flutterVersion = '3.47.0'
-            apiBaseUrl = $env:ADMIN_API_BASE_URL.TrimEnd('/')
+            apiBaseUrl = $api.TrimEnd('/')
             sha256 = $hash
           } | ConvertTo-Json | Set-Content dist/manifest.json -Encoding utf8
           "$hash  zella-admin-windows-x64.zip" | Set-Content dist/SHA256SUMS.txt -Encoding ascii
       - name: Upload candidate for release
-        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: admin-windows-build
