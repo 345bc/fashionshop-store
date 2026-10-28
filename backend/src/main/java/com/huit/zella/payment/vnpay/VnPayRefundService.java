@@ -151,6 +151,7 @@ public class VnPayRefundService {
                 if (order.getStatus() != OrderStatus.CANCELLED || !"REFUND_PENDING".equals(order.getPaymentStatus()))
                     throw error("INVALID_REFUND_ORDER", "Trạng thái đơn thay đổi, cần đối soát khoản hoàn");
                 order.setPaymentStatus("REFUNDED"); order.setUpdatedAt(LocalDateTime.now(orderClock));
+                orders.notifyUpdate(order);
                 OrderHistory history = new OrderHistory(); history.setOrder(order);
                 history.setOldStatus(order.getStatus().name()); history.setNewStatus(order.getStatus().name());
                 history.setNote("VNPay hoàn tiền: " + refund.getRequestId());

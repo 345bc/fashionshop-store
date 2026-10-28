@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 import { AuthProvider } from "../auth/AuthContext";
 import { CartProvider } from "../cart/CartContext";
 import CartDrawer from "../cart/CartDrawer";
+import ZellaAssistant from "../components/ZellaAssistant";
 import { ConnectionErrorProvider } from "../components/ConnectionError";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -39,7 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <AuthProvider><CartProvider><ConnectionErrorProvider>{children}<CartDrawer /></ConnectionErrorProvider></CartProvider></AuthProvider>
+        <AuthProvider><CartProvider><ConnectionErrorProvider>{children}<CartDrawer /><ZellaAssistant /></ConnectionErrorProvider></CartProvider></AuthProvider>
       </body>
     </html>
   );

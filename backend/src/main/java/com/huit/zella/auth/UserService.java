@@ -118,6 +118,62 @@ public class UserService {
     }
 
     @Transactional
+    public CurrentUser processOAuthPostLogin(String email, String fullName) {
+        String normalized = normalizeEmail(email);
+        User user = user_repository.findByEmailIgnoreCase(normalized).orElse(null);
+        if (user == null) {
+            Role userRole = role_repository.findByRoleCode(RoleEnum.USER.name())
+                    .orElseThrow(() -> new BusinessException(
+                            HttpStatus.INTERNAL_SERVER_ERROR,
+                            "ROLE_NOT_FOUND",
+                            "Lỗi: Không tìm thấy Role USER trong DB!"
+                    ));
+            Set<Role> roles = new HashSet<>();
+            roles.add(userRole);
+
+            String base = normalized.contains("@") ? normalized.substring(0, normalized.indexOf('@')) : normalized;
+            base = base.replaceAll("[^a-zA-Z0-9_]", "");
+            if (base.isBlank()) base = "user";
+            if (base.length() > 30) base = base.substring(0, 30);
+            String candidate = base;
+            int counter = 1;
+            while (user_repository.findByUserNameIgnoreCase(candidate).isPresent()) {
+                candidate = base + counter++;
+            }
+
+            user = new User();
+            user.setUserName(candidate);
+            user.setEmail(normalized);
+            user.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            user.setActive(true);
+            user.setRoles(roles);
+            user = user_repository.save(user);
+
+            Customer customer = new Customer();
+            customer.setFullName(fullName != null && !fullName.isBlank() ? fullName.trim() : candidate);
+            user.setProfile(customer);
+            customerRepository.save(customer);
+        } else {
+            if (!user.isActive()) {
+                throw new BusinessException(HttpStatus.FORBIDDEN, "USER_DISABLED", "Tài khoản đã bị khóa");
+            }
+            if (user.getRoles().isEmpty()) {
+                Role userRole = role_repository.findByRoleCode(RoleEnum.USER.name()).orElse(null);
+                if (userRole != null) {
+                    user.getRoles().add(userRole);
+                    user = user_repository.save(user);
+                }
+            }
+            if (user.getCustomer() != null && (user.getCustomer().getFullName() == null || user.getCustomer().getFullName().isBlank())
+                    && fullName != null && !fullName.isBlank()) {
+                user.getCustomer().setFullName(fullName.trim());
+                customerRepository.save(user.getCustomer());
+            }
+        }
+        return toCurrentUser(user);
+    }
+
+    @Transactional
     public UserResponse createUser(CreateUserRequest req) {
         if (user_repository.findByEmailIgnoreCase(normalizeEmail(req.email())).isPresent()
                 || user_repository.findByUserNameIgnoreCase(normalizeUserName(req.username())).isPresent()) {

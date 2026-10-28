@@ -12,6 +12,7 @@ import '../../data/models/campaign_model.dart';
 import '../providers/campaigns_provider.dart';
 import '../widgets/campaign_status_badge.dart';
 import 'campaign_form_dialog.dart';
+import 'voucher_email_dialog.dart';
 
 class CampaignDetailDialog extends StatefulWidget {
   final int id;
@@ -1097,6 +1098,21 @@ class _CampaignDetailDialogState extends State<CampaignDetailDialog> {
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Đóng'),
           ),
+          if (item is VoucherModel && !item.redeemable) ...[
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
+              onPressed: _toggling || p.status(item) != CampaignStatus.active
+                  ? null
+                  : () => showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) =>
+                          VoucherEmailDialog(voucher: item, provider: p),
+                    ),
+              icon: const Icon(Icons.mail_outline, size: 16),
+              label: const Text('Gửi theo hạng'),
+            ),
+          ],
           const SizedBox(width: 12),
           OutlinedButton(
             onPressed: _toggling

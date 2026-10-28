@@ -171,6 +171,7 @@ public class ReturnService {
             entry.setCreatedBy(actor);
             order.getHistories().add(entry); order.setStatus(OrderStatus.RETURNED); order.setUpdatedAt(LocalDateTime.now(orderClock));
             if("PAID".equals(order.getPaymentStatus())) order.setPaymentStatus("REFUND_PENDING");
+            orderService.notifyUpdate(order);
         }
         return ReturnResponse.from(document);
     }
@@ -201,8 +202,10 @@ public class ReturnService {
         transition(document, ReturnStatus.COMPLETED, "Đã xử lý hoàn tiền: " + request.note(), actorId);
         document.setCompletedAt(LocalDateTime.now(orderClock));
         if (document.getOrder().getStatus() == OrderStatus.RETURNED && document.getRefundAmount().signum() > 0
-                && returnRepository.pendingRefundCount(document.getOrder().getId())==0)
+                && returnRepository.pendingRefundCount(document.getOrder().getId())==0) {
             document.getOrder().setPaymentStatus("REFUNDED");
+            orderService.notifyUpdate(document.getOrder());
+        }
         return ReturnResponse.from(document);
     }
 

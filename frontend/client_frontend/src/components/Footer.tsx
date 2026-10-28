@@ -144,9 +144,9 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/support-chat" className={styles.linkItem}>
+                <button type="button" className={styles.linkItem} onClick={() => window.dispatchEvent(new Event("zella:open-chat"))} style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer", textAlign: "left" }}>
                   Tư vấn trực tuyến
-                </Link>
+                </button>
               </li>
               <li>
                 <Link href="/orders" className={styles.linkItem}>

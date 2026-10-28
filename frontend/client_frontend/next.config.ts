@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Image inference can outlast Next.js's default 30-second rewrite timeout.
+    proxyTimeout: 130000,
+  },
   async rewrites() {
     const backend = (process.env.BACKEND_API_BASE_URL || "").replace(/\/$/, "");
     return [{ source: "/api/v1/:path*", destination: `${backend}/:path*` }];

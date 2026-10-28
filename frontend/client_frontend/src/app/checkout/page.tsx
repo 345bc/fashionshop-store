@@ -42,7 +42,7 @@ import CheckoutAddressFields from "./CheckoutAddressFields";
 import CheckoutOrderDialog from "./CheckoutOrderDialog";
 import CheckoutSummary from "./CheckoutSummary";
 
-type StoredOrder = { owner: string; order: PendingCheckout; items: CartItem[]; restoreKey: string };
+type StoredOrder = { owner: string; order: PendingCheckout; items: CartItem[]; restoreKey: string; savedAt?: number };
 type CheckoutDraft = { owner: string; request: Parameters<typeof createCheckout>[0]; items: CartItem[]; restoreKey: string };
 const STORAGE_KEY = "zella.pending-checkout.v1";
 const DRAFT_KEY = "zella.checkout-draft.v1";
@@ -50,7 +50,15 @@ function saveOrder(value: StoredOrder) { sessionStorage.setItem(STORAGE_KEY, JSO
 function getStoredOrder(owner: string): StoredOrder | null {
   try {
     const stored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null");
-    return stored?.owner === owner && stored.order?.checkoutToken && stored.order?.code && Array.isArray(stored.items) ? stored : null;
+    if (!stored || stored.owner !== owner || !stored.order?.checkoutToken || !stored.order?.code || !Array.isArray(stored.items)) {
+      return null;
+    }
+    const isFinished = stored.order.paymentStatus === "PAID" || stored.order.status === "CANCELLED";
+    if (isFinished && stored.savedAt && Date.now() - stored.savedAt > 30 * 60 * 1000) {
+      sessionStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return stored;
   } catch { return null; }
 }
 
@@ -64,6 +72,7 @@ export default function CheckoutPage() {
   const [form, setForm] = useState({
     recipientName: "",
     recipientPhone: "",
+    recipientEmail: "",
     street: "",
     apartment: "",
     city: "",
@@ -99,6 +108,7 @@ export default function CheckoutPage() {
             ...f,
             recipientName: profile.fullName || profile.fullname || "",
             recipientPhone: profile.phone || "",
+            recipientEmail: String(auth.user?.email || ""),
             street,
             ward,
             city,
@@ -133,7 +143,9 @@ export default function CheckoutPage() {
   const [now, setNow] = useState(0);
   const [closedDialogKey, setClosedDialogKey] = useState("");
 
-  const pending = stored?.owner === owner ? stored : null;
+  const isFinished = stored?.order.paymentStatus === "PAID" || stored?.order.status === "CANCELLED";
+  const hasNewCartItems = cart.selectedItems.length > 0 && cart.selectedItems.every(i => i.purchasable);
+  const pending = stored?.owner === owner && !(isFinished && hasNewCartItems) ? stored : null;
   const orderCode = pending?.order.code;
   const orderToken = pending?.order.checkoutToken;
   const orderStatus = pending?.order.status;
@@ -179,7 +191,16 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (owner === "waiting") return;
     const timer = setTimeout(() => {
-      setStored(getStoredOrder(owner));
+      const savedOrder = getStoredOrder(owner);
+      const isFinishedOrder = savedOrder?.order.paymentStatus === "PAID" || savedOrder?.order.status === "CANCELLED";
+      const hasNewCart = cart.selectedItems.length > 0 && cart.selectedItems.every(i => i.purchasable);
+      if (savedOrder && isFinishedOrder && hasNewCart) {
+        sessionStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(DRAFT_KEY);
+        setStored(null);
+      } else {
+        setStored(savedOrder);
+      }
       setNow(Date.now());
       try {
         const saved = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || "null") as CheckoutDraft | null;
@@ -187,14 +208,14 @@ export default function CheckoutPage() {
           && Array.isArray(saved.request.items) && saved.request.items.length > 0 ? saved : null;
         setDraft(valid);
         if (valid) {
-          setForm(f => ({ ...f, recipientName: valid.request.recipientName, recipientPhone: valid.request.recipientPhone, note: valid.request.note || "", street: valid.request.address }));
+          setForm(f => ({ ...f, recipientName: valid.request.recipientName, recipientPhone: valid.request.recipientPhone, recipientEmail: valid.request.recipientEmail || "", note: valid.request.note || "", street: valid.request.address }));
           setShipping(valid.request.shippingMethod);
         }
       } catch { setDraft(null); }
       setHydratedOwner(owner);
     }, 0);
     return () => clearTimeout(timer);
-  }, [owner]);
+  }, [owner, cart.selectedItems]);
 
   useEffect(() => {
     if (!emptyCheckout || submittingRef.current) return;
@@ -232,7 +253,7 @@ export default function CheckoutPage() {
         }
         const current = getStoredOrder(owner);
         if (active && current?.order.code === orderCode && current.order.checkoutToken === orderToken) {
-          const next = { ...current, order }; saveOrder(next); setStored(next); setError("");
+          const next = { ...current, order, savedAt: current.savedAt || Date.now() }; saveOrder(next); setStored(next); setError("");
         }
       } catch (cause) { if (active) setError(cause instanceof Error ? cause.message : "Không tải được trạng thái đơn"); }
       finally { polling = false; }
@@ -241,6 +262,18 @@ export default function CheckoutPage() {
     const timer = setInterval(() => void poll(), 5000);
     return () => { active = false; clearInterval(timer); clearInterval(tick); };
   }, [orderCode, orderToken, orderStatus, paymentStatus, owner]);
+
+  function startNewOrder() {
+    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(DRAFT_KEY);
+    setStored(null);
+    void clearCheckoutFlow().catch(() => undefined);
+    if (cart.selectedItems.length > 0) {
+      setClosedDialogKey(dialogKey);
+    } else {
+      router.push("/products");
+    }
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -261,11 +294,11 @@ export default function CheckoutPage() {
     }
 
     try {
-      const attempt = activeDraft ?? { owner, items, restoreKey: crypto.randomUUID(), request: { recipientName: form.recipientName.trim(), recipientPhone: form.recipientPhone.trim(), address: fullAddress.trim() || form.street.trim(), note: form.note.trim(), shippingMethod: shipping, items: items.map(i => ({ variantId: i.variantId, quantity: i.quantity })), checkoutKey: crypto.randomUUID(), voucherCode: appliedVoucherCode } };
+      const attempt = activeDraft ?? { owner, items, restoreKey: crypto.randomUUID(), request: { recipientName: form.recipientName.trim(), recipientPhone: form.recipientPhone.trim(), recipientEmail: form.recipientEmail.trim() || undefined, address: fullAddress.trim() || form.street.trim(), note: form.note.trim(), shippingMethod: shipping, items: items.map(i => ({ variantId: i.variantId, quantity: i.quantity })), checkoutKey: crypto.randomUUID(), voucherCode: appliedVoucherCode } };
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify(attempt)); setDraft(attempt);
       const order = await createCheckout(attempt.request);
       const pricedItems = order.items.map(line => ({ ...items.find(i => i.variantId === line.variantId)!, ...line }));
-      const next = { owner, order, items: pricedItems, restoreKey: attempt.restoreKey };
+      const next = { owner, order, items: pricedItems, restoreKey: attempt.restoreKey, savedAt: Date.now() };
       saveOrder(next); setStored(next); setNow(Date.now());
       sessionStorage.removeItem(DRAFT_KEY); setDraft(null);
       await cart.consumeGuest(items);
@@ -309,8 +342,27 @@ export default function CheckoutPage() {
               <section>
                 <h1 className="text-2xl font-semibold mb-3">{orderTitle}</h1>
                 <p className="text-sm text-gray-500 mb-6 flex items-center gap-2">Mã đơn: <CopyableCode code={pending.order.code} /></p>
-                <button type="button" className="px-6 py-3 bg-black text-white rounded font-semibold"
-                  onClick={() => setClosedDialogKey("")}>{paid || cancelled ? "Xem trạng thái đơn" : "Tiếp tục thanh toán"}</button>
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" className="px-6 py-3 bg-black text-white rounded font-semibold hover:bg-gray-800 transition-colors"
+                    onClick={() => setClosedDialogKey("")}>{paid || cancelled ? "Xem trạng thái đơn" : "Tiếp tục thanh toán"}</button>
+                  {paid && (
+                    <>
+                      <button
+                        type="button"
+                        className="px-6 py-3 bg-white text-black border border-gray-300 rounded font-semibold hover:bg-gray-100 transition-colors"
+                        onClick={startNewOrder}
+                      >
+                        {cart.selectedItems.length > 0 ? "Thanh toán giỏ hàng mới" : "Đặt đơn hàng mới"}
+                      </button>
+                      <Link
+                        href="/orders"
+                        className="px-6 py-3 bg-gray-100 text-gray-800 rounded font-semibold hover:bg-gray-200 transition-colors inline-flex items-center"
+                      >
+                        Lịch sử đơn hàng
+                      </Link>
+                    </>
+                  )}
+                </div>
               </section>
               <CheckoutSummary items={pending.items} subtotal={subtotal} shippingFee={shippingFee} total={pending.order.totalAmount} discount={discount} pricing={pricing} />
             </div>
@@ -357,17 +409,20 @@ export default function CheckoutPage() {
                   <p className="text-sm text-gray-500 bg-white p-4 rounded-lg border border-gray-200 mb-6 leading-relaxed">
                     Đơn hàng đã được tự động xác nhận. Nội dung đơn đã thanh toán được giữ nguyên.
                   </p>
-                  <button
-                    className="w-full py-4 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors"
-                    onClick={() => {
-                      void clearCheckoutFlow().then(() => {
-                        sessionStorage.removeItem(STORAGE_KEY);
-                        router.push("/products");
-                      }).catch(cause => setError(cause instanceof Error ? cause.message : "Không kết thúc được phiên đặt hàng"));
-                    }}
-                  >
-                    Tiếp tục mua sắm
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      className="flex-1 py-4 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors"
+                      onClick={startNewOrder}
+                    >
+                      {cart.selectedItems.length > 0 ? "Thanh toán giỏ hàng mới" : "Đặt đơn hàng mới"}
+                    </button>
+                    <Link
+                      href="/orders"
+                      className="py-4 px-6 text-center border border-gray-300 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      Xem đơn hàng
+                    </Link>
+                  </div>
                 </>
               )}
               <p className="mt-5 text-sm leading-6 text-black/55">Lưu mã đơn để <Link href="/order-tracking" className="font-medium text-black underline underline-offset-4">tra cứu đơn hàng</Link> bằng số điện thoại nhận hàng.</p>
@@ -423,6 +478,11 @@ export default function CheckoutPage() {
                     </div>
 
                     <div className="md:col-span-2">
+                      <label className="block mb-4">
+                        <span className="block mb-2 text-sm">Email nhận thông tin đơn hàng (không bắt buộc)</span>
+                        <input type="email" maxLength={254} autoComplete="email" value={form.recipientEmail} onChange={e => setForm({ ...form, recipientEmail: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3.5 text-[15px] text-gray-900" placeholder="you@gmail.com" />
+                      </label>
                       <textarea rows={3} maxLength={500} value={form.note} onChange={e => setForm({ ...form, note: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-4 py-3.5 text-[15px] font-medium text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-black focus:border-black outline-none transition-all resize-none"
                         placeholder="Ghi chú đơn hàng" />

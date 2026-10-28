@@ -33,6 +33,7 @@ public class SecurityConfig {
             "/api/v1/product/**", "/api/v1/product-image/files/*",
             "/api/v1/category/**", "/api/v1/checkout/orders/*", "/api/v1/payment/vnpay/ipn",
             "/api/v1/size/**","/api/v1/color/**", "/api/v1/posts/**",
+            "/oauth2/**", "/login/oauth2/**",
     };
 
 
@@ -43,13 +44,16 @@ public class SecurityConfig {
             JwtAccessTokenService jwtAccessTokenService,
             UserService userService,
             RefreshSessionRepository sessions,
-            ApiSecurityErrorHandler apiSecurityErrorHandler
+            ApiSecurityErrorHandler apiSecurityErrorHandler,
+            OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
+            @Value("${app.frontend-url:http://localhost:3000}") String frontendUrl
     ) throws Exception {
+        String cleanFrontendUrl = frontendUrl.replaceAll("/$", "");
         return configureCookieSecurity(http, apiSecurityErrorHandler)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/admin/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout",
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password", "/api/v1/auth/login", "/api/v1/auth/admin/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout",
                                 "/api/v1/checkout/orders", "/api/v1/checkout/orders/lookup", "/api/v1/checkout/orders/voucher", "/api/v1/checkout/orders/quote", "/api/v1/checkout/orders/*/cancel", "/api/v1/cart/quote",
                                 "/api/v1/checkout/orders/*/payment", "/api/v1/checkout/orders/*/payment/verify", "/api/v1/posts/*/view-session", "/api/v1/posts/*/views").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/supplier/**", "/api/v1/sizeguide/**", "/api/v1/product-variant/**", "/api/v1/product-image/**", "/api/v1/variant-image/**")
@@ -64,6 +68,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/order/**").hasAnyRole("ADMIN", "SALES", "CUSTOMER_SUPPORT")
                         .requestMatchers("/api/v1/order-return/**").hasAnyRole("ADMIN", "CUSTOMER_SUPPORT", "WAREHOUSE")
                         .anyRequest().authenticated())
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureUrl(cleanFrontendUrl + "/login?error=oauth2_failed"))
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(apiSecurityErrorHandler)
                         .accessDeniedHandler(apiSecurityErrorHandler))

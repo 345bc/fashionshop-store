@@ -13,8 +13,13 @@ public record CreateCheckoutOrderRequest(
     @NotBlank @Pattern(regexp = "STANDARD|EXPRESS") String shippingMethod,
     @NotEmpty @Size(max = 200) List<@NotNull @Valid Item> items,
     @Pattern(regexp = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[89aAbB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}") String checkoutKey,
-    @Size(max=50) String voucherCode
+    @Size(max=50) String voucherCode,
+    @Email @Size(max = 254) String recipientEmail
 ) {
+    public CreateCheckoutOrderRequest(String recipientName, String recipientPhone, String address, String note,
+            String shippingMethod, List<Item> items, String checkoutKey, String voucherCode) {
+        this(recipientName, recipientPhone, address, note, shippingMethod, items, checkoutKey, voucherCode, null);
+    }
     public CreateCheckoutOrderRequest(String recipientName, String recipientPhone, String address, String note,
             String shippingMethod, List<Item> items) {
         this(recipientName, recipientPhone, address, note, shippingMethod, items, null, null);

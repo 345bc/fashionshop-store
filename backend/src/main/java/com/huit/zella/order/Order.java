@@ -22,6 +22,7 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "user_id") private User customer;
     @Nationalized @Column(name = "recipient_name", length = 150) private String recipientName;
     @Column(name = "recipient_phone", length = 20) private String recipientPhone;
+    @Column(name = "recipient_email", length = 254) private String recipientEmail;
     @Nationalized @Column(name = "recipient_note", length = 500) private String note;
     @Nationalized @Column(length = 350) private String address;
     @Column(precision = 18, scale = 2) private BigDecimal subtotal = BigDecimal.ZERO;

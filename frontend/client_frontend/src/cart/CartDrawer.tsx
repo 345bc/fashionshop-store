@@ -26,6 +26,10 @@ export default function CartDrawer() {
     if (!canCheckout || startingCheckout) return;
     setStartingCheckout(true); setCheckoutError("");
     try {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("zella.pending-checkout.v1");
+        sessionStorage.removeItem("zella.checkout-draft.v1");
+      }
       await startCheckoutFlow(cart.selectedItems.map(({ variantId, quantity }) => ({ variantId, quantity })));
       closeCart(); router.push("/checkout");
     } catch (cause) { setCheckoutError(cause instanceof Error ? cause.message : "Không mở được trang đặt hàng"); }
