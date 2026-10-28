@@ -6,8 +6,13 @@ const nextConfig: NextConfig = {
     proxyTimeout: 130000,
   },
   async rewrites() {
-    const backend = (process.env.BACKEND_API_BASE_URL || "").replace(/\/$/, "");
-    return [{ source: "/api/v1/:path*", destination: `${backend}/:path*` }];
+    const backendApi = (process.env.BACKEND_API_BASE_URL || "").replace(/\/$/, "");
+    const backendRoot = (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080").replace(/\/$/, "");
+    return [
+      { source: "/api/v1/:path*", destination: `${backendApi}/:path*` },
+      { source: "/oauth2/:path*", destination: `${backendRoot}/oauth2/:path*` },
+      { source: "/login/oauth2/:path*", destination: `${backendRoot}/login/oauth2/:path*` },
+    ];
   },
   images: {
     remotePatterns: [
