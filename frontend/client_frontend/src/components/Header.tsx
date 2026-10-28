@@ -35,6 +35,12 @@ export default function Header() {
   const mobileSearchRef = useRef<HTMLInputElement>(null);
   const [categoryParent, setCategoryParent] = useState<category[] | null>(null);
   const [category, setCategory] = useState<category[] | null>(null);
+  const [loadingSubCategories, setLoadingSubCategories] = useState(false);
+
+  const activeParent = (categoryParent || []).find((c) => c.id === activeSection);
+  const activeParentName = activeParent?.name || "danh mục";
+
+
 
   useEffect(() => {
     async function fetchCategories() {
@@ -58,11 +64,15 @@ export default function Header() {
   useEffect(() => {
     async function fetchSubCategories() {
       if (activeSection) {
+        setLoadingSubCategories(true);
         try {
           const response = await getCategories(activeSection);
           setCategory(response?.data || []);
         } catch (error) {
           console.error("Lỗi khi fetch category con:", error);
+          setCategory([]);
+        } finally {
+          setLoadingSubCategories(false);
         }
       }
     }
@@ -185,8 +195,8 @@ export default function Header() {
               href="/blog"
               onClick={closeNavigation}
               className={`relative flex h-full items-center text-[13.5px] font-bold uppercase tracking-[0.06em] transition-colors after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-black after:transition-all ${pathname.startsWith("/blog")
-                  ? "text-black after:w-full"
-                  : "text-black/90 after:w-0 hover:text-black hover:after:w-full"
+                ? "text-black after:w-full"
+                : "text-black/90 after:w-0 hover:text-black hover:after:w-full"
                 }`}
             >
               Bài viết
@@ -273,7 +283,7 @@ export default function Header() {
           id="catalog-menu"
           aria-label="Danh mục sản phẩm"
           aria-hidden={!catalogOpen}
-          className={`absolute top-full left-1/2 w-full -translate-x-1/2 overflow-y-auto border-b border-black/10 bg-(--z-bg) shadow-[0_28px_60px_rgba(20,22,18,0.14)] transition-[opacity,transform,visibility] duration-200 ${catalogOpen ? "visible translate-y-0 opacity-100" : "invisible -translate-y-2 pointer-events-none opacity-0"}`}
+          className={`absolute top-full left-0 w-full border-b border-black/10 bg-white shadow-[0_28px_60px_rgba(20,22,18,0.14)] z-50 transition-[opacity,transform,visibility] duration-200 ${catalogOpen ? "visible translate-y-0 opacity-100" : "invisible -translate-y-2 pointer-events-none opacity-0"}`}
         >
           <div className="container mx-auto max-h-[calc(100vh-100px)] overflow-y-auto px-8 pt-6 pb-7 xl:px-12">
             <div className="flex items-center justify-between border-b border-black/10">
@@ -311,21 +321,53 @@ export default function Header() {
               <button type="submit" className="rounded-full bg-[#1d211c] px-4 py-2 text-[10px] font-semibold tracking-[0.08em] text-white uppercase transition-colors hover:bg-black">Tìm kiếm</button>
             </form>
 
-            <div role="tabpanel" className="grid grid-cols-4 gap-x-4 gap-y-6 xl:grid-cols-8">
-              {(category || []).map((item) => (
-                <Link key={item.id}
-                  href={`/products?cat=${item.id}&categoryName=${encodeURIComponent(item.name)}`}
-                  onClick={closeNavigation} className="group min-w-0">
-                  <div className="relative aspect-[3/4] overflow-hidden rounded-[12px] bg-[#eeece6]">
-                    <Image src={item.imageUrl || "/assets/images/v7_1795.png"} alt={item.name || ""} fill sizes="(max-width: 1280px) 25vw, 160px" className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]" />
+            {loadingSubCategories ? (
+              <div className="grid grid-cols-4 gap-x-4 gap-y-6 xl:grid-cols-8 animate-pulse">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div key={index} className="min-w-0">
+                    <div className="aspect-[3/4] rounded-[12px] bg-black/5" />
+                    <div className="mt-2.5 h-3.5 w-3/4 rounded bg-black/5" />
                   </div>
-                  <div className="mt-2.5 flex items-center justify-between gap-2">
-                    <span className="truncate text-[12px] font-medium text-[#2b2e29] transition-colors group-hover:text-black">{item.name}</span>
-                    <span aria-hidden="true" className="translate-x-0 text-[13px] text-[#9a9c95] transition-all group-hover:translate-x-0.5 group-hover:text-black"><GoogleSymbol name="arrow_forward" size={16} /></span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : category && category.length > 0 ? (
+              <div role="tabpanel" className="grid grid-cols-4 gap-x-4 gap-y-6 xl:grid-cols-8">
+                {category.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/products?cat=${item.id}&categoryName=${encodeURIComponent(item.name)}`}
+                    onClick={closeNavigation}
+                    className="group min-w-0"
+                  >
+                    <div className="relative aspect-[3/4] overflow-hidden rounded-[12px] ">
+                      <Image
+                        src={item.imageUrl || "/assets/images/v7_1795.png"}
+                        alt={item.name || ""}
+                        fill
+                        sizes="(max-width: 1280px) 25vw, 160px"
+                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]"
+                      />
+                    </div>
+                    <div className="mt-2.5 flex items-center justify-between gap-2">
+                      <span className="truncate text-[12px] font-medium text-[#2b2e29] transition-colors group-hover:text-black">
+                        {item.name}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="translate-x-0 text-[13px] text-[#9a9c95] transition-all group-hover:translate-x-0.5 group-hover:text-black"
+                      >
+                        <GoogleSymbol name="arrow_forward" size={16} />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="py-14 text-center">
+                <p className="text-[13.5px] font-medium text-[#2b2e29]">Chưa có danh mục sản phẩm</p>
+                <p className="mt-1 text-[11.5px] text-[#8a8d85]">Danh mục này hiện chưa có sản phẩm nào được cập nhật.</p>
+              </div>
+            )}
 
             <div className="mt-6 border-t border-black/10 pt-4 text-[10px] text-[#777a72]">
               <p>Thiết kế có chủ đích · Chất liệu được tuyển chọn</p>

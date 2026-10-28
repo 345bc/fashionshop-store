@@ -33,11 +33,14 @@ export function ConnectionErrorProvider({ children }: { children: ReactNode }) {
     if (!active) return;
     const element = dialog.current;
     element?.showModal();
-    const previousOverflow = document.body.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     return () => {
       element?.close();
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
     };
   }, [active]);
   const failure = useMemo(() => failures.values().next().value, [failures]);

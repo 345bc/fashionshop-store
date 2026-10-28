@@ -14,14 +14,14 @@ export function reportConnectionFailure() {
 
 async function backendFetch(url, options = {}) {
   const timeout = new AbortController();
-  const timer = setTimeout(() => timeout.abort(), 20000);
+  const timer = setTimeout(() => timeout.abort(), options.timeoutMs ?? 20000);
   const signal = options.signal ? AbortSignal.any([options.signal, timeout.signal]) : timeout.signal;
   try {
     const response = await fetch(url, { ...options, signal });
-    if ([502, 503, 504].includes(response.status)) reportConnectionFailure();
+    if (!options.localErrorHandling && [502, 503, 504].includes(response.status)) reportConnectionFailure();
     return response;
   } catch (error) {
-    if (!options.signal?.aborted && (error instanceof TypeError || timeout.signal.aborted)) reportConnectionFailure();
+    if (!options.localErrorHandling && !options.signal?.aborted && (error instanceof TypeError || timeout.signal.aborted)) reportConnectionFailure();
     throw error;
   } finally {
     clearTimeout(timer);

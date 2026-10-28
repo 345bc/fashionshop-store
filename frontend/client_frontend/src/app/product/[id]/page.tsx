@@ -3,7 +3,8 @@
 import GoogleSymbol from "@/components/ui/GoogleSymbol";
 
 import ProductReviews from "@/components/product/ProductReviews";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, use } from "react";
+import galleryStyles from "./ProductGallery.module.css";
 import Header from "@/components/Header";
 import { useCart } from "@/cart/CartContext";
 import { money } from "@/cart/types";
@@ -72,6 +73,29 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const thumbnailTrack = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const track = thumbnailTrack.current;
+    if (!track) return;
+    const revealSelectedThumbnail = () => {
+      const selected = track.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
+      if (!selected || track.clientHeight === 0) return;
+      const top = selected.offsetTop;
+      const bottom = top + selected.offsetHeight;
+      const visibleTop = track.scrollTop;
+      const visibleBottom = visibleTop + track.clientHeight;
+      const target = top < visibleTop ? top : bottom > visibleBottom ? bottom - track.clientHeight : null;
+      if (target !== null) track.scrollTo({
+        top: target,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      });
+    };
+    revealSelectedThumbnail();
+    const observer = new ResizeObserver(revealSelectedThumbnail);
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [loading, product, selectedImageId, selectedColorId, selectedSizeId]);
 
   useEffect(() => {
     getProductDetail(id)
@@ -105,7 +129,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     return (
       <>
         <Header />
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 main-content" style={{ padding: "100px 0", textAlign: "center" }}>
+        <main className="container mx-auto px-3 sm:px-4 main-content" style={{ padding: "100px 0", textAlign: "center" }}>
           <p style={{ color: "var(--ink-secondary)", fontSize: "16px" }}>Sản phẩm không tồn tại hoặc đã ngừng kinh doanh.</p>
         </main>
         <Footer />
@@ -165,7 +189,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <Header />
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 main-content" style={{ paddingBottom: 0 }}>
+      <main className="container mx-auto px-3 sm:px-4 main-content" style={{ paddingBottom: 0 }}>
 
         {/* ── OUTER 3/5 + 2/5 LAYOUT ── */}
         <div className="product-page-layout" style={{ marginBottom: 0 }}>
@@ -175,23 +199,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
             {/* Gallery */}
             <div className="gallery-container">
-              <div className="gallery-thumbs" style={{ width: "clamp(84px, 10vw, 120px)" }}>
-                {galleryImages.map((image, index) => (
-                  <button
-                    key={image.id}
-                    type="button"
-                    className={`thumb-item ${activeImage?.id === image.id ? "active" : ""}`}
-                    aria-label={`Xem ảnh ${index + 1} của ${product.name}`}
-                    aria-pressed={activeImage?.id === image.id}
-                    onClick={() => setSelectedImageId(image.id)}
-                    style={{ padding: 0, background: "transparent", flexShrink: 0 }}
-                  >
-                    <Image src={image.imageUrl} alt={`${product.name} - ảnh ${index + 1}`} width={120} height={160} style={{ objectFit: "contain" }} />
-                  </button>
-                ))}
+              <div className={galleryStyles.thumbnailViewport}>
+                <div ref={thumbnailTrack} className={galleryStyles.thumbnailTrack} aria-label="Danh sách ảnh sản phẩm">
+                  {galleryImages.map((image, index) => (
+                    <button
+                      key={image.id}
+                      type="button"
+                      className={`thumb-item ${activeImage?.id === image.id ? "active" : ""}`}
+                      aria-label={`Xem ảnh ${index + 1} của ${product.name}`}
+                      aria-pressed={activeImage?.id === image.id}
+                      onClick={() => setSelectedImageId(image.id)}
+                      style={{ padding: 0, background: "#CDCDCD", border: 0, borderRadius: 8, flexShrink: 0 }}
+                    >
+                      <Image src={image.imageUrl} alt={`${product.name} - ảnh ${index + 1}`} width={120} height={160} style={{ objectFit: "contain" }} />
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="gallery-main" style={{ aspectRatio: "4 / 5", alignSelf: "flex-start", minWidth: 0, position: "relative" }}>
+              <div className="gallery-main" style={{ aspectRatio: "4 / 5", alignSelf: "flex-start", minWidth: 0, position: "relative", background: "#CDCDCD", border: 0, borderRadius: 8 }}>
                 {displayImage ? (
                   <>
                     <Image
@@ -201,6 +227,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       height={875}
                       style={{ width: "100%", height: "100%", objectFit: "contain" }}
                       priority
+                      onLoad={(event) => {
+                        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                          event.currentTarget.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: "ease-out" });
+                        }
+                      }}
                     />
                     {galleryImages.length > 1 && (
                       <>
@@ -254,10 +285,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {/* RIGHT COL – 2/5: sticky info panel */}
           <div className="product-right-col">
             <div className="detail-info detail-info-sticky">
-              <h1 className="detail-title">{product.name}</h1>
+              <div className="detail-heading">
+                <p className="detail-brand">ZELLA</p>
+                <h1 className="detail-title">{product.name.normalize("NFC")}</h1>
+                {product.categoryName && <p className="detail-subtitle">{product.categoryName}</p>}
+              </div>
 
               {/* Color */}
-              <div className="detail-section">
+              <div className="detail-section detail-color-section">
                 <div className="detail-section-label">
                   Màu sắc: <span>{selectedColorObj?.name}</span>
                 </div>
