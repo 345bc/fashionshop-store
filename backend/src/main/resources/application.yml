@@ -6,6 +6,31 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:local,jwt-auth}
   application:
     name: ${APP_NAME:KLCN-048}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-client-secret}
+            scope:
+              - openid
+              - profile
+              - email
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.ssl.checkserveridentity: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
@@ -41,6 +66,14 @@ server:
         secure: ${SESSION_COOKIE_SECURE:false}
 
 app:
+  chat:
+    rasa:
+      base-url: ${RASA_BASE_URL:http://127.0.0.1:5005}
+      auth-token: ${RASA_AUTH_TOKEN:}
+      timeout-seconds: ${RASA_TIMEOUT_SECONDS:60}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
   checkout:
     pricing:
       standard-shipping-fee: ${CHECKOUT_STANDARD_SHIPPING_FEE:30000}

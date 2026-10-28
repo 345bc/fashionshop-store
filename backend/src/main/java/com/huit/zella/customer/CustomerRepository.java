@@ -12,6 +12,21 @@ import java.util.Optional;
 
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
+    interface VoucherEmailRecipient {
+        Long getId();
+        String getFullName();
+        String getEmail();
+        String getMembershipTier();
+    }
+
+    @Query("""
+            select c.id as id, c.fullName as fullName, u.email as email, c.membershipTier as membershipTier
+            from Customer c join c.user u
+            where u.isActive = true and c.membershipTier in :tiers
+            order by c.id
+            """)
+    org.springframework.data.domain.Slice<VoucherEmailRecipient> voucherEmailRecipients(
+            @Param("tiers") java.util.Set<String> tiers, Pageable pageable);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Customer c where c.user.id=:id")
     Optional<Customer> lockByUserId(@Param("id") Long userId);
