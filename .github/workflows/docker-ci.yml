@@ -36,12 +36,22 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT || 22 }}
           DOCKER_USER: ${{ vars.DOCKERHUB_USERNAME }}
         run: |
+          if [ -z "$VPS_HOST" ] || [ -z "$SSH_KEY" ]; then
+            echo "::error::VPS_HOST or VPS_SSH_KEY secret is not set!"
+            exit 1
+          fi
+
           mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf "%s\n" "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p $VPS_PORT -H "$VPS_HOST" >> ~/.ssh/known_hosts
           
-          ssh -i ~/.ssh/id_ed25519 -p $VPS_PORT "$VPS_USER@$VPS_HOST" "
+          ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ConnectTimeout=15 \
+              -p $VPS_PORT \
+              "$VPS_USER@$VPS_HOST" "
+            set -e
             echo '--- Pulling latest image from Docker Hub ---'
             sudo docker pull $DOCKER_USER/zbe:latest
 
@@ -59,4 +69,5 @@ jobs:
 
             echo '--- Cleaning up dangling images ---'
             sudo docker image prune -f
+            echo '--- Deployment finished successfully! ---'
           "
