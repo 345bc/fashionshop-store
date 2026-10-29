@@ -1,0 +1,25 @@
+.section { min-width: 0; padding-inline: 0; }
+.track {
+  grid-auto-columns: minmax(0, calc((100% - 42px) / 4));
+  gap: 14px;
+}
+.track > article { min-width: 0; }
+.track :global(.modern-product-bottom) { flex-direction: column; align-items: flex-start; gap: 10px; }
+.track :global(.product-color-controls) { align-items: flex-start; max-width: 100%; }
+.track :global(.mini-swatches) { flex-wrap: wrap; }
+.track :global(.modern-product-title) { overflow-wrap: anywhere; }
+.track :global(.modern-product-price) { white-space: nowrap; }
+.section :global(.product-rail-buttons button) { width: 44px; height: 44px; }
+
+@media (max-width: 1024px) {
+  .track { grid-auto-columns: minmax(0, calc((100% - 28px) / 3)); }
+}
+
+@media (max-width: 640px) {
+  .section { padding-block: 24px; margin-top: 0; }
+  .track { grid-auto-columns: minmax(0, calc((100% - 12px) / 2)); gap: 12px; }
+  .track :global(.modern-product-price) { font-size: clamp(12px, 3.6vw, 15px); }
+  .track :global(.modern-product-title) { font-size: 14px; line-height: 1.45; }
+  .track :global(.product-meta-line) { flex-wrap: wrap; gap: 4px; }
+  .section :global(.product-rail-footer) { margin-top: 16px; }
+}
