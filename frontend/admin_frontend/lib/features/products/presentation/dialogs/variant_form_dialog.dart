@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/common/searchable_select_field.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../providers/product_variants_provider.dart';
 
@@ -261,235 +262,330 @@ class _VariantFormDialogState extends State<VariantFormDialog> {
     return null;
   }
 
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     return ZellaFormDialog(
       title: widget.variant == null ? 'Thêm biến thể' : 'Chỉnh sửa biến thể',
-      width: (size.width * 2 / 3).clamp(500.0, 1000.0),
-      height: size.height * 2 / 3,
+      subtitle: 'Thiết lập kích thước, màu sắc và giá bán.',
+      width: 640,
+      height: size.height * 0.82,
       confirmText: widget.variant == null ? 'Thêm biến thể' : 'Lưu thay đổi',
       isLoading: _saving,
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _submit,
-      content:
-          FutureBuilder<
-            ({
-              List<Map<String, dynamic>> sizes,
-              List<Map<String, dynamic>> colors,
-            })
-          >(
-            future: _options,
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return Center(
-                  child: snapshot.hasError
-                      ? Text('Không tải được size và màu: ${snapshot.error}')
-                      : const CircularProgressIndicator(),
-                );
-              }
-              final options = snapshot.data!;
-              return Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: _sizeId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Size *',
-                              ),
-                              items: options.sizes
-                                  .map(
-                                    (item) => DropdownMenuItem<int>(
-                                      value: (item['id'] as num).toInt(),
-                                      child: Text(
-                                        item['name']?.toString() ?? '',
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) =>
-                                  setState(() => _sizeId = value),
-                              validator: (value) =>
-                                  value == null ? 'Vui lòng chọn size' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: _colorId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Màu *',
-                              ),
-                              items: options.colors
-                                  .map(
-                                    (item) => DropdownMenuItem<int>(
-                                      value: (item['id'] as num).toInt(),
-                                      child: Text(
-                                        '${item['name']} (${item['code']})',
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) =>
-                                  setState(() => _colorId = value),
-                              validator: (value) =>
-                                  value == null ? 'Vui lòng chọn màu' : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      TextFormField(
-                        controller: _price,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Giá bán (VND) *',
-                        ),
-                        validator: (value) =>
-                            _moneyValidator(value, positive: true),
-                      ),
-                      const SizedBox(height: 16),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Đang bán'),
-                        value: _isActive,
-                        activeThumbColor: AppTheme.primary,
-                        onChanged: (value) => setState(() => _isActive = value),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Ảnh biến thể',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Chọn ảnh chính, thêm ảnh từ máy hoặc xóa ảnh. Thay đổi được áp dụng khi bấm Lưu.',
-                      ),
-                      const SizedBox(height: 16),
-                      if (_imagesLoading)
-                        const Center(child: CircularProgressIndicator())
-                      else if (_imagesError != null)
-                        Column(
+      content: Theme(
+        data: Theme.of(context).copyWith(
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 15,
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppTheme.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppTheme.primary),
+            ),
+          ),
+        ),
+        child:
+            FutureBuilder<
+              ({
+                List<Map<String, dynamic>> sizes,
+                List<Map<String, dynamic>> colors,
+              })
+            >(
+              future: _options,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(
+                    child: snapshot.hasError
+                        ? Text('Không tải được size và màu: ${snapshot.error}')
+                        : const CircularProgressIndicator(),
+                  );
+                }
+                final options = snapshot.data!;
+                return Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(top: 8, right: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Không tải được ảnh: $_imagesError'),
-                            TextButton(
-                              onPressed: () => _loadImages(
-                                (widget.variant!['id'] as num).toInt(),
+                            Expanded(
+                              child: SearchableSelectField<int>(
+                                initialValue: _sizeId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Size *',
+                                  hintText: 'Chọn size',
+                                ),
+                                items: options.sizes
+                                    .map(
+                                      (item) => DropdownMenuItem<int>(
+                                        value: (item['id'] as num).toInt(),
+                                        child: Text(
+                                          item['name']?.toString() ?? '',
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) =>
+                                    setState(() => _sizeId = value),
+                                validator: (value) =>
+                                    value == null ? 'Vui lòng chọn size' : null,
                               ),
-                              child: const Text('Thử lại'),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: SearchableSelectField<int>(
+                                initialValue: _colorId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Màu *',
+                                  hintText: 'Chọn màu',
+                                ),
+                                items: options.colors
+                                    .map(
+                                      (item) => DropdownMenuItem<int>(
+                                        value: (item['id'] as num).toInt(),
+                                        child: Text(
+                                          '${item['name']} (${item['code']})',
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) =>
+                                    setState(() => _colorId = value),
+                                validator: (value) =>
+                                    value == null ? 'Vui lòng chọn màu' : null,
+                              ),
                             ),
                           ],
-                        )
-                      else ...[
-                        if (_images.isEmpty)
-                          const Text('Chưa có ảnh biến thể.'),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            for (final image in _images)
-                              Container(
-                                width: 150,
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: AppTheme.borderLight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: _price,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Giá bán *',
+                            hintText: 'Nhập giá bán',
+                            suffixText: 'VND',
+                          ),
+                          validator: (value) =>
+                              _moneyValidator(value, positive: true),
+                        ),
+                        const SizedBox(height: 16),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          tileColor: AppTheme.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          title: const Text('Đang bán'),
+                          subtitle: const Text(
+                            'Cho phép bán biến thể này',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          value: _isActive,
+                          activeThumbColor: AppTheme.primary,
+                          onChanged: (value) =>
+                              setState(() => _isActive = value),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Ảnh biến thể',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Thêm ảnh và chọn một ảnh làm ảnh chính.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_imagesLoading)
+                          const Center(child: CircularProgressIndicator())
+                        else if (_imagesError != null)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Không tải được ảnh: $_imagesError'),
+                              TextButton(
+                                onPressed: () => _loadImages(
+                                  (widget.variant!['id'] as num).toInt(),
                                 ),
-                                child: Column(
-                                  children: [
-                                    Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          child: image.file != null
-                                              ? Image.memory(
-                                                  image.file!.bytes!,
-                                                  width: 132,
-                                                  height: 110,
-                                                  fit: BoxFit.cover,
-                                                )
-                                              : Image.network(
-                                                  _imageUrl(image.imageUrl!),
-                                                  width: 132,
-                                                  height: 110,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, _, _) =>
-                                                      const SizedBox(
-                                                        width: 132,
-                                                        height: 110,
-                                                        child: Icon(
-                                                          Icons
-                                                              .broken_image_outlined,
-                                                        ),
-                                                      ),
-                                                ),
-                                        ),
-                                        Positioned(
-                                          top: 0,
-                                          right: 0,
-                                          child: IconButton.filledTonal(
-                                            tooltip: 'Xóa ảnh',
-                                            onPressed: _saving
-                                                ? null
-                                                : () => _removeImage(image),
-                                            icon: const Icon(
-                                              Symbols.close,
-                                              size: 18,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: _saving
-                                          ? null
-                                          : () => setState(
-                                              () => _primaryImage = image,
-                                            ),
-                                      icon: Icon(
-                                        identical(_primaryImage, image)
-                                            ? Symbols.check_circle
-                                            : Symbols.radio_button_unchecked,
-                                        size: 18,
+                                child: const Text('Thử lại'),
+                              ),
+                            ],
+                          )
+                        else ...[
+                          if (_images.isEmpty)
+                            Material(
+                              color: AppTheme.surface,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(color: AppTheme.border),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: InkWell(
+                                onTap: _saving ? null : _pickImages,
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: 24,
+                                    horizontal: 16,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Symbols.add_photo_alternate,
+                                        size: 28,
+                                        color: AppTheme.textSecondary,
                                       ),
-                                      label: const Text('Ảnh chính'),
-                                    ),
-                                  ],
+                                      SizedBox(height: 10),
+                                      Text(
+                                        'Chọn ảnh từ máy',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'JPG, PNG, GIF, WebP · Tối đa 10 MB/ảnh',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
+                            ),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              for (final image in _images)
+                                Container(
+                                  width: 150,
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: identical(_primaryImage, image)
+                                        ? AppTheme.surface
+                                        : Colors.white,
+                                    border: Border.all(
+                                      color: identical(_primaryImage, image)
+                                          ? AppTheme.primary
+                                          : AppTheme.borderLight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            child: image.file != null
+                                                ? Image.memory(
+                                                    image.file!.bytes!,
+                                                    width: 132,
+                                                    height: 110,
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : Image.network(
+                                                    _imageUrl(image.imageUrl!),
+                                                    width: 132,
+                                                    height: 110,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, _, _) =>
+                                                        const SizedBox(
+                                                          width: 132,
+                                                          height: 110,
+                                                          child: Icon(
+                                                            Icons
+                                                                .broken_image_outlined,
+                                                          ),
+                                                        ),
+                                                  ),
+                                          ),
+                                          Positioned(
+                                            top: 0,
+                                            right: 0,
+                                            child: IconButton.filledTonal(
+                                              tooltip: 'Xóa ảnh',
+                                              onPressed: _saving
+                                                  ? null
+                                                  : () => _removeImage(image),
+                                              icon: const Icon(
+                                                Symbols.close,
+                                                size: 18,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      TextButton.icon(
+                                        onPressed: _saving
+                                            ? null
+                                            : () => setState(
+                                                () => _primaryImage = image,
+                                              ),
+                                        icon: Icon(
+                                          identical(_primaryImage, image)
+                                              ? Symbols.check_circle
+                                              : Symbols.radio_button_unchecked,
+                                          size: 18,
+                                        ),
+                                        label: const Text('Ảnh chính'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (_images.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: OutlinedButton.icon(
+                                onPressed: _saving ? null : _pickImages,
+                                icon: const Icon(Symbols.add_photo_alternate),
+                                label: const Text('Thêm ảnh'),
+                              ),
+                            ),
                           ],
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: _saving ? null : _pickImages,
-                          icon: const Icon(Symbols.add_photo_alternate),
-                          label: const Text('Thêm ảnh'),
-                        ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
+      ),
     );
   }
 }
