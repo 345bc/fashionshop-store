@@ -1,0 +1,11 @@
+.sample { font-size: 13px; line-height: 1.55; }
+.sample h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+.sample .caption { margin: 0 0 8px; color: #737373; font-size: 12px; }
+.methods { margin: 0 0 14px; padding: 0; list-style: none; }
+.methods li { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; padding: 14px 0; border-bottom: 1px solid #ccc; }
+.methods h4 { margin: 0; font-size: 13px; font-weight: 400; text-transform: uppercase; }
+.methods p { margin: 2px 0 0; font-size: 12px; }
+.fee { text-align: right; }
+.fee > span { white-space: nowrap; }
+.sample .returns { margin-top: 18px; }
+@media (max-width: 360px) { .methods li { grid-template-columns: minmax(0, 1fr); gap: 6px; } .fee { text-align: left; } }
