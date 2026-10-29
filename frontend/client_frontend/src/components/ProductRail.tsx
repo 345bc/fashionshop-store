@@ -2,6 +2,7 @@
 
 import { useRef, type ComponentProps } from "react";
 import ProductCard from "./ProductCard";
+import styles from "./ProductRail.module.css";
 
 type ProductRailItem = Omit<ComponentProps<typeof ProductCard>, "slug"> & { slug?: string };
 
@@ -20,14 +21,14 @@ export default function ProductRail({ title, products }: ProductRailProps) {
 
     rail.scrollBy({
       left: direction * rail.clientWidth * 0.82,
-      behavior: "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
     });
   };
 
   return (
-    <section className="home-section product-rail-section">
+    <section className={`home-section product-rail-section ${styles.section}`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div ref={railRef} className="product-rail" tabIndex={0} aria-label={title ?? "Sản phẩm"}>
+        <div ref={railRef} className={`product-rail ${styles.track}`} tabIndex={0} aria-label={title ?? "Sản phẩm"}>
           {products.map((item) => <ProductCard key={item.id} {...item} slug={item.slug ?? item.id} />)}
         </div>
         <div className="product-rail-footer">

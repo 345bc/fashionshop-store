@@ -78,7 +78,7 @@
 
 @media (max-width: 640px) {
   .panel .spotlightContent > * { max-width: 100%; }
-  .panel { min-height: 400px; }
+  .panel { min-height: clamp(300px, 85vw, 400px); }
   .panel > div { padding-inline: 16px; bottom: 36px; }
   .panel > div > span { margin-bottom: 20px; }
   .panel .description { margin-top: 12px; }
