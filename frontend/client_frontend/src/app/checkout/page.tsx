@@ -1,5 +1,6 @@
 "use client";
 import GoogleSymbol from "@/components/ui/GoogleSymbol";
+import styles from "./CheckoutMethods.module.css";
 
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -490,43 +491,37 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                {/* Phương thức vận chuyển */}
-                <section>
-                  <h2 className="normal-title">Phương thức vận chuyển</h2>
-                  <div className={`rounded-lg overflow-hidden transition-all ${shipping === "STANDARD" ? "border border-black bg-gray-50/80" : "border border-gray-300"}`}>
-                    <label className="flex items-center gap-3 p-4 cursor-pointer transition-colors hover:bg-gray-50">
-                      <input type="radio" name="shipping" checked={shipping === "STANDARD"} onChange={() => setShipping("STANDARD")} className="w-5 h-5 accent-black" />
-                      <span className="text-[15px] font-normal text-gray-900 flex-1">Giao hàng tiêu chuẩn</span>
-                      <span className="text-[15px] font-medium text-gray-900">{money(shippingFee)}</span>
-                    </label>
-                  </div>
+                <section className={styles.section} aria-labelledby="shipping-title">
+                  <h2 id="shipping-title" className={styles.title}>Phương thức vận chuyển</h2>
+                  <label className={styles.option} data-selected={shipping === 'STANDARD'}>
+                    <input type="radio" name="shipping" checked={shipping === 'STANDARD'} onChange={() => setShipping('STANDARD')} />
+                    <div className={styles.copy}>
+                      <span className={styles.optionTitle}>Giao hàng tiêu chuẩn</span>
+                      <span className={styles.description}>Giao đến địa chỉ nhận hàng của bạn</span>
+                    </div>
+                    <span className={styles.price}>{money(shippingFee)}</span>
+                  </label>
                 </section>
 
-                {/* Thanh toán */}
-                <section>
-                  <div className="mb-4">
-                    <h2 className="text-[22px] font-normal text-gray-900 mb-6">Thanh toán</h2>
-                    <p className="text-sm text-gray-500 font-normal">Đơn được giữ hàng 5 phút để thanh toán. Hết hạn chưa thanh toán, đơn sẽ tự hủy.</p>
-                  </div>
-
-                  <div className={`rounded-lg overflow-hidden transition-all ${payment === "VNPAY" ? "border border-black bg-gray-50/80 shadow-sm" : "border border-gray-300"}`}>
-                    <label className="flex items-center gap-4 p-4 cursor-pointer transition-all hover:bg-gray-50">
-                      <input type="radio" name="payment" checked={payment === "VNPAY"} onChange={() => setPayment("VNPAY")} className="w-5 h-5 accent-black" />
-                      <div className="flex flex-col flex-1">
-                        <span className="text-[15px] font-medium text-gray-900">Thanh toán qua VNPAY</span>
-                        <span className="text-[13px] text-gray-500 mt-0.5">Quét mã QR, Thẻ ATM nội địa hoặc thẻ quốc tế</span>
-                      </div>
-                      <div className="flex items-center bg-white px-2.5 py-1.5 rounded-md shadow-sm border border-gray-200 select-none">
-                        <span className="font-black text-blue-700 text-[14px] italic tracking-tighter">VN</span>
-                        <span className="font-black text-red-600 text-[14px] italic tracking-tighter">PAY</span>
-                      </div>
-                    </label>
-                  </div>
+                <section className={styles.section} aria-labelledby="payment-title">
+                  <h2 id="payment-title" className={styles.title}>Thanh toán</h2>
+                  <label className={styles.option} data-selected={payment === 'VNPAY'}>
+                    <input type="radio" name="payment" checked={payment === 'VNPAY'} onChange={() => setPayment('VNPAY')} />
+                    <div className={styles.copy}>
+                      <span className={styles.optionTitle}>Thanh toán qua VNPAY</span>
+                      <span className={styles.description}>Quét mã QR, thẻ ATM nội địa hoặc thẻ quốc tế</span>
+                    </div>
+                    <span className={styles.paymentBrand} aria-label="VNPAY"><span>VN</span><span>PAY</span></span>
+                  </label>
+                  <p className={styles.notice}>
+                    <GoogleSymbol name="schedule" size={16} />
+                    <span>Hoàn tất thanh toán trong <strong>5 phút</strong>. Đơn hàng sẽ tự hủy nếu quá thời hạn.</span>
+                  </p>
                 </section>
 
                 <div className="mt-6">
                   <button type="submit" disabled={submitting || (!canSubmitQuote && !activeDraft) || (!validCart && !activeDraft)}
-                    className="w-full py-3 bg-black text-white rounded-lg text-[14px] font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    className={styles.submit}>
                     {submitting ? "Đang xử lý..." : activeDraft ? "Thử lại đặt hàng" : "Hoàn tất đơn hàng"}
                   </button>
                   {activeDraft && <p className="text-[13px] text-gray-600 mt-4 text-center">Chưa xác nhận được kết quả đặt hàng. Hãy thử lại để kiểm tra yêu cầu trước.</p>}
