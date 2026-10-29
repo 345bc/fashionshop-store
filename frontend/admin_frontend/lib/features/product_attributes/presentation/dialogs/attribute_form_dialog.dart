@@ -198,157 +198,284 @@ class _AttributeFormDialogState extends State<AttributeFormDialog> {
       title: widget.item == null
           ? 'Thêm ${widget.kind.singular}'
           : 'Chỉnh sửa ${widget.kind.singular}',
-      width: 560,
+      width: widget.kind == AttributeKind.color ? 720 : 560,
+      subtitle: widget.kind == AttributeKind.color
+          ? 'Thông tin tên, mã và màu hiển thị.'
+          : null,
+      confirmText: widget.item == null ? 'Thêm mới' : 'Lưu thay đổi',
       isLoading: _saving,
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _save,
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (widget.kind == AttributeKind.size)
-                TextFormField(
-                  controller: _name,
-                  textCapitalization: TextCapitalization.characters,
-                  inputFormatters: [LengthLimitingTextInputFormatter(100)],
-                  decoration: const InputDecoration(
-                    labelText: 'Size *',
-                    hintText: 'Ví dụ: S, XL, 39 hoặc 39-40',
-                  ),
-                  validator: (value) => _required(value, 100),
-                )
-              else
-                TextFormField(
-                  controller: _name,
-                  decoration: InputDecoration(
-                    labelText: 'Tên ${widget.kind.singular} *',
-                  ),
-                  validator: (value) => _required(
-                    value,
-                    widget.kind == AttributeKind.color ? 50 : 100,
-                  ),
-                ),
-              const SizedBox(height: 18),
-              if (widget.kind == AttributeKind.color) ...[
-                TextFormField(
-                  controller: _code,
-                  decoration: const InputDecoration(
-                    labelText: 'Mã màu *',
-                    hintText: 'BLK',
-                  ),
-                  validator: (value) {
-                    final text = value?.trim() ?? '';
-                    if (text.isEmpty) return 'Vui lòng nhập mã màu';
-                    return RegExp(r'^[A-Za-z0-9_-]{1,10}$').hasMatch(text)
-                        ? null
-                        : 'Tối đa 10 ký tự: chữ, số, _ hoặc -';
-                  },
-                ),
-                const SizedBox(height: 18),
-                TextFormField(
-                  controller: _hex,
-                  decoration: const InputDecoration(
-                    labelText: 'Mã HEX',
-                    hintText: '#000000',
-                  ),
-                  validator: (value) {
-                    final text = value?.trim() ?? '';
-                    return text.isEmpty ||
-                            RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(text)
-                        ? null
-                        : 'Mã HEX phải có dạng #RRGGBB';
-                  },
-                ),
-              ],
-              if (widget.kind == AttributeKind.size)
-                TextFormField(
-                  controller: _order,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Thứ tự hiển thị *',
-                  ),
-                  validator: (value) {
-                    final number = int.tryParse(value?.trim() ?? '');
-                    return number == null || number < 0
-                        ? 'Nhập số nguyên từ 0 trở lên'
-                        : null;
-                  },
-                ),
-              if (widget.kind == AttributeKind.sizeGuide) ...[
-                TextFormField(
-                  controller: _description,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Mô tả'),
-                  validator: (value) =>
-                      (value?.length ?? 0) > 500 ? 'Tối đa 500 ký tự' : null,
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Ảnh hướng dẫn',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 10),
-                if (_selectedImage != null)
-                  Image.memory(
-                    _selectedImage!.bytes!,
-                    height: 180,
-                    fit: BoxFit.contain,
-                  )
-                else if (_currentImageUrl != null && !_removeImage)
-                  Image.network(
-                    _imageUrl(_currentImageUrl!),
-                    height: 180,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const SizedBox(
-                      height: 120,
-                      child: Icon(Symbols.broken_image),
-                    ),
-                  ),
-                if (_selectedImage == null &&
-                    (_currentImageUrl == null || _removeImage))
-                  const Text('Chưa có ảnh hướng dẫn.'),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 10,
+      content: widget.kind == AttributeKind.color
+          ? _buildColorForm(context)
+          : Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    OutlinedButton.icon(
-                      onPressed: _saving ? null : _pickImage,
-                      icon: const Icon(Symbols.upload_file),
-                      label: Text(
-                        _currentImageUrl == null
-                            ? 'Chọn ảnh từ máy'
-                            : 'Thay ảnh',
+                    if (widget.kind == AttributeKind.size)
+                      TextFormField(
+                        controller: _name,
+                        textCapitalization: TextCapitalization.characters,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(100),
+                        ],
+                        decoration: const InputDecoration(
+                          labelText: 'Size *',
+                          hintText: 'Ví dụ: S, XL, 39 hoặc 39-40',
+                        ),
+                        validator: (value) => _required(value, 100),
+                      )
+                    else
+                      TextFormField(
+                        controller: _name,
+                        decoration: InputDecoration(
+                          labelText: 'Tên ${widget.kind.singular} *',
+                        ),
+                        validator: (value) => _required(
+                          value,
+                          widget.kind == AttributeKind.color ? 50 : 100,
+                        ),
                       ),
-                    ),
-                    if (_selectedImage != null ||
-                        (_currentImageUrl != null && !_removeImage))
-                      TextButton.icon(
-                        onPressed: _saving
-                            ? null
-                            : () => setState(() {
-                                _selectedImage = null;
-                                _removeImage = _currentImageUrl != null;
-                              }),
-                        icon: const Icon(Symbols.delete),
-                        label: const Text('Xóa ảnh'),
+                    const SizedBox(height: 18),
+                    if (widget.kind == AttributeKind.size)
+                      TextFormField(
+                        controller: _order,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Thứ tự hiển thị *',
+                        ),
+                        validator: (value) {
+                          final number = int.tryParse(value?.trim() ?? '');
+                          return number == null || number < 0
+                              ? 'Nhập số nguyên từ 0 trở lên'
+                              : null;
+                        },
                       ),
+                    if (widget.kind == AttributeKind.sizeGuide) ...[
+                      TextFormField(
+                        controller: _description,
+                        maxLines: 3,
+                        decoration: const InputDecoration(labelText: 'Mô tả'),
+                        validator: (value) => (value?.length ?? 0) > 500
+                            ? 'Tối đa 500 ký tự'
+                            : null,
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Ảnh hướng dẫn',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 10),
+                      if (_selectedImage != null)
+                        Image.memory(
+                          _selectedImage!.bytes!,
+                          height: 180,
+                          fit: BoxFit.contain,
+                        )
+                      else if (_currentImageUrl != null && !_removeImage)
+                        Image.network(
+                          _imageUrl(_currentImageUrl!),
+                          height: 180,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, _, _) => const SizedBox(
+                            height: 120,
+                            child: Icon(Symbols.broken_image),
+                          ),
+                        ),
+                      if (_selectedImage == null &&
+                          (_currentImageUrl == null || _removeImage))
+                        const Text('Chưa có ảnh hướng dẫn.'),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _saving ? null : _pickImage,
+                            icon: const Icon(Symbols.upload_file),
+                            label: Text(
+                              _currentImageUrl == null
+                                  ? 'Chọn ảnh từ máy'
+                                  : 'Thay ảnh',
+                            ),
+                          ),
+                          if (_selectedImage != null ||
+                              (_currentImageUrl != null && !_removeImage))
+                            TextButton.icon(
+                              onPressed: _saving
+                                  ? null
+                                  : () => setState(() {
+                                      _selectedImage = null;
+                                      _removeImage = _currentImageUrl != null;
+                                    }),
+                              icon: const Icon(Symbols.delete),
+                              label: const Text('Xóa ảnh'),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Hoạt động'),
+                        value: _isActive,
+                        activeThumbColor: AppTheme.primary,
+                        onChanged: (value) => setState(() => _isActive = value),
+                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Hoạt động'),
-                  value: _isActive,
-                  activeThumbColor: AppTheme.primary,
-                  onChanged: (value) => setState(() => _isActive = value),
-                ),
-              ],
-            ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildColorForm(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          hintStyle: const TextStyle(color: AppTheme.textMuted),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 16,
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(9),
+            borderSide: const BorderSide(color: AppTheme.borderLight),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(9),
+            borderSide: const BorderSide(color: AppTheme.primary),
           ),
         ),
       ),
+      child: AbsorbPointer(
+        absorbing: _saving,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 12, right: 6, bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _colorRow(
+                  'Tên màu *',
+                  TextFormField(
+                    controller: _name,
+                    decoration: const InputDecoration(
+                      hintText: 'Ví dụ: Đen, Trắng, Xanh navy',
+                    ),
+                    validator: (value) => _required(value, 50),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _colorRow(
+                  'Mã màu *',
+                  TextFormField(
+                    controller: _code,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: const InputDecoration(
+                      hintText: 'Ví dụ: BLK, WHT, NAVY',
+                    ),
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) return 'Vui lòng nhập mã màu';
+                      return RegExp(r'^[A-Za-z0-9_-]{1,10}$').hasMatch(text)
+                          ? null
+                          : 'Tối đa 10 ký tự: chữ, số, _ hoặc -';
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _colorRow(
+                  'Mã HEX',
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _hex,
+                    builder: (context, value, _) {
+                      final valid = RegExp(r'^#[0-9A-Fa-f]{6}$')
+                          .hasMatch(value.text.trim());
+                      final color = valid
+                          ? Color(
+                              int.parse(
+                                'FF${value.text.trim().substring(1)}',
+                                radix: 16,
+                              ),
+                            )
+                          : null;
+                      return TextFormField(
+                        controller: _hex,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          hintText: '#000000',
+                          helperText:
+                              'Mã màu hiển thị trên sản phẩm, ví dụ #1A1A1A.',
+                          helperMaxLines: 2,
+                          suffixIcon: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: color ?? AppTheme.surface,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: AppTheme.border),
+                              ),
+                              child: color == null
+                                  ? const Icon(
+                                      Icons.palette_outlined,
+                                      size: 16,
+                                      color: AppTheme.textMuted,
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          return text.isEmpty ||
+                                  RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(text)
+                              ? null
+                              : 'Mã HEX phải có dạng #RRGGBB';
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _colorRow(String label, Widget field) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final title = Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 14, color: AppTheme.text),
+          ),
+        );
+        if (constraints.maxWidth < 560) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [title, const SizedBox(height: 10), field],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 190, child: title),
+            Expanded(child: field),
+          ],
+        );
+      },
     );
   }
 }
