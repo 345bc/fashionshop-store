@@ -47,7 +47,6 @@ final List<NavGroup> navGroups = [
   NavGroup('HỆ THỐNG', [
     NavItem('Tài khoản', Symbols.security, '/users'),
     NavItem('Nhân sự', Symbols.badge, '/staff'),
-    NavItem('Cài đặt', Symbols.settings, '/settings'),
   ]),
   NavGroup('BÀI VIẾT', [
     NavItem('Bài viết', Symbols.article, '/posts'),

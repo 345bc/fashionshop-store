@@ -44,7 +44,6 @@ import 'features/products/presentation/providers/product_variants_provider.dart'
 import 'features/categories/presentation/providers/categories_provider.dart';
 import 'features/suppliers/presentation/providers/suppliers_provider.dart';
 import 'features/sizeguides/presentation/providers/size_guides_provider.dart';
-import 'features/settings/presentation/screens/settings_screen.dart';
 import 'screens/login_screen.dart';
 import 'features/products/presentation/screens/product_variants_screen.dart';
 import 'features/categories/presentation/screens/categories_screen.dart';
@@ -234,8 +233,6 @@ class MainScreenState extends State<MainScreen> {
         return const ReportsScreen();
       case '/users':
         return const UsersScreen();
-      case '/settings':
-        return const SettingsScreen();
       case '/unauthorized':
         return const UnauthorizedScreen();
       default:
