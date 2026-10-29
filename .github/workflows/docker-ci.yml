@@ -73,6 +73,7 @@ jobs:
             sudo docker run -d --name zella-backend \
               --restart unless-stopped \
               -p 8080:8080 \
+              -e SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI="https://zella.id.vn/login/oauth2/code/google" \
               --mount type=bind,src=/home/ubuntu/application-product.properties,dst=/app/config/application-product.properties,readonly \
               --mount type=bind,src=/home/ubuntu/rds-truststore.jks,dst=/app/config/rds-truststore.jks,readonly \
               $DOCKER_USER/zbe:latest
