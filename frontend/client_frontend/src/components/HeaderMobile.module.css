@@ -1,0 +1,48 @@
+.drawer {
+  display: flex;
+  flex-direction: column;
+  width: min(400px, 100vw);
+  height: 100dvh;
+  overflow: hidden;
+  background: #fff;
+  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+}
+.head { flex-shrink: 0; }
+.search { flex-shrink: 0; }
+.search input { width: 100%; font-size: 16px; }
+.navigation { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.navigation > a, .navigation > button, .categories > a {
+  flex-shrink: 0;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.categories { flex-shrink: 0; padding-inline: 12px; background: #f8f8f6; border-radius: 12px; }
+.categoryToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding-block: 14px;
+  border: 0;
+  border-bottom: 1px solid rgb(0 0 0 / 8%);
+  background: transparent;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.children { padding: 4px 0 12px 12px; }
+.children > a { display: flex; align-items: center; min-height: 48px; padding-block: 10px; font-size: 14px; }
+.children p { padding-block: 10px; font-size: 13px; color: #737373; }
+.children button { min-height: 44px; font-size: 13px; text-decoration: underline; cursor: pointer; }
+.account { flex-shrink: 0; padding-top: 16px; }
+.account > a { min-height: 48px; font-size: 14px; }
+.close { width: 44px; height: 44px; }
+@media (min-width: 480px) { .drawer { width: min(400px, 90vw); } }
+@media (min-width: 1024px) { .drawer { display: none; } }
+@media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
