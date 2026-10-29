@@ -118,4 +118,18 @@ class CategoriesProvider extends ChangeNotifier {
     await _repository.delete(id);
     await loadItems(page: _currentPage);
   }
+
+  Future<void> applyBulkItem(int id, {bool? active}) async {
+    if (active == null) {
+      await _repository.delete(id);
+    } else {
+      final item = await loadDetail(id);
+      await _repository.update(id, {
+        'name': item.name,
+        'parentId': item.parentId,
+        'imageUrl': item.imageUrl,
+        'isActive': active,
+      });
+    }
+  }
 }
