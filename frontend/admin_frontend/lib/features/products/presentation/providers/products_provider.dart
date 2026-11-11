@@ -4,11 +4,6 @@ import 'package:zella_admin_flutter/features/products/data/api/product_repositor
 import 'package:zella_admin_flutter/features/products/data/api/product_image_repository.dart';
 import 'package:zella_admin_flutter/features/products/data/models/product_response_model.dart';
 
-typedef ProductDetails = ({
-  Map<String, dynamic> product,
-  List<Map<String, dynamic>> images,
-});
-
 class ProductsProvider extends ChangeNotifier {
   final ProductRepository _repository = ProductRepository();
   final ProductImageRepository _imageRepository = ProductImageRepository();
@@ -68,17 +63,6 @@ class ProductsProvider extends ChangeNotifier {
         notifyListeners();
       }
     }
-  }
-
-  Future<ProductDetails> loadDetail(int productId) async {
-    final product = await _repository.getById(productId);
-    List<Map<String, dynamic>> images = [];
-    try {
-      images = await _imageRepository.getByProductId(productId);
-    } catch (_) {
-      // Still show product details when its images are unavailable.
-    }
-    return (product: product, images: images);
   }
 
   Future<List<Map<String, dynamic>>> loadImages(int productId) =>

@@ -9,7 +9,7 @@ import 'package:zella_admin_flutter/features/suppliers/presentation/providers/su
 import 'package:zella_admin_flutter/features/sizeguides/data/models/size_guide_response_model.dart';
 import 'package:zella_admin_flutter/features/sizeguides/presentation/providers/size_guides_provider.dart';
 import 'package:zella_admin_flutter/features/products/presentation/providers/products_provider.dart';
-import 'package:zella_admin_flutter/features/products/presentation/dialogs/product_form_dialog.dart';
+import 'package:zella_admin_flutter/features/products/presentation/screens/product_form_screen.dart';
 
 class FormCategories extends CategoriesProvider {
   @override
@@ -67,9 +67,10 @@ class FormProducts extends ProductsProvider {
 Future<void> openForm(
   WidgetTester tester,
   Widget dialog,
-  FormProducts products,
-) async {
-  tester.view.physicalSize = const Size(1200, 1200);
+  FormProducts products, {
+  double width = 1200,
+}) async {
+  tester.view.physicalSize = Size(width, 1200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -90,7 +91,8 @@ Future<void> openForm(
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () =>
-                  showDialog<void>(context: context, builder: (_) => dialog),
+                  Navigator.of(context)
+                      .push(MaterialPageRoute<void>(builder: (_) => dialog)),
               child: const Text('Mở'),
             ),
           ),
@@ -113,10 +115,12 @@ void main() {
     tester,
   ) async {
     final products = FormProducts();
-    await openForm(tester, const ProductFormDialog(), products);
-    expect(find.text('Thêm sản phẩm mới'), findsOneWidget);
+    await openForm(tester, const ProductFormScreen(), products);
+    expect(find.text('Thêm sản phẩm'), findsOneWidget);
     expect(products.imageLoads, 0);
-    await tester.tap(find.text('Tạo sản phẩm'));
+    expect(find.byType(Dialog), findsNothing);
+    await tester.ensureVisible(find.text('Đăng sản phẩm'));
+    await tester.tap(find.text('Đăng sản phẩm'));
     await tester.pumpAndSettle();
     expect(find.text('Vui lòng nhập tên'), findsOneWidget);
     expect(products.creates, 0);
@@ -130,7 +134,7 @@ void main() {
     final products = FormProducts();
     await openForm(
       tester,
-      const ProductFormDialog(
+      const ProductFormScreen(
         product: {
           'id': 10,
           'name': 'Áo ban đầu',
@@ -146,7 +150,8 @@ void main() {
     expect(find.text('Chỉnh sửa sản phẩm'), findsOneWidget);
     expect(products.imageLoads, 1);
     await tester.enterText(find.byType(TextFormField).first, 'Áo đã sửa');
-    await tester.tap(find.text('Lưu thay đổi'));
+    await tester.ensureVisible(find.text('Lưu nháp'));
+    await tester.tap(find.text('Lưu nháp'));
     await tester.pumpAndSettle();
     expect(products.creates, 0);
     expect(products.updates, 1);
@@ -154,6 +159,47 @@ void main() {
     expect(products.saved?['isActive'], false);
     expect(products.saved?['categoryId'], 1);
     expect(find.text('Chỉnh sửa sản phẩm'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('publish activates an inactive product', (tester) async {
+    final products = FormProducts();
+    await openForm(
+      tester,
+      const ProductFormScreen(
+        product: {
+          'id': 10,
+          'name': 'Áo nháp',
+          'basePrice': 150000,
+          'categoryId': 1,
+          'supplierId': 2,
+          'sizeGuideId': 3,
+          'isActive': false,
+        },
+      ),
+      products,
+    );
+    await tester.ensureVisible(find.text('Lưu và đăng sản phẩm'));
+    await tester.tap(find.text('Lưu và đăng sản phẩm'));
+    await tester.pumpAndSettle();
+    expect(products.saved?['isActive'], true);
+    expect(products.updates, 1);
+    expect(products.creates, 0);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('product page fits a narrow screen without a dialog', (
+    tester,
+  ) async {
+    await openForm(
+      tester,
+      const ProductFormScreen(),
+      FormProducts(),
+      width: 360,
+    );
+    expect(find.byType(Dialog), findsNothing);
+    await tester.ensureVisible(find.text('Lưu nháp'));
+    await tester.pumpAndSettle();
+    expect(find.text('Lưu nháp'), findsOneWidget);
+    expect(find.text('Đăng sản phẩm'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

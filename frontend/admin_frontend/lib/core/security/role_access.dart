@@ -30,6 +30,8 @@ class RoleAccess {
         '/suppliers',
         '/products',
         '/product-variants',
+        '/products/variants/new',
+        '/products/variants/edit',
       ].contains(route),
       'CUSTOMER_SUPPORT' => [
         '/orders',

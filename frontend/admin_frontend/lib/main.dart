@@ -1,3 +1,5 @@
+import 'features/products/presentation/screens/product_form_screen.dart';
+import 'features/products/presentation/screens/variant_form_screen.dart';
 import 'features/home_appearance/home_appearance_screen.dart';
 import 'features/bought_together/bought_together_screen.dart';
 
@@ -180,8 +182,29 @@ class MainScreenState extends State<MainScreen> {
         return const AttributeManagementScreen(kind: AttributeKind.size);
       case '/sizeguides':
         return const AttributeManagementScreen(kind: AttributeKind.sizeGuide);
+      case '/products/new':
+        return ProductFormScreen(onClose: () => navigate('/products'));
+      case '/products/edit':
+        return ProductFormScreen(
+          product: _currentArgs,
+          onClose: () => navigate('/products'),
+        );
       case '/products':
         return const ProductsScreen();
+      case '/products/variants/new':
+      case '/products/variants/edit':
+        final product = _currentArgs?['product'] as Map<String, dynamic>?;
+        final variant = _currentArgs?['variant'] as Map<String, dynamic>?;
+        if (product == null ||
+            (_currentRoute == '/products/variants/edit' && variant == null)) {
+          return ProductVariantsScreen(product: product);
+        }
+        return VariantFormScreen(
+          key: ValueKey((product['id'], variant?['id'])),
+          productId: (product['id'] as num).toInt(),
+          variant: variant,
+          onClose: () => navigate('/product-variants', product),
+        );
       case '/product-variants':
         return ProductVariantsScreen(product: _currentArgs);
       case '/inventory':

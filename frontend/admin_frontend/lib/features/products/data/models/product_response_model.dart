@@ -13,6 +13,7 @@ class ProductResponseModel {
   final String supplierName;
   final int sizeGuideId;
   final String sizeGuideName;
+  final String? imageUrl;
   final String? createdAt;
   final String? updatedAt;
 
@@ -31,6 +32,7 @@ class ProductResponseModel {
     required this.sizeGuideName,
     required this.supplierId,
     required this.supplierName,
+    this.imageUrl,
     this.createdAt,
     this.updatedAt,
   });
@@ -52,6 +54,7 @@ class ProductResponseModel {
       sizeGuideId: json['sizeGuideId'] as int? ?? 0,
       sizeGuideName: json['sizeGuideName'] as String? ?? '',
 
+      imageUrl: json['imageUrl'] as String?,
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
     );
@@ -73,6 +76,7 @@ class ProductResponseModel {
       'supplierName': supplierName,
       'sizeGuideId': sizeGuideId,
       'sizeGuideName': sizeGuideName,
+      'imageUrl': imageUrl,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };

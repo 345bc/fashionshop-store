@@ -2,7 +2,6 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../main.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/bulk_action_bar.dart';
@@ -101,19 +100,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () =>
-                        MainScreen.of(context).navigate('/product-attributes'),
-                    icon: const Icon(Symbols.arrow_back),
-                    label: const Text('Thuộc tính sản phẩm'),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 FeatureHeader(
                   title: 'Danh mục',
-                  subtitle: 'Quản lý cấu trúc danh mục sản phẩm',
+                  subtitle: 'Quản lý danh mục sản phẩm',
                   actionLabel: 'Thêm danh mục',
                   actionIcon: Symbols.add,
                   onExportPressed: () {},
