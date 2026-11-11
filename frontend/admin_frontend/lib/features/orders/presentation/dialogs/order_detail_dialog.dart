@@ -384,16 +384,22 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Tổng tiền',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              const Expanded(
+                child: Text(
+                  'Tổng tiền',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
-              Text(
-                money(order.totalAmount),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: AppTheme.primary,
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  money(order.totalAmount),
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: AppTheme.primary,
+                  ),
                 ),
               ),
             ],

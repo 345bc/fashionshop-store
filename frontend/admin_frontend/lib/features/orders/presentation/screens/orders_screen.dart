@@ -41,7 +41,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         children: [
           FeatureHeader(
             showAction: [
-              'ADMIN',
+              'SUPERADMIN',
               'WAREHOUSE',
               'CUSTOMER_SUPPORT',
             ].contains(context.watch<AuthProvider>().user?.activeRole),
@@ -77,13 +77,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
           const SizedBox(height: 24),
           WarehouseTable(
-            flexes: const [2, 2, 1, 1, 1],
+            flexes: const [3, 2, 2, 1, 1],
             headers: const [
               'ĐƠN HÀNG',
+              'NGÀY TẠO',
               'KHÁCH HÀNG',
               'TỔNG TIỀN',
               'TRẠNG THÁI',
-              'THANH TOÁN',
             ],
             rows: p.pageItems.map(_row).toList(),
             loading: p.isLoading,
@@ -111,30 +111,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
         child: Row(
           children: [
             Expanded(
-              flex: 2,
+              flex: 3,
               child: Padding(
                 padding: const EdgeInsets.only(right: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order.code,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('dd/MM/yyyy HH:mm').format(order.createdAt),
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  order.code,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primary,
+                  ),
                 ),
               ),
             ),
@@ -142,26 +129,30 @@ class _OrdersScreenState extends State<OrdersScreen> {
               flex: 2,
               child: Padding(
                 padding: const EdgeInsets.only(right: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order.customerName.isEmpty
+                child: Text(
+                  DateFormat('dd/MM/yyyy HH:mm').format(order.createdAt),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  order.customerName.trim().isNotEmpty
+                      ? order.customerName
+                      : (order.recipientName.trim().isNotEmpty
                           ? order.recipientName
-                          : order.customerName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      order.recipientPhone,
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
+                          : '—'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ),
             ),
@@ -171,20 +162,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 padding: const EdgeInsets.only(right: 16),
                 child: Text(
                   money(order.totalAmount),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _statusBadge(
-                    orderStatuses[order.status] ?? order.status,
-                    _getStatusColor(order.status),
-                  ),
                 ),
               ),
             ),
@@ -193,9 +173,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: _statusBadge(
-                  orderPaymentStatuses[order.paymentStatus] ??
-                      order.paymentStatus,
-                  _getPaymentStatusColor(order.paymentStatus),
+                  orderStatuses[order.status] ?? order.status,
+                  _getStatusColor(order.status),
                 ),
               ),
             ),
@@ -239,16 +218,5 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
-  Color _getPaymentStatusColor(String status) {
-    switch (status) {
-      case 'PAID':
-        return AppTheme.success;
-      case 'REFUNDED':
-        return AppTheme.textSecondary;
-      case 'REFUND_PENDING':
-        return AppTheme.danger;
-      default:
-        return Colors.orange;
-    }
-  }
+
 }
