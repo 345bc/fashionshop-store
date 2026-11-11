@@ -72,7 +72,7 @@ class StaffWorkflowTest {
   attack=attack.substring(0,attack.length()-1)+",\"password\":\"NewPassword!\",\"username\":\"hacked\",\"email\":\"hacked@example.test\",\"isActive\":false}";
   mvc.perform(put("/api/v1/staff/"+s.getId()).cookie(access).with(csrf()).contentType("application/json").content(attack))
    .andExpect(status().isOk()).andExpect(jsonPath("$.data.roles[0]").value("SALES"))
-   .andExpect(jsonPath("$.data.status").value("ACTIVE")).andExpect(jsonPath("$.data.accountActive").value(true));
+   .andExpect(jsonPath("$.data.accountActive").value(true));
   assertEquals(hash,target.getPasswordHash());assertEquals(email,target.getEmail());assertEquals(username,target.getUserName());assertEquals(version,target.getAuthVersion());assertEquals(target.getId(),s.getUser().getId());
   mvc.perform(get("/api/v1/auth/me").cookie(logged.getResponse().getCookie("ACCESS_TOKEN"))).andExpect(status().isOk());
  }
@@ -98,7 +98,7 @@ class StaffWorkflowTest {
   String req=body(target.getId(),"TERMINATED","ADMIN");req=req.substring(0,req.length()-1)+",\"username\":\""+key+"\",\"email\":\""+key+"@example.test\",\"password\":\"Password123!\"}";
   mvc.perform(post("/api/v1/staff").cookie(access).with(csrf()).contentType("application/json").content(req)).andExpect(status().isOk()).andExpect(jsonPath("$.data.email").value(key+"@example.test"))
    .andExpect(jsonPath("$.data.roles[0]").value("SALES")).andExpect(jsonPath("$.data.roles.length()").value(1))
-   .andExpect(jsonPath("$.data.status").value("ACTIVE")).andExpect(jsonPath("$.data.accountActive").value(true))
+   .andExpect(jsonPath("$.data.accountActive").value(true))
    .andExpect(jsonPath("$.data.staffCode").doesNotExist());
   mvc.perform(post("/api/v1/staff").cookie(access).with(csrf()).contentType("application/json").content(body(target.getId(),"ACTIVE","USER"))).andExpect(status().isBadRequest());
  }

@@ -1,5 +1,6 @@
 class RoleAccess {
   static const labels = {
+    'SUPERADMIN': 'Quản trị viên cấp cao',
     'ADMIN': 'Quản trị viên',
     'SALES': 'Bán hàng',
     'WAREHOUSE': 'Kho',
@@ -8,9 +9,19 @@ class RoleAccess {
     'USER': 'Khách hàng',
   };
 
+  static bool isBackOfficeRole(String? role) =>
+      role != 'USER' && labels.containsKey(role);
+
   static bool canOpen(String? role, String route) {
-    if (role == 'ADMIN') return true;
     return switch (role) {
+      'SUPERADMIN' => true,
+      'ADMIN' => [
+        '/',
+        '/customers',
+        '/users',
+        '/staff',
+        '/reports',
+      ].contains(route),
       'SALES' => ['/orders', '/customers', '/products'].contains(route),
       'WAREHOUSE' => [
         '/orders',
@@ -40,6 +51,7 @@ class RoleAccess {
   }
 
   static String home(String? role) => switch (role) {
+    'ADMIN' => '/reports',
     'SALES' || 'CUSTOMER_SUPPORT' => '/orders',
     'WAREHOUSE' => '/inventory',
     'MARKETING' => '/promotions',

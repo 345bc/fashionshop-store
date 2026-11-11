@@ -43,7 +43,7 @@ public class JwtLoginController {
     ApiResponse<CurrentUser> adminLogin(@Valid @RequestBody LoginRequest request,
             HttpServletRequest servletRequest, HttpServletResponse response) {
         CurrentUser user = appUserService.authenticate(request.email(), request.password(), passwordEncoder);
-        var businessRoles = java.util.Set.of("ADMIN", "SALES", "WAREHOUSE", "CUSTOMER_SUPPORT", "MARKETING");
+        var businessRoles = java.util.Set.of("SUPERADMIN", "ADMIN", "SALES", "WAREHOUSE", "CUSTOMER_SUPPORT", "MARKETING");
         if (user.roles().stream().noneMatch(businessRoles::contains)) {
             throw new com.huit.zella.common.exception.BusinessException(
                     org.springframework.http.HttpStatus.FORBIDDEN, "ADMIN_ACCESS_DENIED",

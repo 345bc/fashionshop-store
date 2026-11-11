@@ -148,31 +148,19 @@ class MainScreen extends StatefulWidget {
 class MainScreenState extends State<MainScreen> {
   String _currentRoute = '/';
   Map<String, dynamic>? _currentArgs;
-  Widget? _currentDrawer;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _showUnauthorized = false;
 
   void navigate(String route, [Map<String, dynamic>? args]) {
-    if (!RoleAccess.canOpen(
-      context.read<AuthProvider>().user?.activeRole,
-      route,
-    )) {
+    final role = context.read<AuthProvider>().user?.activeRole;
+    if (route == '/unauthorized' || !RoleAccess.canOpen(role, route)) {
+      setState(() => _showUnauthorized = true);
       return;
     }
     setState(() {
       _currentRoute = route;
       _currentArgs = args;
+      _showUnauthorized = false;
     });
-  }
-
-  void openDrawer(Widget drawerContent) {
-    setState(() {
-      _currentDrawer = drawerContent;
-    });
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
-
-  void closeDrawer() {
-    _scaffoldKey.currentState?.closeEndDrawer();
   }
 
   Widget _buildScreen() {
@@ -180,14 +168,11 @@ class MainScreenState extends State<MainScreen> {
     if (!RoleAccess.canOpen(role, _currentRoute)) {
       _currentRoute = RoleAccess.home(role);
       _currentArgs = null;
-      _currentDrawer = null;
     }
-    switch (_currentRoute) {
+    switch (_showUnauthorized ? '/unauthorized' : _currentRoute) {
       case '/':
         return DashboardScreen(onNavigate: (route) => navigate(route));
       case '/categories':
-        return const CategoriesScreen();
-      case '/product-attributes':
         return const CategoriesScreen();
       case '/colors':
         return const AttributeManagementScreen(kind: AttributeKind.color);
@@ -197,8 +182,6 @@ class MainScreenState extends State<MainScreen> {
         return const AttributeManagementScreen(kind: AttributeKind.sizeGuide);
       case '/products':
         return const ProductsScreen();
-      // case '/product-detail':
-      //   return ProductDetailScreen(product: _currentArgs);
       case '/product-variants':
         return ProductVariantsScreen(product: _currentArgs);
       case '/inventory':
@@ -232,9 +215,12 @@ class MainScreenState extends State<MainScreen> {
       case '/reports':
         return const ReportsScreen();
       case '/users':
-        return const UsersScreen();
+        return UsersScreen(key: ValueKey(role));
       case '/unauthorized':
-        return const UnauthorizedScreen();
+        return UnauthorizedScreen(
+          onBack: () => setState(() => _showUnauthorized = false),
+          onHome: () => navigate(RoleAccess.home(role)),
+        );
       default:
         return Center(
           child: Text(
@@ -247,13 +233,12 @@ class MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screen = _buildScreen();
     return Scaffold(
-      key: _scaffoldKey,
-      endDrawer: _currentDrawer,
       body: AppLayout(
-        currentRoute: _currentRoute,
+        currentRoute: _showUnauthorized ? '/unauthorized' : _currentRoute,
         onNavigate: navigate,
-        child: _buildScreen(),
+        child: screen,
       ),
     );
   }

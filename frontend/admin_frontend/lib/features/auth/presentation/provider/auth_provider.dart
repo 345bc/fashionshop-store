@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/security/role_access.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 
@@ -32,26 +33,14 @@ class AuthProvider with ChangeNotifier {
   bool get needsRoleSelection => _needsRoleSelection;
 
   bool _hasAdminPermission(UserModel user) {
-    return const [
-          'ADMIN',
-          'SALES',
-          'WAREHOUSE',
-          'CUSTOMER_SUPPORT',
-          'MARKETING',
-        ].contains(user.activeRole) ||
+    return RoleAccess.isBackOfficeRole(user.activeRole) ||
         (user.activeRole == null &&
-            user.roles.any(
-              const [
-                'ADMIN',
-                'SALES',
-                'WAREHOUSE',
-                'CUSTOMER_SUPPORT',
-                'MARKETING',
-              ].contains,
-            ));
+            user.roles.any(RoleAccess.isBackOfficeRole));
   }
 
-  bool hasRole(String role) => _user?.activeRole == role;
+  bool hasRole(String role) =>
+      _user?.activeRole == role ||
+      (_user?.activeRole == 'SUPERADMIN' && role == 'ADMIN');
 
   Future<UserModel> loadSessionProfile() async {
     final generation = _sessionGeneration;

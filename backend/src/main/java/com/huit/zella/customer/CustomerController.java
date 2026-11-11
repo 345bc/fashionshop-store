@@ -56,7 +56,7 @@ public class CustomerController {
     @GetMapping("/user/{id}")
     public ApiResponse<CustomerResponse> getCustomerByUserId(@PathVariable Long id, Authentication authentication) {
         if (!(authentication.getPrincipal() instanceof CurrentUser current)
-                || (!current.id().equals(id) && !current.hasRole("ADMIN") && !current.hasRole("SALES") && !current.hasRole("CUSTOMER_SUPPORT"))) {
+                || (!current.id().equals(id) && !canManageCustomers(current) && !current.hasRole("SALES") && !current.hasRole("CUSTOMER_SUPPORT"))) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "CUSTOMER_ACCESS_DENIED", "Cannot view this customer");
         }
         return ApiResponse.success(customerService.get(id));
@@ -65,9 +65,13 @@ public class CustomerController {
     @PutMapping("/user/{id}")
     public ApiResponse<CustomerResponse> updateCustomerByUserId(@PathVariable Long id, @Valid @RequestBody UpdateCustomerRequest request, Authentication authentication) {
         if (!(authentication.getPrincipal() instanceof CurrentUser current)
-                || (!current.id().equals(id) && !current.hasRole("ADMIN"))) {
+                || (!current.id().equals(id) && !canManageCustomers(current))) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "CUSTOMER_ACCESS_DENIED", "Cannot update this customer");
         }
         return ApiResponse.success(customerService.updateByUserId(id, request));
+    }
+
+    private boolean canManageCustomers(CurrentUser current) {
+        return current.hasRole("ADMIN") || current.hasRole("SUPERADMIN");
     }
 }
