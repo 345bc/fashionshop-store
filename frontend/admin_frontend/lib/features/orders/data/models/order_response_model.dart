@@ -34,7 +34,7 @@ class OrderResponseModel {
       paymentStatus,
       paymentMethod;
   final String? note;
-  final bool inventoryManaged;
+  final bool inventoryManaged, vnpayRefundRequired;
   final num subtotal, shippingFee, totalAmount;
   final DateTime createdAt;
   final DateTime? paymentExpiresAt;
@@ -52,6 +52,7 @@ class OrderResponseModel {
       paymentMethod = j['paymentMethod'] as String,
       note = j['note'] as String?,
       inventoryManaged = j['inventoryManaged'] as bool,
+      vnpayRefundRequired = j['vnpayRefundRequired'] == true,
       subtotal = j['subtotal'] as num,
       shippingFee = j['shippingFee'] as num,
       totalAmount = j['totalAmount'] as num,
@@ -62,6 +63,8 @@ class OrderResponseModel {
       items = (j['items'] as List).cast<Map<String, dynamic>>(),
       histories = (j['histories'] as List).cast<Map<String, dynamic>>();
 }
+
+typedef VnPayRefund = ({int id, int? returnId, String state});
 
 class ReturnResponseModel {
   final int id, orderId;

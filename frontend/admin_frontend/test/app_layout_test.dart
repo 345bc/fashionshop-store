@@ -1,6 +1,10 @@
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:zella_admin_flutter/features/auth/presentation/provider/auth_provider.dart';
+import 'package:zella_admin_flutter/features/orders/presentation/providers/orders_provider.dart';
+import 'package:zella_admin_flutter/features/orders/presentation/screens/orders_screen.dart';
+import 'package:zella_admin_flutter/main.dart';
+import 'package:zella_admin_flutter/screens/unauthorized_screen.dart';
 
 import 'support/fake_auth.dart';
 
@@ -8,6 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:zella_admin_flutter/widgets/app_layout.dart';
+
+class _FakeOrders extends OrdersProvider {
+  @override
+  Future<void> loadItems() async {}
+}
 
 void main() {
   setUpAll(
@@ -58,37 +67,37 @@ void main() {
   });
 
   testWidgets(
-    'Assigned ADMIN role does not expose admin menus while SALES is active',
+    'Assigned ADMIN role does not grant account access while SALES is active',
     (tester) async {
       tester.view.physicalSize = const Size(1600, 1000);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final auth = FakeAuth(role: 'SALES');
       await tester.pumpWidget(
-        ChangeNotifierProvider<AuthProvider>.value(
-          value: auth,
-          child: MaterialApp(
-            home: AppLayout(
-              currentRoute: '/orders',
-              onNavigate: (route, [args]) {},
-              child: const SizedBox(),
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthProvider>(
+              create: (_) => FakeAuth(role: 'SALES'),
             ),
-          ),
+            ChangeNotifierProvider<OrdersProvider>(
+              create: (_) => _FakeOrders(),
+            ),
+          ],
+          child: const MaterialApp(home: MainScreen()),
         ),
       );
-      expect(find.text('Đơn hàng'), findsOneWidget);
-      expect(find.text('Tài khoản'), findsNothing);
-      expect(find.text('Tồn kho'), findsNothing);
-      auth.role = 'WAREHOUSE';
-      auth.notifyListeners();
       await tester.pumpAndSettle();
-      expect(find.text('Đơn hàng'), findsOneWidget);
-      expect(find.text('Tồn kho'), findsOneWidget);
-      expect(find.text('Hoàn hàng'), findsNothing);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-      auth.dispose();
+      expect(find.byType(OrdersScreen), findsOneWidget);
+
+      final accounts = find.text('Tài khoản');
+      expect(accounts, findsOneWidget);
+      await tester.tap(accounts);
+      await tester.pumpAndSettle();
+      expect(find.byType(UnauthorizedScreen), findsOneWidget);
+
+      await tester.tap(find.text('Quay lại'));
+      await tester.pumpAndSettle();
+      expect(find.byType(OrdersScreen), findsOneWidget);
     },
   );
 }

@@ -51,7 +51,7 @@ Future<void> record(
     }
   }
   results.add(row);
-  print('${row['status']}: $title');
+  debugPrint('${row['status']}: $title');
   File('$evidenceRoot/admin-windows-live-20261105.json').writeAsStringSync(
     const JsonEncoder.withIndent('  ')
         .convert({'date': '2026-11-05', 'results': results}),
