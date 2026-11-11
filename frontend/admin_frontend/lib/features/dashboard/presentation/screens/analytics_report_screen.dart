@@ -1,9 +1,9 @@
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../../../core/files/csv_export.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
 import '../../../../widgets/common/filter_dropdown.dart';
 import '../../data/models/analytics_models.dart';
@@ -22,6 +22,7 @@ class AnalyticsReportScreen extends StatefulWidget {
 }
 
 class _AnalyticsReportScreenState extends State<AnalyticsReportScreen> {
+  bool _savingCsv = false;
   @override
   void initState() {
     super.initState();
@@ -70,17 +71,21 @@ class _AnalyticsReportScreenState extends State<AnalyticsReportScreen> {
                   ],
                 ),
                 OutlinedButton.icon(
-                  onPressed: !p.ready || p.exporting
+                  onPressed: !p.ready || p.exporting || _savingCsv
                       ? null
                       : () async {
+                          setState(() => _savingCsv = true);
                           try {
+                            final name =
+                                'bao-cao-${p.section.name}-${DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.]'), '-')}.csv';
                             final csv = await p.exportCsv();
-                            await Clipboard.setData(ClipboardData(text: csv));
-                            if (context.mounted) {
+                            if (!mounted) return;
+                            final saved = await saveCsvFile(csv, name);
+                            if (saved && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                    'Đã sao chép CSV của toàn bộ dòng trong bộ lọc hiện tại',
+                                    'Đã xuất CSV của toàn bộ dòng trong bộ lọc hiện tại',
                                   ),
                                 ),
                               );
@@ -94,10 +99,12 @@ class _AnalyticsReportScreenState extends State<AnalyticsReportScreen> {
                                 ),
                               ),
                             );
+                          } finally {
+                            if (mounted) setState(() => _savingCsv = false);
                           }
                         },
-                  icon: const Icon(Symbols.content_copy, size: 18),
-                  label: const Text('Sao chép CSV'),
+                  icon: const Icon(Symbols.download, size: 18),
+                  label: Text(_savingCsv ? 'Đang xuất...' : 'Xuất CSV'),
                 ),
               ],
             ),

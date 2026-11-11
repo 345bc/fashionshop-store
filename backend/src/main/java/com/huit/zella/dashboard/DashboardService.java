@@ -35,7 +35,8 @@ public class DashboardService {
         if (number(current,"missingRefundDates").signum()>0)
             warnings.add("Có đơn hủy đã hoàn tiền nhưng thiếu mốc hoàn trong lịch sử; các đơn này chưa được tính vào hoàn tiền theo kỳ.");
         return Map.ofEntries(Map.entry("summary",summary),Map.entry("previous",previous),Map.entry("trend",trend),
-                Map.entry("current",current),Map.entry("table",table),Map.entry("categories",repository.categories()),
+                Map.entry("current",current),Map.entry("table",table),
+                Map.entry("recentOrders",q.section().name().equals("overview") || q.section().name().equals("orders") ? repository.recentOrders(q) : List.of()),Map.entry("categories",repository.categories()),
                 Map.entry("distribution",repository.distribution(q)),Map.entry("warnings",warnings),
                 Map.entry("timezone","Asia/Ho_Chi_Minh"),Map.entry("generatedAt",Instant.now().toString()));
     }
