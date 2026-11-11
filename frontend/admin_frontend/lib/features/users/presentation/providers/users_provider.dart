@@ -5,7 +5,13 @@ import '../../data/models/user_response_model.dart';
 import '../../data/api/users_repository.dart';
 
 class UsersProvider extends ChangeNotifier {
-  final UsersRepository _repository = UsersRepository();
+  final UsersRepository _repository;
+
+  UsersProvider({UsersRepository? repository})
+    : _repository = repository ?? UsersRepository();
+  int _requestId = 0;
+  String _currentStatus = 'ALL';
+  String get currentStatus => _currentStatus;
 
   bool _isLoading = false;
   String? _error;
@@ -26,12 +32,19 @@ class UsersProvider extends ChangeNotifier {
   String? get currentQuery => _currentQuery;
   String? get currentRole => _currentRole;
 
-  Future<void> loadItems({int page = 0, String? query, String? role}) async {
+  Future<void> loadItems({
+    int page = 0,
+    String? query,
+    String? role,
+    String? status,
+  }) async {
+    final requestId = ++_requestId;
     try {
       _isLoading = true;
       _error = null;
       if (query != null) _currentQuery = query;
       if (role != null) _currentRole = role;
+      if (status != null) _currentStatus = status;
       notifyListeners();
 
       final result = await _repository.getAll(
@@ -39,18 +52,23 @@ class UsersProvider extends ChangeNotifier {
         size: _pageSize,
         query: _currentQuery,
         role: _currentRole == 'ALL' ? null : _currentRole,
+        active: _currentStatus == 'ALL' ? null : _currentStatus == 'ACTIVE',
       );
 
+      if (requestId != _requestId) return;
       _items = (result['content'] as List)
           .map((e) => UserResponseModel.fromJson(e))
           .toList();
       _totalElements = result['totalElements'] ?? 0;
       _currentPage = result['number'] ?? 0;
     } catch (e) {
+      if (requestId != _requestId) return;
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (requestId == _requestId) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

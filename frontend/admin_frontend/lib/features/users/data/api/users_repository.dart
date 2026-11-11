@@ -1,17 +1,22 @@
 // GENERATED FROM TEMPLATE: templates/feature_repository.dart.template
 import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 
 class UsersRepository {
   final ApiClient _apiClient = ApiClient();
 
-  Future<Map<String, dynamic>> getAll({int page = 0, int size = 15, String? query, String? role}) async {
+  Future<Map<String, dynamic>> getAll({
+    int page = 0,
+    int size = 15,
+    String? query,
+    String? role,
+    bool? active,
+  }) async {
     try {
-      final Map<String, dynamic> queryParams = {
-        'page': page,
-        'size': size,
-      };
+      final Map<String, dynamic> queryParams = {'page': page, 'size': size};
+      if (active != null) queryParams['active'] = active;
       if (query != null && query.isNotEmpty) {
         queryParams['q'] = query;
       }
@@ -20,7 +25,7 @@ class UsersRepository {
       }
 
       final response = await _apiClient.get(
-        ApiEndpoints.users, 
+        ApiEndpoints.users,
         queryParameters: queryParams,
       );
 
@@ -62,7 +67,10 @@ class UsersRepository {
 
   Future<Map<String, dynamic>> update(int id, Map<String, dynamic> data) async {
     try {
-      final response = await _apiClient.put('${ApiEndpoints.users}/$id', data: data);
+      final response = await _apiClient.put(
+        '${ApiEndpoints.users}/$id',
+        data: data,
+      );
       if (response.statusCode == 200) {
         return response.data['data'];
       }
