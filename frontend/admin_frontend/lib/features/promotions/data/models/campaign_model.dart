@@ -29,7 +29,7 @@ enum DiscountType {
 }
 
 String money(int value) =>
-    '${NumberFormat.decimalPattern('vi').format(value)} đ';
+    '${NumberFormat.decimalPattern('vi_VN').format(value)} VND';
 String campaignDate(DateTime value) =>
     DateFormat('dd/MM/yyyy HH:mm').format(value.toLocal());
 

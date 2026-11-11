@@ -7,11 +7,12 @@ import 'package:provider/provider.dart';
 import 'package:zella_admin_flutter/widgets/common/bulk_action_bar.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
 import '../../../../widgets/common/filter_dropdown.dart';
 import '../../../../widgets/common/pagination_footer.dart';
 import '../../data/models/campaign_model.dart';
-import '../dialogs/campaign_form_dialog.dart';
+import '../../../../main.dart';
 import '../dialogs/campaign_detail_dialog.dart';
 import '../providers/campaigns_provider.dart';
 import '../widgets/campaign_status_badge.dart';
@@ -86,7 +87,7 @@ class _CampaignManagementScreenState extends State<CampaignManagementScreen> {
                       ),
                     ),
                     ElevatedButton.icon(
-                      onPressed: () => _form(p),
+                      onPressed: () => _form(),
                       icon: const Icon(Symbols.add),
                       label: Text('Thêm ${widget.kind.label.toLowerCase()}'),
                     ),
@@ -206,7 +207,7 @@ class _CampaignManagementScreenState extends State<CampaignManagementScreen> {
                                         ),
                                       ),
                                     ),
-                                  const SizedBox(width: 40),
+                                  const SizedBox(width: 48),
                                 ],
                               ),
                             ),
@@ -221,9 +222,7 @@ class _CampaignManagementScreenState extends State<CampaignManagementScreen> {
                                 color: Colors.transparent,
                                 child: InkWell(
                                   hoverColor: AppTheme.surface,
-                                  onTap: () => voucher
-                                      ? _detail(p, item)
-                                      : _form(p, item),
+                                  onTap: voucher ? null : () => _form(item),
                                   child: Padding(
                                     padding: const EdgeInsets.all(20),
                                     child: Row(
@@ -296,22 +295,27 @@ class _CampaignManagementScreenState extends State<CampaignManagementScreen> {
                                             ),
                                           ),
                                         ),
-                                        PopupMenuButton<String>(
-                                          onSelected: (action) =>
-                                              action == 'view'
-                                              ? _detail(p, item)
-                                              : _form(p, item),
-                                          itemBuilder: (_) => [
-                                            if (voucher)
-                                              const PopupMenuItem(
-                                                value: 'view',
-                                                child: Text('Xem chi tiết'),
+                                        SizedBox(
+                                          width: 48,
+                                          child: ActionMenu(
+                                            items: [
+                                              if (voucher)
+                                                const ActionMenuItem(
+                                                  value: 'view',
+                                                  label: 'Xem chi tiết',
+                                                  icon: Symbols.visibility,
+                                                ),
+                                              const ActionMenuItem(
+                                                value: 'edit',
+                                                label: 'Chỉnh sửa',
+                                                icon: Symbols.edit,
                                               ),
-                                            const PopupMenuItem(
-                                              value: 'edit',
-                                              child: Text('Chỉnh sửa'),
-                                            ),
-                                          ],
+                                            ],
+                                            onSelected: (action) =>
+                                                action == 'view'
+                                                ? _detail(p, item)
+                                                : _form(item),
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -411,13 +415,13 @@ class _CampaignManagementScreenState extends State<CampaignManagementScreen> {
     );
   }
 
-  void _form(CampaignsProvider p, [CampaignModel? item]) => showDialog(
-    context: context,
-    builder: (_) => ChangeNotifierProvider.value(
-      value: p,
-      child: CampaignFormDialog(kind: widget.kind, item: item),
-    ),
-  );
+  void _form([CampaignModel? item]) {
+    final route = widget.kind == CampaignKind.voucher
+        ? '/vouchers/form'
+        : '/promotion-programs/form';
+    MainScreen.of(context).navigate(route, {'item': item});
+  }
+
   Future<void> _detail(CampaignsProvider p, CampaignModel item) async {
     final dialogContext = context;
     try {
@@ -432,12 +436,13 @@ class _CampaignManagementScreenState extends State<CampaignManagementScreen> {
       return;
     }
     if (!dialogContext.mounted) return;
-    await showDialog(
+    final itemToEdit = await showDialog<CampaignModel>(
       context: dialogContext,
       builder: (_) => ChangeNotifierProvider.value(
         value: p,
         child: CampaignDetailDialog(id: item.id),
       ),
     );
+    if (mounted && itemToEdit != null) _form(itemToEdit);
   }
 }

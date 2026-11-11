@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:zella_admin_flutter/features/promotions/data/models/campaign_model.dart';
 import 'package:zella_admin_flutter/features/promotions/data/repositories/campaign_repository.dart';
-import 'package:zella_admin_flutter/features/promotions/presentation/dialogs/campaign_form_dialog.dart';
+import 'package:zella_admin_flutter/features/promotions/presentation/screens/campaign_form_screen.dart';
 import 'package:zella_admin_flutter/features/promotions/presentation/providers/campaigns_provider.dart';
 import 'package:zella_admin_flutter/features/promotions/presentation/screens/campaign_management_screen.dart';
 
@@ -104,15 +104,20 @@ void main() {
     await mount(
       tester,
       p,
-      CampaignFormDialog(kind: CampaignKind.voucher, item: p.detail(2)),
+      CampaignFormScreen(
+        kind: CampaignKind.voucher,
+        item: p.detail(2),
+        onClose: () {},
+      ),
     );
     final points = find.widgetWithText(TextFormField, 'Điểm cần đổi *');
     await tester.ensureVisible(points);
     await tester.enterText(points, '350');
     repo.fail = true;
+    await tester.ensureVisible(find.text('Lưu'));
     await tester.tap(find.text('Lưu'));
     await tester.pumpAndSettle();
-    expect(find.byType(CampaignFormDialog), findsOneWidget);
+    expect(find.byType(CampaignFormScreen), findsOneWidget);
     expect(find.textContaining('Lưu thất bại'), findsOneWidget);
     expect(repo.submitted, isNull);
     expect(tester.takeException(), isNull);
@@ -145,7 +150,9 @@ void main() {
     expect(find.text('Ưu đãi nhập mã'), findsOneWidget);
   });
 
-  testWidgets('Gift voucher form renders without assertion error', (tester) async {
+  testWidgets('Gift voucher form renders without assertion error', (
+    tester,
+  ) async {
     final repo = FakeCampaigns();
     final giftVoucher = VoucherModel(
       id: 3,
@@ -165,13 +172,19 @@ void main() {
     await mount(
       tester,
       p,
-      CampaignFormDialog(kind: CampaignKind.voucher, item: giftVoucher),
+      CampaignFormScreen(
+        kind: CampaignKind.voucher,
+        item: giftVoucher,
+        onClose: () {},
+      ),
     );
-    expect(find.byType(CampaignFormDialog), findsOneWidget);
+    expect(find.byType(CampaignFormScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Promotion screen does not show Xem chi tiết menu', (tester) async {
+  testWidgets('Promotion screen does not show Xem chi tiết menu', (
+    tester,
+  ) async {
     final repo = FakeCampaigns();
     repo.replace(
       PromotionModel(
@@ -199,4 +212,3 @@ void main() {
     expect(find.text('Xem chi tiết'), findsNothing);
   });
 }
-

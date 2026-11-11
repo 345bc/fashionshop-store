@@ -11,7 +11,6 @@ import '../../../../widgets/dialogs/zella_dialog.dart';
 import '../../data/models/campaign_model.dart';
 import '../providers/campaigns_provider.dart';
 import '../widgets/campaign_status_badge.dart';
-import 'campaign_form_dialog.dart';
 import 'voucher_email_dialog.dart';
 
 class CampaignDetailDialog extends StatefulWidget {
@@ -380,7 +379,7 @@ class _CampaignDetailDialogState extends State<CampaignDetailDialog> {
               Expanded(
                 child: _dataField(
                   'ĐƠN TỐI THIỂU',
-                  item.minOrderAmount > 0 ? money(item.minOrderAmount) : '0 đ',
+                  item.minOrderAmount > 0 ? money(item.minOrderAmount) : '0 VND',
                 ),
               ),
               const SizedBox(width: 12),
@@ -1122,18 +1121,9 @@ class _CampaignDetailDialogState extends State<CampaignDetailDialog> {
           ),
           const SizedBox(width: 12),
           ElevatedButton.icon(
-            onPressed: () async {
-              await showDialog(
-                context: context,
-                builder: (_) => ChangeNotifierProvider.value(
-                  value: p,
-                  child: CampaignFormDialog(kind: item.kind, item: item),
-                ),
-              );
-              if (context.mounted) {
-                await p.loadDetail(item.id);
-              }
-            },
+            onPressed: _toggling
+                ? null
+                : () => Navigator.of(context).pop(item),
             icon: const Icon(Symbols.edit, size: 16),
             label: const Text('Chỉnh sửa'),
           ),

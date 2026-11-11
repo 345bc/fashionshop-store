@@ -7,21 +7,27 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../../theme/app_theme.dart';
-import '../../../../widgets/dialogs/zella_dialog.dart';
 import '../../data/models/campaign_model.dart';
 import '../providers/campaigns_provider.dart';
 
-class CampaignFormDialog extends StatefulWidget {
+class CampaignFormScreen extends StatefulWidget {
   final CampaignKind kind;
   final CampaignModel? item;
 
-  const CampaignFormDialog({super.key, required this.kind, this.item});
+  final VoidCallback onClose;
+
+  const CampaignFormScreen({
+    super.key,
+    required this.kind,
+    this.item,
+    required this.onClose,
+  });
 
   @override
-  State<CampaignFormDialog> createState() => _CampaignFormDialogState();
+  State<CampaignFormScreen> createState() => _CampaignFormScreenState();
 }
 
-class _CampaignFormDialogState extends State<CampaignFormDialog> {
+class _CampaignFormScreenState extends State<CampaignFormScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _description = TextEditingController();
@@ -101,7 +107,8 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
 
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
-    if (_isDisplay &&
+    if (!_voucher &&
+        _isDisplay &&
         _imageBytes == null &&
         (_imageUrl == null || _imageUrl!.isEmpty)) {
       setState(
@@ -176,10 +183,6 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
 
       await p.save(value, creating: item == null);
       if (!mounted) return;
-      setState(() => _saving = false);
-      await WidgetsBinding.instance.endOfFrame;
-      if (!mounted) return;
-      Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -190,6 +193,7 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
           backgroundColor: AppTheme.success,
         ),
       );
+      widget.onClose();
     } on ArgumentError catch (e) {
       if (mounted) setState(() => _error = '${e.message}');
     } catch (e) {
@@ -256,181 +260,82 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final dialogWidth = (size.width * 0.8).clamp(860.0, 1160.0);
-    final dialogHeight = (size.height * 0.9).clamp(640.0, 880.0);
-    final isEditing = widget.item != null;
-
-    return PopScope(
-      canPop: !_saving,
-      child: ZellaDialog(
-        width: dialogWidth,
-        height: dialogHeight,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(isEditing),
-            const Divider(height: 1),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isWide = constraints.maxWidth >= 760;
-                      if (isWide) {
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _buildBasicInfoCard(),
-                                  const SizedBox(height: 20),
-                                  _buildDiscountCard(),
-                                  if (!_voucher) ...[
-                                    const SizedBox(height: 20),
-                                    _buildProductsCard(),
-                                  ],
-                                ],
-                              ),
+    final action = widget.item == null ? 'Thêm' : 'Chỉnh sửa';
+    final kind = widget.kind.label.toLowerCase();
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FC),
+      body: Theme(
+        data: Theme.of(context).copyWith(
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 15,
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: Color(0xFFD0D5DD)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: Color(0xFF5364FF)),
+            ),
+          ),
+        ),
+        child: AbsorbPointer(
+          absorbing: _saving,
+          child: LayoutBuilder(
+            builder: (context, box) => SingleChildScrollView(
+              padding: EdgeInsets.all(box.maxWidth < 700 ? 16 : 28),
+              child: Form(
+                key: _form,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: _saving ? null : widget.onClose,
+                          tooltip: 'Về danh sách $kind',
+                          icon: const Icon(Symbols.arrow_back, size: 20),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '$action $kind',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
                             ),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _buildScheduleCard(),
-                                  const SizedBox(height: 20),
-                                  _buildBannerCard(),
-                                  const SizedBox(height: 20),
-                                  _buildTipsCard(),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      } else {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _buildBasicInfoCard(),
-                            const SizedBox(height: 20),
-                            _buildDiscountCard(),
-                            if (!_voucher) ...[
-                              const SizedBox(height: 20),
-                              _buildProductsCard(),
-                            ],
-                            const SizedBox(height: 20),
-                            _buildScheduleCard(),
-                            const SizedBox(height: 20),
-                            _buildBannerCard(),
-                            const SizedBox(height: 20),
-                            _buildTipsCard(),
-                          ],
-                        );
-                      }
-                    },
-                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildBasicInfoCard(),
+                    const SizedBox(height: 24),
+                    _buildDiscountCard(),
+                    if (!_voucher) ...[
+                      const SizedBox(height: 24),
+                      _buildProductsCard(),
+                    ],
+                    const SizedBox(height: 24),
+                    _buildScheduleCard(),
+                    if (!_voucher) ...[
+                      const SizedBox(height: 24),
+                      _buildBannerCard(),
+                    ],
+                    const SizedBox(height: 24),
+                    _buildFooter(),
+                  ],
                 ),
               ),
             ),
-            const Divider(height: 1),
-            _buildFooter(),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Key get _formKey => _form;
-
-  Widget _buildHeader(bool isEditing) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withAlpha(20),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              _voucher ? Symbols.confirmation_number : Symbols.local_offer,
-              color: AppTheme.primary,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '${isEditing ? 'Chỉnh sửa' : 'Thêm mới'} ${widget.kind.label.toLowerCase()}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.text,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _voucher
-                            ? Colors.purple.withAlpha(25)
-                            : Colors.blue.withAlpha(25),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _voucher
-                              ? Colors.purple.withAlpha(80)
-                              : Colors.blue.withAlpha(80),
-                        ),
-                      ),
-                      child: Text(
-                        _voucher ? 'Voucher giảm giá' : 'Khuyến mãi tự động',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _voucher
-                              ? Colors.purple[800]
-                              : Colors.blue[800],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _voucher
-                      ? 'Mã voucher khách hàng nhập khi thanh toán hoặc đổi từ điểm thưởng.'
-                      : 'Chiết khấu tự động giảm vào giá bán sản phẩm được chọn trong thời gian áp dụng.',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: _saving ? null : () => Navigator.pop(context),
-            icon: const Icon(Symbols.close, size: 22),
-            splashRadius: 20,
-            tooltip: 'Đóng',
-          ),
-        ],
       ),
     );
   }
@@ -439,11 +344,11 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
     return Material(
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFFE4E7EC)),
       ),
       child: Padding(
-        padding: padding ?? const EdgeInsets.all(20),
+        padding: padding ?? const EdgeInsets.all(24),
         child: child,
       ),
     );
@@ -1085,96 +990,46 @@ class _CampaignFormDialogState extends State<CampaignFormDialog> {
     );
   }
 
-  Widget _buildTipsCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Symbols.lightbulb, size: 20, color: AppTheme.warning),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _voucher
-                  ? 'Mỗi đơn hàng có thể áp dụng 1 voucher kết hợp cùng các khuyến mãi giảm giá tự động của sản phẩm.'
-                  : 'Nếu một sản phẩm thuộc nhiều khuyến mãi cùng lúc, hệ thống sẽ tự động áp dụng mức giảm có lợi nhất cho khách hàng.',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildFooter() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Row(
-        children: [
-          if (_error != null)
-            Expanded(
-              child: Row(
-                children: [
-                  const Icon(Symbols.error, color: AppTheme.danger, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(
-                        color: AppTheme.danger,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            const Spacer(),
-          const SizedBox(width: 16),
-          OutlinedButton(
-            onPressed: _saving ? null : () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text('Đang lưu…'),
-                    ],
-                  )
-                : const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Symbols.save, size: 18),
-                      SizedBox(width: 6),
-                      Text('Lưu'),
-                    ],
-                  ),
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_error != null) ...[
+          Text(_error!, style: const TextStyle(color: AppTheme.danger)),
+          const SizedBox(height: 12),
         ],
-      ),
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            TextButton(
+              onPressed: _saving ? null : widget.onClose,
+              child: const Text('Hủy'),
+            ),
+            FilledButton.icon(
+              onPressed: _saving ? null : _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF5364FF),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 18,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9),
+                ),
+              ),
+              icon: _saving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Symbols.save, size: 18),
+              label: Text(_saving ? 'Đang lưu…' : 'Lưu'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

@@ -51,6 +51,8 @@ class RoleAccess {
         '/promotions',
         '/vouchers',
         '/promotion-programs',
+        '/vouchers/form',
+        '/promotion-programs/form',
         '/products',
       ].contains(route),
       _ => false,

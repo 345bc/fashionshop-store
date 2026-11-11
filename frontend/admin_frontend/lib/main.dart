@@ -1,5 +1,6 @@
 import 'features/suppliers/data/models/supplier_response_model.dart';
 import 'features/suppliers/presentation/screens/supplier_form_screen.dart';
+import 'features/promotions/presentation/screens/campaign_form_screen.dart';
 import 'features/products/presentation/screens/product_form_screen.dart';
 import 'features/products/presentation/screens/variant_form_screen.dart';
 import 'features/home_appearance/home_appearance_screen.dart';
@@ -250,6 +251,17 @@ class MainScreenState extends State<MainScreen> {
         return const PostCategoriesScreen();
       case '/promotions':
         return const PromotionsScreen();
+      case '/vouchers/form':
+      case '/promotion-programs/form':
+        final isVoucher = _currentRoute == '/vouchers/form';
+        final kind = isVoucher ? CampaignKind.voucher : CampaignKind.promotion;
+        final item = _currentArgs?['item'] as CampaignModel?;
+        return CampaignFormScreen(
+          key: ValueKey((kind, item?.id)),
+          kind: kind,
+          item: item,
+          onClose: () => navigate(isVoucher ? '/vouchers' : '/promotion-programs'),
+        );
       case '/vouchers':
         return const CampaignManagementScreen(kind: CampaignKind.voucher);
       case '/promotion-programs':
