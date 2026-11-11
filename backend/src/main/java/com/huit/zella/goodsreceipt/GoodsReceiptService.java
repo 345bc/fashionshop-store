@@ -31,9 +31,11 @@ public class GoodsReceiptService {
     private static final BigDecimal MAX_AMOUNT = new BigDecimal("9999999999999999.99");
 
     @Transactional(readOnly = true)
-    public Page<GoodsReceiptResponse> list(String query, String status, Pageable pageable) {
+    public Page<GoodsReceiptResponse> list(String query, String status, String paymentStatus, Long supplierId,
+            Pageable pageable) {
         String q = query == null ? "" : query.trim();
-        Page<GoodsReceipt> page = receipts.search(q, (status == null || "all".equals(status) ? null : status), pageable);
+        Page<GoodsReceipt> page = receipts.search(q, "all".equals(status) ? null : status,
+                "all".equals(paymentStatus) ? null : paymentStatus, supplierId, pageable);
         return page.map(GoodsReceiptResponse::from);
     }
 

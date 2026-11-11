@@ -17,8 +17,11 @@ public interface GoodsReceiptRepository extends JpaRepository<GoodsReceipt, Long
     @Query("""
             select r from GoodsReceipt r join r.supplier s
                 where (:status is null or r.status = :status)
+                and (:paymentStatus is null or (r.status <> 'CANCELLED' and r.paymentStatus = :paymentStatus))
+                and (:supplierId is null or s.id = :supplierId)
                 and (:query = '' or lower(r.code) like lower(concat('%', :query, '%'))
                     or lower(s.name) like lower(concat('%', :query, '%')))
             """)
-    Page<GoodsReceipt> search(@Param("query") String query, @Param("status") String status, Pageable pageable);
+    Page<GoodsReceipt> search(@Param("query") String query, @Param("status") String status,
+            @Param("paymentStatus") String paymentStatus, @Param("supplierId") Long supplierId, Pageable pageable);
 }

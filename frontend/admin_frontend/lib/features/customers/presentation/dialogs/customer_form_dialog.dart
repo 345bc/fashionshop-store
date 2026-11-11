@@ -61,7 +61,13 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
     setState(() => _saving = true);
     try {
       final provider = context.read<CustomersProvider>();
-      await provider.updateItem(widget.customer!.id, {'isActive': _active});
+      final customer = widget.customer!;
+      await provider.updateItem(customer.id, {
+        'fullName': customer.fullName,
+        'phone': customer.phone,
+        'address': customer.address,
+        'isActive': _active,
+      });
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Đã lưu khách hàng')));

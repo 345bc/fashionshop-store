@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../main.dart';
 import '../../../../widgets/common/feature_header.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
 import '../../../../widgets/common/filter_dropdown.dart';
 import '../../../../widgets/common/warehouse_table.dart';
 import '../../../inventory/data/models/inventory_response_model.dart';
+import '../../../suppliers/data/models/supplier_response_model.dart';
 import '../../data/models/goods_receipt_response_model.dart';
 import '../providers/purchases_provider.dart';
 import '../dialogs/goods_receipt_form_dialog.dart';
-import '../dialogs/goods_receipt_detail_dialog.dart';
 
 class PurchasesScreen extends StatefulWidget {
   const PurchasesScreen({super.key});
@@ -20,9 +21,12 @@ class PurchasesScreen extends StatefulWidget {
 }
 
 class _PurchasesScreenState extends State<PurchasesScreen> {
+  late Future<List<SupplierResponseModel>> _suppliers;
+
   @override
   void initState() {
     super.initState();
+    _suppliers = context.read<PurchasesProvider>().supplierOptions();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<PurchasesProvider>().loadItems();
     });
@@ -54,11 +58,12 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
             searchHint: 'Tìm theo mã phiếu hoặc tên nhà cung cấp',
             initialSearchText: p.query,
             onSearchChanged: p.search,
-            filterWidget: Row(
-              mainAxisSize: MainAxisSize.min,
+            filterWidget: Wrap(
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 FilterDropdown<String>(
-                  label: 'Trạng thái',
+                  label: 'Trạng thái phiếu',
                   searchHint: 'Tìm trạng thái',
                   value: p.status,
                   defaultValue: 'all',
@@ -66,6 +71,48 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                       .map((e) => FilterOption(value: e.key, label: e.value))
                       .toList(),
                   onChanged: (v) => p.filter(v),
+                ),
+                FilterDropdown<String>(
+                  label: 'Trạng thái thanh toán',
+                  value: p.paymentStatus,
+                  defaultValue: 'all',
+                  options: paymentStatuses.entries
+                      .map((e) => FilterOption(value: e.key, label: e.value))
+                      .toList(),
+                  onChanged: p.filterPaymentStatus,
+                ),
+                FutureBuilder(
+                  future: _suppliers,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return OutlinedButton(
+                        onPressed: snapshot.hasError
+                            ? () => setState(
+                                () => _suppliers = p.supplierOptions(),
+                              )
+                            : null,
+                        child: Text(
+                          snapshot.hasError
+                              ? 'Tải lại nhà cung cấp'
+                              : 'Đang tải nhà cung cấp…',
+                        ),
+                      );
+                    }
+                    return FilterDropdown<int?>(
+                      label: 'Nhà cung cấp',
+                      searchHint: 'Tìm nhà cung cấp',
+                      value: p.supplierId,
+                      defaultValue: null,
+                      options: [
+                        for (final supplier in snapshot.data!)
+                          FilterOption(
+                            value: supplier.id,
+                            label: supplier.name,
+                          ),
+                      ],
+                      onChanged: p.filterSupplier,
+                    );
+                  },
                 ),
               ],
             ),
@@ -97,10 +144,9 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
   Widget _row(GoodsReceiptResponseModel r) => Material(
     color: Colors.transparent,
     child: InkWell(
-      onTap: () => showDialog(
-        context: context,
-        builder: (_) => GoodsReceiptDetailDialog(receiptId: r.id),
-      ),
+      onTap: () =>
+          MainScreen.of(context)
+              .navigate('/purchases/detail', {'receiptId': r.id}),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(

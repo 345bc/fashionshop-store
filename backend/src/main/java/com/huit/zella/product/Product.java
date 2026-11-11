@@ -37,9 +37,11 @@ public class Product {
     @Nationalized
     private String description;
 
+    @Nationalized
     @Column(length = 50)
     private String style;
 
+    @Nationalized
     @Column(length = 100)
     private String occasion;
 

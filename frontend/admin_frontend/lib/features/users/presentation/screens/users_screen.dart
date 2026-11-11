@@ -12,14 +12,14 @@ import '../../../../widgets/common/bulk_action_bar.dart';
 import '../../../../widgets/common/zella_checkbox.dart';
 import '../../../../widgets/common/zella_toast.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../core/security/role_access.dart';
+import '../../../../widgets/common/filter_dropdown.dart';
+import '../../../auth/presentation/provider/auth_provider.dart';
 
 import '../../data/models/user_response_model.dart';
 import '../providers/users_provider.dart';
-import '../dialogs/user_details_dialog.dart';
 import '../dialogs/user_edit_dialog.dart';
 import '../dialogs/role_create_dialog.dart';
-import '../dialogs/user_lock_dialog.dart';
-import '../dialogs/user_delete_dialog.dart';
 
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
@@ -89,6 +89,61 @@ class _UsersScreenState extends State<UsersScreen> {
                     );
                   },
                   initialSearchText: context.read<UsersProvider>().currentQuery,
+                  filterWidget: Consumer<UsersProvider>(
+                    builder: (context, provider, _) {
+                      final roles = <String>{
+                        ...RoleAccess.labels.keys,
+                        ...provider.items.expand((user) => user.roles),
+                      };
+                      return Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          FilterDropdown<String>(
+                            label: 'Vai trò',
+                            searchHint: 'Tìm vai trò',
+                            value: provider.currentRole ?? 'ALL',
+                            defaultValue: 'ALL',
+                            options: roles
+                                .map(
+                                  (role) => FilterOption(
+                                    value: role,
+                                    label: RoleAccess.labels[role] ?? role,
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (role) {
+                              setState(() => selectedIds.clear());
+                              provider.loadItems(role: role);
+                            },
+                          ),
+                          FilterDropdown<String>(
+                            label: 'Trạng thái',
+                            value: provider.currentStatus,
+                            defaultValue: 'ALL',
+                            options: const [
+                              FilterOption(
+                                value: 'ACTIVE',
+                                label: 'Hoạt động',
+                                icon: Symbols.check_circle,
+                                iconColor: AppTheme.success,
+                              ),
+                              FilterOption(
+                                value: 'LOCKED',
+                                label: 'Đã khóa',
+                                icon: Symbols.lock,
+                                iconColor: AppTheme.danger,
+                              ),
+                            ],
+                            onChanged: (status) {
+                              setState(() => selectedIds.clear());
+                              provider.loadItems(status: status);
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Container(
@@ -160,6 +215,8 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Widget _buildTable() {
+    final canManageSuperadmins =
+        context.watch<AuthProvider?>()?.hasRole('SUPERADMIN') ?? false;
     return Consumer<UsersProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading && provider.items.isEmpty) {
@@ -183,6 +240,13 @@ class _UsersScreenState extends State<UsersScreen> {
         }
 
         final users = provider.items;
+        final editableIds = users
+            .where(
+              (user) =>
+                  canManageSuperadmins || !user.roles.contains('SUPERADMIN'),
+            )
+            .map((user) => user.id)
+            .toSet();
 
         return Container(
           decoration: const BoxDecoration(
@@ -212,17 +276,19 @@ class _UsersScreenState extends State<UsersScreen> {
                       alignment: Alignment.centerLeft,
                       child: ZellaCheckbox(
                         value:
-                            users.isNotEmpty &&
-                            selectedIds.length == users.length,
-                        onChanged: (v) {
-                          setState(() {
-                            if (v == true) {
-                              selectedIds.addAll(users.map((e) => e.id));
-                            } else {
-                              selectedIds.clear();
-                            }
-                          });
-                        },
+                            editableIds.isNotEmpty &&
+                            selectedIds.containsAll(editableIds),
+                        onChanged: editableIds.isEmpty
+                            ? null
+                            : (v) {
+                                setState(() {
+                                  if (v == true) {
+                                    selectedIds.addAll(editableIds);
+                                  } else {
+                                    selectedIds.clear();
+                                  }
+                                });
+                              },
                       ),
                     ),
                     Expanded(
@@ -264,7 +330,11 @@ class _UsersScreenState extends State<UsersScreen> {
                       const Divider(height: 1, color: AppTheme.borderLight),
                   itemBuilder: (context, index) {
                     final user = users[index];
-                    return _buildDataRow(context, user);
+                    return _buildDataRow(
+                      context,
+                      user,
+                      editableIds.contains(user.id),
+                    );
                   },
                 ),
               const Divider(height: 1, color: AppTheme.borderLight),
@@ -293,7 +363,11 @@ class _UsersScreenState extends State<UsersScreen> {
     );
   }
 
-  Widget _buildDataRow(BuildContext context, UserResponseModel user) {
+  Widget _buildDataRow(
+    BuildContext context,
+    UserResponseModel user,
+    bool canEdit,
+  ) {
     final roleDisplay = user.roles.isEmpty
         ? 'USER'
         : '${user.roles.first}${user.roles.length > 1 ? ' +${user.roles.length - 1}' : ''}';
@@ -311,221 +385,151 @@ class _UsersScreenState extends State<UsersScreen> {
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: () {},
-        hoverColor: AppTheme.surface,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                alignment: Alignment.centerLeft,
-                child: ZellaCheckbox(
-                  value: selectedIds.contains(user.id),
-                  onChanged: (v) {
-                    setState(() {
-                      if (v == true) {
-                        selectedIds.add(user.id);
-                      } else {
-                        selectedIds.remove(user.id);
-                      }
-                    });
-                  },
-                ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              alignment: Alignment.centerLeft,
+              child: ZellaCheckbox(
+                value: selectedIds.contains(user.id),
+                onChanged: !canEdit
+                    ? null
+                    : (v) {
+                        setState(() {
+                          if (v == true) {
+                            selectedIds.add(user.id);
+                          } else {
+                            selectedIds.remove(user.id);
+                          }
+                        });
+                      },
               ),
-              Expanded(
-                flex: 3,
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: AppTheme.primary.withAlpha(25),
-                      child: Text(
-                        user.username.isNotEmpty
-                            ? user.username.substring(0, 1).toUpperCase()
-                            : 'U',
-                        style: const TextStyle(
-                          color: AppTheme.primary,
-                          fontWeight: FontWeight.bold,
+            ),
+            Expanded(
+              flex: 3,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: AppTheme.primary.withAlpha(25),
+                    child: Text(
+                      user.username.isNotEmpty
+                          ? user.username.substring(0, 1).toUpperCase()
+                          : 'U',
+                      style: const TextStyle(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.username,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user.username,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          user.email,
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
                           ),
-                          Text(
-                            user.email,
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 13,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Tooltip(
-                    message: user.roles.join(', '),
-                    child: StatusBadge(
-                      text: roleDisplay,
-                      textColor: roleDisplay.toLowerCase() == 'super admin'
-                          ? AppTheme.primary
-                          : roleDisplay.toLowerCase() == 'admin'
-                          ? const Color(0xFF1976D2)
-                          : roleDisplay.toLowerCase() == 'manager'
-                          ? const Color(0xFF7B1FA2)
-                          : AppTheme.textSecondary,
-                      backgroundColor:
-                          roleDisplay.toLowerCase() == 'super admin'
-                          ? AppTheme.primary.withAlpha(25)
-                          : roleDisplay.toLowerCase() == 'admin'
-                          ? const Color(0xFFE3F2FD)
-                          : roleDisplay.toLowerCase() == 'manager'
-                          ? const Color(0xFFF3E5F5)
-                          : AppTheme.surface,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                ],
               ),
-              Expanded(
-                flex: 2,
-                child: Align(
-                  alignment: Alignment.centerLeft,
+            ),
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Tooltip(
+                  message: user.roles.join(', '),
                   child: StatusBadge(
-                    text: statusDisplay,
-                    textColor: statusDisplay.toLowerCase() == 'hoạt động'
-                        ? AppTheme.success
-                        : AppTheme.danger,
-                    backgroundColor: statusDisplay.toLowerCase() == 'hoạt động'
-                        ? AppTheme.success.withAlpha(25)
-                        : AppTheme.danger.withAlpha(25),
+                    text: roleDisplay,
+                    textColor: roleDisplay.toLowerCase() == 'super admin'
+                        ? AppTheme.primary
+                        : roleDisplay.toLowerCase() == 'admin'
+                        ? const Color(0xFF1976D2)
+                        : roleDisplay.toLowerCase() == 'manager'
+                        ? const Color(0xFF7B1FA2)
+                        : AppTheme.textSecondary,
+                    backgroundColor: roleDisplay.toLowerCase() == 'super admin'
+                        ? AppTheme.primary.withAlpha(25)
+                        : roleDisplay.toLowerCase() == 'admin'
+                        ? const Color(0xFFE3F2FD)
+                        : roleDisplay.toLowerCase() == 'manager'
+                        ? const Color(0xFFF3E5F5)
+                        : AppTheme.surface,
                   ),
                 ),
               ),
-              Expanded(
-                flex: 3,
-                child: Text(
-                  dateDisplay,
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 13,
-                  ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: StatusBadge(
+                  text: statusDisplay,
+                  textColor: statusDisplay.toLowerCase() == 'hoạt động'
+                      ? AppTheme.success
+                      : AppTheme.danger,
+                  backgroundColor: statusDisplay.toLowerCase() == 'hoạt động'
+                      ? AppTheme.success.withAlpha(25)
+                      : AppTheme.danger.withAlpha(25),
                 ),
               ),
-              SizedBox(
-                width: 48,
-                child: ActionMenu(
-                  items: [
-                    const ActionMenuItem(
-                      value: 'view',
-                      label: 'Xem chi tiết',
-                      icon: Symbols.visibility,
-                    ),
-                    const ActionMenuItem(
-                      value: 'edit',
-                      label: 'Chỉnh sửa',
-                      icon: Symbols.edit,
-                    ),
-                    // const ActionMenuItem(
-                    //   value: 'permission',
-                    //   label: 'Phân quyền',
-                    //   icon: Symbols.shield,
-                    // ),
-                    // const ActionMenuItem(
-                    //   value: 'reset_password',
-                    //   label: 'Cấp lại mật khẩu',
-                    //   icon: Symbols.lock_reset,
-                    // ),
-                    // ActionMenuItem.divider(),
-                    // ActionMenuItem(
-                    //   value: 'lock',
-                    //   label: user.isActive
-                    //       ? 'Khóa tài khoản'
-                    //       : 'Mở khóa tài khoản',
-                    //   icon: user.isActive
-                    //       ? Symbols.lock
-                    //       : Symbols.lock_open,
-                    //   color: user.isActive
-                    //       ? AppTheme.warning
-                    //       : AppTheme.success,
-                    // ),
-                    // ActionMenuItem(
-                    //   value: 'delete',
-                    //   label: 'Xóa tài khoản',
-                    //   icon: Symbols.delete,
-                    //   color: AppTheme.danger,
-                    // ),
-                  ],
-                  onSelected: (value) {
-                    final userMap = {
-                      'id': user.id,
-                      'name': user.username,
-                      'email': user.email,
-                      'role': roleDisplay,
-                      'status': statusDisplay,
-                      'roles': user.roles,
-                      'isActive': user.isActive,
-                    };
-
-                    switch (value) {
-                      case 'view':
-                        showDialog(
-                          context: context,
-                          builder: (_) => UserDetailsDialog(user: userMap),
-                        );
-                        break;
-                      case 'edit':
-                        showDialog(
-                          context: context,
-                          builder: (_) => UserEditDialog(user: userMap),
-                        );
-                        break;
-                      case 'permission':
-                        showDialog(
-                          context: context,
-                          builder: (_) => UserEditDialog(user: userMap),
-                        );
-                        break;
-                      case 'reset_password':
-                        showDialog(
-                          context: context,
-                          builder: (_) => UserEditDialog(user: userMap),
-                        );
-                        break;
-                      case 'lock':
-                        showDialog(
-                          context: context,
-                          builder: (_) => UserLockDialog(user: userMap),
-                        );
-                        break;
-                      case 'delete':
-                        showDialog(
-                          context: context,
-                          builder: (_) => UserDeleteDialog(user: userMap),
-                        );
-                        break;
-                    }
-                  },
+            ),
+            Expanded(
+              flex: 3,
+              child: Text(
+                dateDisplay,
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
                 ),
               ),
-            ],
-          ),
+            ),
+            SizedBox(
+              width: 48,
+              child: !canEdit
+                  ? null
+                  : ActionMenu(
+                      items: const [
+                        ActionMenuItem(
+                          value: 'edit',
+                          label: 'Chỉnh sửa',
+                          icon: Symbols.edit,
+                        ),
+                      ],
+                      onSelected: (_) {
+                        final userMap = {
+                          'id': user.id,
+                          'name': user.username,
+                          'email': user.email,
+                          'role': roleDisplay,
+                          'status': statusDisplay,
+                          'roles': user.roles,
+                          'isActive': user.isActive,
+                        };
+                        showDialog(
+                          context: context,
+                          builder: (_) => UserEditDialog(user: userMap),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
     );

@@ -20,8 +20,9 @@ class InventoryProvider extends ChangeNotifier {
     loadItems();
   }
 
-  void filter(String value) {
+  void filter(String value, {bool clearSearch = false}) {
     status = value;
+    if (clearSearch) query = '';
     currentPage = 0;
     loadItems();
   }
@@ -69,6 +70,8 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>> history(int id, {int page = 0}) =>
       _repository.history(id, page: page);
+  Future<({int lowStock, int outOfStock})> stockAlerts() =>
+      _repository.getStockAlerts();
   Future<void> adjust(Map<String, dynamic> data) async {
     await _repository.adjust(data);
     await loadItems();

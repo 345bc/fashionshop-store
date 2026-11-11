@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
+import '../../../auth/presentation/provider/auth_provider.dart';
 import '../providers/users_provider.dart';
 
 class UserEditDialog extends StatefulWidget {
@@ -25,15 +26,6 @@ class _UserEditDialogState extends State<UserEditDialog> {
   bool _isActive = true;
   bool _isLoading = false;
 
-  final List<String> _roles = [
-    'ADMIN',
-    'USER',
-    'SALES',
-    'WAREHOUSE',
-    'CUSTOMER_SUPPORT',
-    'MARKETING',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -48,7 +40,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
         _selectedRoles.addAll(
           (widget.user!['roles'] as List)
               .map((role) => role.toString())
-              .where(_roles.contains),
+              .where(RoleAccess.labels.containsKey),
         );
       }
       _isActive = widget.user!['isActive'] ?? true;
@@ -201,6 +193,8 @@ class _UserEditDialogState extends State<UserEditDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final canAssignSuperadmin =
+        context.watch<AuthProvider?>()?.hasRole('SUPERADMIN') ?? false;
     final isEditing = widget.user != null;
     final size = MediaQuery.sizeOf(context);
 
@@ -243,7 +237,10 @@ class _UserEditDialogState extends State<UserEditDialog> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _roles
+                  children: RoleAccess.labels.keys
+                      .where(
+                        (role) => role != 'SUPERADMIN' || canAssignSuperadmin,
+                      )
                       .map(
                         (role) => FilterChip(
                           label: Text(RoleAccess.labels[role] ?? role),

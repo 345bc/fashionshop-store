@@ -27,9 +27,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT DISTINCT u FROM User u LEFT JOIN u.roles r WHERE " +
            "(:query IS NULL OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
-           "(:role IS NULL OR r.roleCode = :role)")
-    Page<User> searchUsers(@org.springframework.data.repository.query.Param("query") String query, 
-                           @org.springframework.data.repository.query.Param("role") String role, 
+           "(:role IS NULL OR r.roleCode = :role) AND (:active IS NULL OR u.isActive = :active)")
+    Page<User> searchUsers(@org.springframework.data.repository.query.Param("query") String query,
+                           @org.springframework.data.repository.query.Param("role") String role,
+                           @org.springframework.data.repository.query.Param("active") Boolean active,
                            Pageable pageable);
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

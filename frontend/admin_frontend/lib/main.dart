@@ -1,9 +1,16 @@
+import 'features/suppliers/data/models/supplier_response_model.dart';
+import 'features/suppliers/presentation/screens/supplier_form_screen.dart';
+import 'features/promotions/presentation/screens/campaign_form_screen.dart';
+import 'features/products/presentation/screens/product_form_screen.dart';
+import 'features/products/presentation/screens/variant_form_screen.dart';
 import 'features/home_appearance/home_appearance_screen.dart';
 import 'features/bought_together/bought_together_screen.dart';
 
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'features/posts/post_category_form_screen.dart';
+import 'features/posts/post_form_screen.dart';
 import 'features/posts/posts_screen.dart';
 import 'features/posts/post_categories_screen.dart';
 import 'core/security/role_access.dart';
@@ -20,6 +27,8 @@ import 'widgets/app_layout.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'features/products/presentation/screens/products_screen.dart';
+import 'features/inventory/data/models/inventory_response_model.dart';
+import 'features/inventory/presentation/screens/inventory_detail_screen.dart';
 import 'features/inventory/presentation/screens/inventory_screen.dart';
 import 'features/promotions/presentation/screens/promotions_screen.dart';
 import 'features/promotions/presentation/screens/campaign_management_screen.dart';
@@ -29,6 +38,7 @@ import 'features/orders/presentation/screens/orders_screen.dart';
 import 'features/orders/presentation/providers/orders_provider.dart';
 import 'features/customers/presentation/screens/customers_screen.dart';
 import 'features/customers/presentation/providers/customers_provider.dart';
+import 'features/purchases/presentation/screens/goods_receipt_detail_screen.dart';
 import 'features/purchases/presentation/screens/purchases_screen.dart';
 import 'features/purchases/presentation/providers/purchases_provider.dart';
 import 'features/inventory/presentation/providers/inventory_provider.dart';
@@ -148,31 +158,19 @@ class MainScreen extends StatefulWidget {
 class MainScreenState extends State<MainScreen> {
   String _currentRoute = '/';
   Map<String, dynamic>? _currentArgs;
-  Widget? _currentDrawer;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _showUnauthorized = false;
 
   void navigate(String route, [Map<String, dynamic>? args]) {
-    if (!RoleAccess.canOpen(
-      context.read<AuthProvider>().user?.activeRole,
-      route,
-    )) {
+    final role = context.read<AuthProvider>().user?.activeRole;
+    if (route == '/unauthorized' || !RoleAccess.canOpen(role, route)) {
+      setState(() => _showUnauthorized = true);
       return;
     }
     setState(() {
       _currentRoute = route;
       _currentArgs = args;
+      _showUnauthorized = false;
     });
-  }
-
-  void openDrawer(Widget drawerContent) {
-    setState(() {
-      _currentDrawer = drawerContent;
-    });
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
-
-  void closeDrawer() {
-    _scaffoldKey.currentState?.closeEndDrawer();
   }
 
   Widget _buildScreen() {
@@ -180,14 +178,11 @@ class MainScreenState extends State<MainScreen> {
     if (!RoleAccess.canOpen(role, _currentRoute)) {
       _currentRoute = RoleAccess.home(role);
       _currentArgs = null;
-      _currentDrawer = null;
     }
-    switch (_currentRoute) {
+    switch (_showUnauthorized ? '/unauthorized' : _currentRoute) {
       case '/':
         return DashboardScreen(onNavigate: (route) => navigate(route));
       case '/categories':
-        return const CategoriesScreen();
-      case '/product-attributes':
         return const CategoriesScreen();
       case '/colors':
         return const AttributeManagementScreen(kind: AttributeKind.color);
@@ -195,24 +190,78 @@ class MainScreenState extends State<MainScreen> {
         return const AttributeManagementScreen(kind: AttributeKind.size);
       case '/sizeguides':
         return const AttributeManagementScreen(kind: AttributeKind.sizeGuide);
+      case '/products/new':
+        return ProductFormScreen(onClose: () => navigate('/products'));
+      case '/products/edit':
+        return ProductFormScreen(
+          product: _currentArgs,
+          onClose: () => navigate('/products'),
+        );
       case '/products':
         return const ProductsScreen();
-      // case '/product-detail':
-      //   return ProductDetailScreen(product: _currentArgs);
+      case '/products/variants/new':
+      case '/products/variants/edit':
+        final product = _currentArgs?['product'] as Map<String, dynamic>?;
+        final variant = _currentArgs?['variant'] as Map<String, dynamic>?;
+        if (product == null ||
+            (_currentRoute == '/products/variants/edit' && variant == null)) {
+          return ProductVariantsScreen(product: product);
+        }
+        return VariantFormScreen(
+          key: ValueKey((product['id'], variant?['id'])),
+          productId: (product['id'] as num).toInt(),
+          variant: variant,
+          onClose: () => navigate('/product-variants', product),
+        );
       case '/product-variants':
         return ProductVariantsScreen(product: _currentArgs);
+      case '/inventory/detail':
+        final item = _currentArgs?['item'] as InventoryResponseModel?;
+        if (item == null) return const InventoryScreen();
+        return InventoryDetailScreen(
+          key: ValueKey(item.variantId),
+          item: item,
+          onClose: () => navigate('/inventory'),
+        );
       case '/inventory':
         return const InventoryScreen();
       case '/home-appearance':
         return const HomeAppearanceScreen();
       case '/bought-together':
         return const BoughtTogetherScreen();
+      case '/posts/form':
+        final post = _currentArgs?['post'] as Map<String, dynamic>?;
+        final categories = _currentArgs?['categories'] as List<dynamic>? ?? [];
+        return PostFormScreen(
+          key: ValueKey(post?['id']),
+          post: post,
+          categories: categories,
+          onClose: () => navigate('/posts'),
+        );
+      case '/post-categories/form':
+        final category = _currentArgs?['category'] as Map<String, dynamic>?;
+        return PostCategoryFormScreen(
+          key: ValueKey(category?['id']),
+          category: category,
+          onClose: () => navigate('/post-categories'),
+        );
       case '/posts':
         return const PostsScreen();
       case '/post-categories':
         return const PostCategoriesScreen();
       case '/promotions':
         return const PromotionsScreen();
+      case '/vouchers/form':
+      case '/promotion-programs/form':
+        final isVoucher = _currentRoute == '/vouchers/form';
+        final kind = isVoucher ? CampaignKind.voucher : CampaignKind.promotion;
+        final item = _currentArgs?['item'] as CampaignModel?;
+        return CampaignFormScreen(
+          key: ValueKey((kind, item?.id)),
+          kind: kind,
+          item: item,
+          onClose: () => navigate(isVoucher ? '/vouchers' : '/promotion-programs'),
+        );
       case '/vouchers':
         return const CampaignManagementScreen(kind: CampaignKind.voucher);
       case '/promotion-programs':
@@ -221,8 +270,23 @@ class MainScreenState extends State<MainScreen> {
         return const OrdersScreen();
       case '/customers':
         return const CustomersScreen();
+      case '/purchases/detail':
+        final receiptId = _currentArgs?['receiptId'] as int?;
+        if (receiptId == null) return const PurchasesScreen();
+        return GoodsReceiptDetailScreen(
+          key: ValueKey(receiptId),
+          receiptId: receiptId,
+          onClose: () => navigate('/purchases'),
+        );
       case '/purchases':
         return const PurchasesScreen();
+      case '/suppliers/form':
+        final supplier = _currentArgs?['supplier'] as SupplierResponseModel?;
+        return SupplierFormScreen(
+          key: ValueKey(supplier?.id),
+          supplier: supplier,
+          onClose: () => navigate('/suppliers'),
+        );
       case '/suppliers':
         return const SuppliersScreen();
       case '/feedback':
@@ -232,9 +296,12 @@ class MainScreenState extends State<MainScreen> {
       case '/reports':
         return const ReportsScreen();
       case '/users':
-        return const UsersScreen();
+        return UsersScreen(key: ValueKey(role));
       case '/unauthorized':
-        return const UnauthorizedScreen();
+        return UnauthorizedScreen(
+          onBack: () => setState(() => _showUnauthorized = false),
+          onHome: () => navigate(RoleAccess.home(role)),
+        );
       default:
         return Center(
           child: Text(
@@ -247,13 +314,12 @@ class MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screen = _buildScreen();
     return Scaffold(
-      key: _scaffoldKey,
-      endDrawer: _currentDrawer,
       body: AppLayout(
-        currentRoute: _currentRoute,
+        currentRoute: _showUnauthorized ? '/unauthorized' : _currentRoute,
         onNavigate: navigate,
-        child: _buildScreen(),
+        child: screen,
       ),
     );
   }

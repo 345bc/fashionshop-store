@@ -1,7 +1,5 @@
-import 'dart:typed_data';
+import '../../main.dart';
 
-import 'package:dio/dio.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -89,245 +87,9 @@ class _PostCategoriesScreenState extends State<PostCategoriesScreen> {
     return _filteredCategories.sublist(start, end);
   }
 
-  Future<void> _toggleStatus(Map<String, dynamic> cat) async {
-    try {
-      final newActive = !(cat['active'] == true);
-      await _api.put(
-        '/admin/posts/categories/${cat['id']}',
-        data: {
-          'name': cat['name'],
-          'thumbnail': cat['thumbnail'],
-          'active': newActive,
-        },
-      );
-      await _loadCategories();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              newActive
-                  ? 'Đã kích hoạt danh mục "${cat['name']}"'
-                  : 'Đã ẩn danh mục "${cat['name']}"',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Lỗi: $e')));
-      }
-    }
-  }
-
-  Future<void> _openDialog([Map<String, dynamic>? category]) async {
-    final name = TextEditingController(text: category?['name']);
-    bool active = category?['active'] ?? true;
-    String? thumbnail = category?['thumbnail'];
-    Uint8List? coverBytes;
-    String? coverName;
-    bool saving = false;
-    String? error;
-    final form = GlobalKey<FormState>();
-
-    final changed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, update) => PopScope(
-          canPop: !saving,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Text(category == null ? 'Thêm danh mục' : 'Sửa danh mục'),
-            content: SizedBox(
-              width: 440,
-              child: SingleChildScrollView(
-                child: Form(
-                  key: form,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: name,
-                        enabled: !saving,
-                        maxLength: 100,
-                        decoration: const InputDecoration(
-                          labelText: 'Tên danh mục *',
-                          hintText: 'Nhập tên danh mục bài viết',
-                        ),
-                        validator: (v) => v == null || v.trim().isEmpty
-                            ? 'Vui lòng nhập tên danh mục'
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      if (coverBytes != null || thumbnail != null)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: coverBytes != null
-                              ? Image.memory(
-                                  coverBytes!,
-                                  height: 145,
-                                  width: 440,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.network(
-                                  thumbnail!,
-                                  height: 145,
-                                  width: 440,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => const SizedBox(
-                                    height: 80,
-                                    child: Center(
-                                      child: Text('Không tải được ảnh bìa'),
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.add_photo_alternate_outlined),
-                        label: Text(
-                          coverBytes != null || thumbnail != null
-                              ? 'Đổi ảnh bìa danh mục'
-                              : 'Chọn ảnh bìa danh mục',
-                        ),
-                        onPressed: saving
-                            ? null
-                            : () async {
-                                try {
-                                  final selected = await FilePicker.platform
-                                      .pickFiles(
-                                        type: FileType.custom,
-                                        allowedExtensions: [
-                                          'jpg',
-                                          'jpeg',
-                                          'png',
-                                          'gif',
-                                          'webp',
-                                        ],
-                                        withData: true,
-                                      );
-                                  if (selected == null || !context.mounted) {
-                                    return;
-                                  }
-                                  final file = selected.files.single;
-                                  if (file.bytes == null ||
-                                      file.size > 10 * 1024 * 1024) {
-                                    update(
-                                      () => error = 'Chọn ảnh JPG, PNG, GIF hoặc WebP tối đa 10 MB.',
-                                    );
-                                    return;
-                                  }
-                                  update(() {
-                                    coverBytes = file.bytes;
-                                    coverName = file.name;
-                                    error = null;
-                                  });
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    update(() => error = e.toString());
-                                  }
-                                }
-                              },
-                      ),
-                      const SizedBox(height: 12),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Hiển thị danh mục và bài viết'),
-                        value: active,
-                        onChanged: saving
-                            ? null
-                            : (v) => update(() => active = v),
-                      ),
-                      if (error != null) ...[
-                        const SizedBox(height: 8),
-                        Text(error!, style: const TextStyle(color: Colors.red)),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: saving ? null : () => Navigator.pop(dialogContext),
-                child: const Text('Hủy'),
-              ),
-              FilledButton(
-                onPressed: saving
-                    ? null
-                    : () async {
-                        if (!form.currentState!.validate()) return;
-                        if (coverBytes == null &&
-                            (thumbnail == null || thumbnail!.isEmpty)) {
-                          update(
-                            () => error = 'Vui lòng chọn ảnh bìa danh mục.',
-                          );
-                          return;
-                        }
-                        update(() {
-                          saving = true;
-                          error = null;
-                        });
-                        try {
-                          if (coverBytes != null) {
-                            final response = await _api.post(
-                              '/admin/posts/images',
-                              data: FormData.fromMap({
-                                'file': MultipartFile.fromBytes(
-                                  coverBytes!,
-                                  filename: coverName ?? 'category.jpg',
-                                ),
-                              }),
-                            );
-                            thumbnail = response.data['data']['url'] as String;
-                            coverBytes = null;
-                          }
-                          final data = {
-                            'name': name.text.trim(),
-                            'thumbnail': thumbnail,
-                            'active': active,
-                          };
-                          if (category == null) {
-                            await _api.post(
-                              '/admin/posts/categories',
-                              data: data,
-                            );
-                          } else {
-                            await _api.put(
-                              '/admin/posts/categories/${category['id']}',
-                              data: data,
-                            );
-                          }
-                          if (dialogContext.mounted) {
-                            update(() => saving = false);
-                            await WidgetsBinding.instance.endOfFrame;
-                            if (dialogContext.mounted) {
-                              Navigator.pop(dialogContext, true);
-                            }
-                          }
-                        } catch (e) {
-                          if (dialogContext.mounted) {
-                            update(() {
-                              saving = false;
-                              error = e.toString();
-                            });
-                          }
-                        }
-                      },
-                child: Text(saving ? 'Đang lưu…' : 'Lưu'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    name.dispose();
-    if (changed == true && mounted) _loadCategories();
+  void _openForm([Map<String, dynamic>? category]) {
+    MainScreen.of(context)
+        .navigate('/post-categories/form', {'category': category});
   }
 
   Text _header(String label) => Text(
@@ -345,140 +107,124 @@ class _PostCategoriesScreenState extends State<PostCategoriesScreen> {
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _openDialog(category),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Row(
-            children: [
-              ZellaCheckbox(
-                value: selectedIds.contains(id),
-                onChanged: (val) {
-                  setState(() {
-                    if (val == true) {
-                      selectedIds.add(id);
-                    } else {
-                      selectedIds.remove(id);
-                    }
-                  });
-                },
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 4,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppTheme.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.borderLight),
-                      ),
-                      child: category['thumbnail'] != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                category['thumbnail'],
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => const Icon(
-                                  Symbols.folder,
-                                  color: AppTheme.primary,
-                                  size: 22,
-                                ),
-                              ),
-                            )
-                          : const Icon(
-                              Symbols.folder,
-                              color: AppTheme.primary,
-                              size: 22,
-                            ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        category['name'] ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Row(
+          children: [
+            ZellaCheckbox(
+              value: selectedIds.contains(id),
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    selectedIds.add(id);
+                  } else {
+                    selectedIds.remove(id);
+                  }
+                });
+              },
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 4,
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppTheme.borderLight),
                     ),
+                    child: category['thumbnail'] != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              category['thumbnail'],
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => const Icon(
+                                Symbols.folder,
+                                color: AppTheme.primary,
+                                size: 22,
+                              ),
+                            ),
+                          )
+                        : const Icon(
+                            Symbols.folder,
+                            color: AppTheme.primary,
+                            size: 22,
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Text(
-                      category['slug'] ?? '',
+                      category['name'] ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13,
-                        fontFamily: 'monospace',
-                        color: AppTheme.textSecondary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-              Expanded(
-                flex: 2,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: StatusBadge(
-                    text: isActive ? 'Hoạt động' : 'Đã ẩn',
-                    textColor: isActive ? AppTheme.success : AppTheme.danger,
-                    backgroundColor:
-                        (isActive ? AppTheme.success : AppTheme.danger)
-                            .withAlpha(25),
+            ),
+            Expanded(
+              flex: 3,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppTheme.borderLight),
+                  ),
+                  child: Text(
+                    category['slug'] ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ),
               ),
-              SizedBox(
-                width: 48,
-                child: ActionMenu(
-                  items: [
-                    const ActionMenuItem(
-                      value: 'edit',
-                      label: 'Chỉnh sửa',
-                      icon: Symbols.edit,
-                    ),
-                    ActionMenuItem(
-                      value: 'toggle',
-                      label: isActive ? 'Ẩn danh mục' : 'Kích hoạt',
-                      icon: isActive
-                          ? Symbols.visibility_off
-                          : Symbols.visibility,
-                      color: isActive ? AppTheme.warning : AppTheme.success,
-                    ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      _openDialog(category);
-                    } else if (value == 'toggle') {
-                      _toggleStatus(category);
-                    }
-                  },
+            ),
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: StatusBadge(
+                  text: isActive ? 'Hoạt động' : 'Đã ẩn',
+                  textColor: isActive ? AppTheme.success : AppTheme.danger,
+                  backgroundColor:
+                      (isActive ? AppTheme.success : AppTheme.danger).withAlpha(
+                        25,
+                      ),
                 ),
               ),
-            ],
-          ),
+            ),
+            SizedBox(
+              width: 48,
+              child: ActionMenu(
+                items: [
+                  const ActionMenuItem(
+                    value: 'edit',
+                    label: 'Chỉnh sửa',
+                    icon: Symbols.edit,
+                  ),
+                ],
+                onSelected: (_) => _openForm(category),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -501,7 +247,7 @@ class _PostCategoriesScreenState extends State<PostCategoriesScreen> {
                   'Quản lý cấu trúc danh mục bài viết và phân loại tin tức',
               actionLabel: 'Thêm danh mục',
               actionIcon: Symbols.add,
-              onActionPressed: () => _openDialog(),
+              onActionPressed: () => _openForm(),
               secondaryAction: IconButton(
                 onPressed: _loadCategories,
                 tooltip: 'Tải lại',
@@ -610,10 +356,7 @@ class _PostCategoriesScreenState extends State<PostCategoriesScreen> {
                             ),
                             const SizedBox(width: 16),
                             Expanded(flex: 4, child: _header('DANH MỤC')),
-                            Expanded(
-                              flex: 3,
-                              child: _header('SLUG'),
-                            ),
+                            Expanded(flex: 3, child: _header('SLUG')),
                             Expanded(flex: 2, child: _header('TRẠNG THÁI')),
                             const SizedBox(width: 48),
                           ],

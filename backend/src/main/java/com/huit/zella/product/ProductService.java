@@ -342,7 +342,24 @@ public class ProductService {
                     ? productRepository.findByCategoryIdAndNameContainingIgnoreCase(categoryId, query.trim(), pageable)
                     : productRepository.findByCategoryId(categoryId, pageable);
         }
-        return page.map(ProductResponse::from);
+        if (page.isEmpty()) return page.map(ProductResponse::from);
+        List<Long> ids = page.getContent().stream().map(Product::getId).toList();
+        Map<Long, String> images = new HashMap<>();
+        for (ProductImage image : productImageRepository.findByProductIdInOrderByIsPrimaryDescDisplayOrderAscIdAsc(ids)) {
+            images.putIfAbsent(image.getProduct().getId(), image.getImageUrl());
+        }
+        List<Long> missing = ids.stream().filter(id -> !images.containsKey(id)).toList();
+        if (!missing.isEmpty()) {
+            List<ProductVariant> variants = productVariantRepository.findCardVariants(missing);
+            Map<Long, Long> productsByVariant = new HashMap<>();
+            variants.forEach(variant -> productsByVariant.put(variant.getId(), variant.getProduct().getId()));
+            if (!productsByVariant.isEmpty()) {
+                for (VariantImage image : variantImageRepository.findByVariantIdInOrderByIsPrimaryDescDisplayOrderAscIdAsc(new ArrayList<>(productsByVariant.keySet()))) {
+                    images.putIfAbsent(productsByVariant.get(image.getVariant().getId()), image.getImageUrl());
+                }
+            }
+        }
+        return page.map(product -> ProductResponse.from(product, images.get(product.getId())));
     }
 
     @Transactional(readOnly = true)

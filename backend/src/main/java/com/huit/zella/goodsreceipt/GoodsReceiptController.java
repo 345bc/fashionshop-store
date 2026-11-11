@@ -33,12 +33,14 @@ public class GoodsReceiptController {
     public ApiResponse<PageResponse<GoodsReceiptResponse>> list(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String paymentStatus,
+            @RequestParam(required = false) Long supplierId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         int safeSize = Math.max(1, Math.min(size, 100));
         return ApiResponse.success(PageResponse.from(service.list(
-                q, status,
+                q, status, paymentStatus, supplierId,
                 PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "id"))
         )));
     }

@@ -23,12 +23,13 @@ public class UserController {
     public ApiResponse<PageResponse<UserResponse>> list(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String role,
+            @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "15") int size
     ) {
         int safeSize = Math.max(1, Math.min(size, 100));
         return ApiResponse.success(PageResponse.from(userService.listUser(
-                q, role, PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "id"))
+                q, role, active, PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "id"))
         )));
     }
 

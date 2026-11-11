@@ -34,6 +34,11 @@ public class InventoryController {
         )));
     }
 
+    @GetMapping("/stock-alerts")
+    public ApiResponse<InventoryStockAlerts> stockAlerts() {
+        return ApiResponse.success(service.stockAlerts());
+    }
+
     @GetMapping("/movements")
     public ApiResponse<PageResponse<InventoryMovementResponse>> history(
             @RequestParam Long variantId,
@@ -47,7 +52,6 @@ public class InventoryController {
         )));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/adjustments")
     public ApiResponse<String> adjust(@Valid @RequestBody CreateInventoryAdjustmentRequest request,
                                       @AuthenticationPrincipal CurrentUser actor) {

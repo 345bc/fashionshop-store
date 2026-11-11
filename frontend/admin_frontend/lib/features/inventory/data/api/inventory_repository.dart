@@ -57,6 +57,18 @@ class InventoryRepository {
   });
 
   final _api = ApiClient();
+
+  Future<({int lowStock, int outOfStock})> getStockAlerts() => warehouseRequest(
+    () async {
+      final response = await _api.get('${ApiEndpoints.inventory}/stock-alerts');
+      final data = response.data['data'] as Map;
+      return (
+        lowStock: (data['lowStock'] as num).toInt(),
+        outOfStock: (data['outOfStock'] as num).toInt(),
+      );
+    },
+  );
+
   Future<Map<String, dynamic>> history(int id, {int page = 0, int size = 15}) =>
       warehouseRequest(() async {
         final response = await _api.get(
