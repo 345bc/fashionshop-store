@@ -38,8 +38,7 @@ app.payment.vnpay.return-url=http://localhost:3000/checkout
 app.order.payment-simulation.enabled=false
 
 # Chat thời trang: Spring Boot gọi Rasa Server, không dùng phiên quản trị AiModel.
-app.chat.rasa.base-url=${RASA_BASE_URL:http://127.0.0.1:5005}
-app.chat.rasa.auth-token=${RASA_AUTH_TOKEN:}
+app.chat.rasa.base-url=${RASA_BASE_URL:http://127.0.0.1:9090}
 app.chat.rasa.timeout-seconds=${RASA_TIMEOUT_SECONDS:60}
 
 # Google OAuth2 Login

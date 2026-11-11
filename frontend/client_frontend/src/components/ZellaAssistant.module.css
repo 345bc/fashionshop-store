@@ -158,6 +158,10 @@
   gap: 12px;
   max-width: 100%;
 }
+.continuation {
+  padding-inline-start: 44px;
+  margin-block-start: -14px;
+}
 .bot p {
   min-width: 0;
   padding: 2px 0 0;
@@ -527,10 +531,10 @@
 .chatToolbar button { border: 0; background: transparent; text-decoration: underline; cursor: pointer; color: #333; font: inherit; }
 .chatToolbar button:disabled { opacity: .5; cursor: wait; }
 .quickReplies { display: flex; flex-wrap: wrap; gap: 8px; }
-.quickReplies button, .chatAction { padding: 8px 12px; border: 1px solid #deded8; border-radius: 14px; background: #fafbf8; color: #29372c; font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
-.quickReplies button:hover, .chatAction:hover { background: #eef2e9; }
-.quickReplies button:disabled, .chatAction:disabled { opacity: .5; cursor: wait; }
-.quickReplies button:focus-visible, .chatAction:focus-visible, .chatToolbar button:focus-visible { outline: 2px solid #52664f; outline-offset: 3px; }
+.quickReplies button { padding: 8px 12px; border: 1px solid #deded8; border-radius: 14px; background: #fafbf8; color: #29372c; font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+.quickReplies button:hover { background: #eef2e9; }
+.quickReplies button:disabled { opacity: .5; cursor: wait; }
+.quickReplies button:focus-visible, .chatToolbar button:focus-visible { outline: 2px solid #52664f; outline-offset: 3px; }
 .guideImage { display: block; margin-top: 10px; color: inherit; font-size: 12px; }
 .guideImage img { display: block; max-width: 100%; max-height: 300px; object-fit: contain; border: 1px solid #eee; border-radius: 8px; }
 .guideImage span { display: block; margin-top: 6px; text-decoration: underline; }

@@ -9,21 +9,72 @@ import type { CatalogSuggestion } from "@/service/imageRecognitionService";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/auth/AuthContext";
 import { recognizeImage, describeRecognition, garmentName, catalogSearchUrl } from "@/service/imageRecognitionService";
-import { sendChatMessage, type ChatReply } from "@/service/chatService";
+import { sendChatMessage, type ChatProductReference, type ChatReply } from "@/service/chatService";
 import GoogleSymbol from "@/components/ui/GoogleSymbol";
 import styles from "./ZellaAssistant.module.css";
 
 const BotAvatar = dynamic(() => import("bot-avatars").then(module => module.BotAvatar), { ssr: false });
 
-type Message = ChatReply & { from: "bot" | "user"; suggestions?: CatalogSuggestion[]; retryImage?: string; retryText?: string; image?: { url: string; name: string }; streaming?: boolean };
+type Message = ChatReply & { from: "bot" | "user"; suggestions?: CatalogSuggestion[]; retryImage?: string; retryText?: string; image?: { url: string; name: string }; streaming?: boolean; continuation?: boolean };
 const welcome: Message = { from: "bot", text: "Xin chào! Mình là Zella, trợ lý thời trang. Mình có thể giúp bạn chọn size, phối đồ hoặc tìm mẫu trang phục qua tin nhắn và hình ảnh." };
 const topics = [
-  { label: "Kiểu dáng", question: "Dáng quả lê nên mặc gì?" },
-  { label: "Dịp mặc", question: "Đi làm nên mặc gì?" },
-  { label: "Màu sắc", question: "Da ngăm hợp màu nào?" },
-  { label: "Chọn size", question: "Tư vấn chọn size" },
-  { label: "Theo ngân sách", question: "Tìm sản phẩm dưới 300k" },
+  { label: "Tìm sản phẩm công sở", question: "Tìm sản phẩm công sở" },
+  { label: "Tìm sản phẩm mùa đông", question: "Tìm sản phẩm mặc vào mùa đông" },
 ];
+
+function withProductConfirmation(question: string, replies: ChatReply[], history: Message[]): ChatReply[] {
+  const isSizeQuestion = /\bsize\b|kích cỡ|kích thước|\d\s*(?:kg|kh|cm)\b|\d\s*m\s*\d/iu.test(question);
+  const isColorQuestion = /(?<!\p{L})màu(?!\p{L})/iu.test(question);
+  if ((!isSizeQuestion && !isColorQuestion) || question.startsWith("/")) return replies;
+
+  const clarification = replies.find(reply =>
+    /bạn muốn (?:hỏi|xem|tư vấn|đối chiếu)[^?\n]*(?:sản phẩm|trang phục|mẫu) nào/iu.test(reply.text)
+  );
+  const outfitPrompt = isSizeQuestion && /mặc gì/iu.test(question) && !/phối|outfit/iu.test(question)
+    ? replies.find(reply => /cho mình biết dịp mặc hoặc phong cách/iu.test(reply.text))
+    : undefined;
+  if (!clarification && !outfitPrompt) return replies;
+
+  const products = new Map<string, ChatProductReference>();
+  let latestList: ChatProductReference[] = [];
+  let latestDiscussed: ChatProductReference | undefined;
+  let isSearchTurn = false;
+  const lastUserIndex = history.findLastIndex(message => message.from === "user");
+  for (const message of history.slice(0, lastUserIndex)) {
+    if (message.from === "user") {
+      const text = message.text.toLocaleLowerCase("vi");
+      isSearchTurn = /^(?:tìm|gợi ý|đề xuất)\s/u.test(text);
+      const ordinal = text.match(/(?:^|\s)(?:số|thứ|mẫu)\s+(\d+)(?!\d|[.,]\d)/u);
+      const named = [...products.values()].sort((a, b) => b.name.length - a.name.length).find(product =>
+        text.includes(product.slug) || text.includes(product.name.toLocaleLowerCase("vi"))
+      );
+      latestDiscussed = named ?? (ordinal ? latestList[Number(ordinal[1]) - 1] : undefined) ?? latestDiscussed;
+      continue;
+    }
+    const listed = message.products ?? message.suggestions?.flatMap(suggestion => suggestion.products) ?? [];
+    for (const product of listed) products.set(product.slug, product);
+    if (listed.length > 1 || (listed.length === 1 && (isSearchTurn || !latestList.length))) latestList = listed;
+    const guide = message.sizeGuide;
+    const referenced = message.productReference ?? (guide?.slug ? { name: guide.product, slug: guide.slug } : undefined);
+    if (referenced) products.set(referenced.slug, referenced);
+    latestDiscussed = referenced ?? (listed.length === 1 ? listed[0] : latestDiscussed);
+  }
+  if (!products.size || (!clarification && !latestDiscussed)) return replies;
+
+  const topic = isSizeQuestion ? "size" : "màu";
+  const intent = isSizeQuestion ? "ask_size_advice" : "ask_product_detail";
+  const choices = latestDiscussed ? [latestDiscussed] : [...products.values()];
+  return replies.map(reply => reply === (clarification ?? outfitPrompt) ? {
+    ...reply,
+    text: latestDiscussed
+      ? `Bạn muốn hỏi ${topic} của ${latestDiscussed.name} đúng không? Nếu là mẫu khác, bạn gửi tên mẫu nhé.`
+      : `Bạn muốn hỏi ${topic} cho mẫu nào trong các sản phẩm đã xem?`,
+    buttons: choices.map(product => ({
+      title: latestDiscussed ? "Đúng, mẫu này" : product.name,
+      payload: "/" + intent + JSON.stringify({ product_name: product.name }),
+    })),
+  } : reply);
+}
 
 function StreamingText({
   text,
@@ -162,7 +213,15 @@ function Conversation({ onClose }: { onClose: () => void }) {
       const result = await sendChatMessage(question, conversationId.current, controller.signal);
       if (!controller.signal.aborted) {
         conversationId.current = result.conversationId;
-        setMessages(previous => [...previous, ...result.messages.map(message => ({ ...message, from: "bot" as const, streaming: !!message.text }))]);
+        setMessages(previous => [
+          ...previous,
+          ...withProductConfirmation(question, result.messages, previous).map((message, index) => ({
+            ...message,
+            from: "bot" as const,
+            streaming: !!message.text,
+            continuation: index > 0,
+          })),
+        ]);
       }
     } catch (error) {
       if (!controller.signal.aborted) {
@@ -234,7 +293,12 @@ function Conversation({ onClose }: { onClose: () => void }) {
   useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [messages, isBusy]);
   function send(value: string, displayText?: string) {
     if (status !== "authenticated" || !user || inFlight.current || readingFile || isBusy || (!value.trim() && !attachment)) return;
-    const question = value.trim().slice(0, 1000);
+    const typedQuestion = value.trim().slice(0, 1000);
+    const confirmation = !attachment && /^(?:đúng(?: rồi| vậy|,? mẫu này)?|vâng|phải rồi)[.!\s]*$/iu.test(typedQuestion)
+      ? messages.slice(messages.findLastIndex(message => message.from === "user") + 1)
+        .flatMap(message => message.buttons ?? []).find(button => button.title === "Đúng, mẫu này")
+      : undefined;
+    const question = confirmation?.payload ?? typedQuestion;
     const currentAttachment = attachment;
     setText("");
     if (input.current) input.current.style.height = "auto";
@@ -249,7 +313,7 @@ function Conversation({ onClose }: { onClose: () => void }) {
         if (question) await askChat(question);
       })();
     } else {
-      setMessages(previous => [...previous, { from: "user", text: displayText ?? question }]);
+      setMessages(previous => [...previous, { from: "user", text: displayText ?? typedQuestion }]);
       void askChat(question);
     }
   }
@@ -264,9 +328,9 @@ function Conversation({ onClose }: { onClose: () => void }) {
     </div>
     <div ref={log} className={styles.messages} role="log" aria-label="Tin nhắn" aria-live="polite" aria-relevant="additions">
       {messages.map((message, index) => (
-        <div key={index} className={`${styles.message} ${message.from === "user" ? styles.user : styles.bot}`}>
-          <span className={styles.srOnly}>{message.from === "user" ? "Bạn" : "Zella"}:</span>
-          {message.from === "bot" && (
+        <div key={index} className={`${styles.message} ${message.from === "user" ? styles.user : styles.bot} ${message.continuation ? styles.continuation : ""}`}>
+          {!message.continuation && <span className={styles.srOnly}>{message.from === "user" ? "Bạn" : "Zella"}:</span>}
+          {message.from === "bot" && !message.continuation && (
             <div className={styles.replyAvatar} aria-hidden="true">
               <BotAvatar type="mech" size={32} color="#bdbdbd" theme="light" interactive={false} />
             </div>
@@ -317,7 +381,6 @@ function Conversation({ onClose }: { onClose: () => void }) {
                   {product.imageUrl && <img src={product.imageUrl} alt={product.name} loading="lazy" />}
                   <span><strong>{product.name}</strong><span>{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(product.price)}</span><span>Xem chi tiết →</span></span>
                 </Link>
-                <button className={styles.chatAction} type="button" disabled={readingFile || isBusy || !!attachment} onClick={() => send(`Tư vấn size sản phẩm ${product.slug}`)}>Tư vấn size mẫu này</button>
               </div>)}
             </section>}
             {message.sizeGuide && <section className={styles.sizeGuide} aria-label="Thông tin bảng size">
