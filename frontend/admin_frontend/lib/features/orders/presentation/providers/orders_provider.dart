@@ -89,6 +89,18 @@ class OrdersProvider extends ChangeNotifier {
 
   Future<List<ReturnResponseModel>> returns(int orderId) =>
       _repository.returns(orderId);
+
+  Future<List<VnPayRefund>> vnpayRefunds(int orderId) =>
+      _repository.vnpayRefunds(orderId);
+
+  Future<VnPayRefund> submitVnpayRefund(
+    int orderId,
+    int? returnId,
+    String note,
+  ) => _repository.submitVnpayRefund(orderId, returnId, note);
+
+  Future<VnPayRefund> reconcileVnpayRefund(int refundId) =>
+      _repository.reconcileVnpayRefund(refundId);
   Future<({List<ReturnOrderSummary> items, int total})> returnOrders({
     int page = 0,
     String query = '',

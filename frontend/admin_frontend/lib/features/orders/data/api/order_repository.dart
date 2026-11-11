@@ -82,6 +82,46 @@ class OrderRepository {
             .map((j) => ReturnResponseModel(j as Map<String, dynamic>))
             .toList();
       });
+  VnPayRefund _refund(Map<String, dynamic> json) => (
+    id: (json['id'] as num).toInt(),
+    returnId: (json['returnId'] as num?)?.toInt(),
+    state: json['state'] as String,
+  );
+
+  Future<List<VnPayRefund>> vnpayRefunds(int orderId) =>
+      warehouseRequest(() async {
+        final response = await _api.get(
+          '${ApiEndpoints.orders}/$orderId/vnpay-refunds',
+        );
+        return (response.data['data'] as List)
+            .cast<Map<String, dynamic>>()
+            .map(_refund)
+            .toList();
+      });
+
+  Future<VnPayRefund> submitVnpayRefund(
+    int orderId,
+    int? returnId,
+    String note,
+  ) => warehouseRequest(() async {
+    final target = returnId == null
+        ? '${ApiEndpoints.orders}/$orderId'
+        : '${ApiEndpoints.orderReturns}/$returnId';
+    final response = await _api.post(
+      '$target/vnpay-refund',
+      data: {'note': note},
+    );
+    return _refund(response.data['data'] as Map<String, dynamic>);
+  });
+
+  Future<VnPayRefund> reconcileVnpayRefund(int refundId) =>
+      warehouseRequest(() async {
+        final response = await _api.post(
+          '/payment/vnpay/refunds/$refundId/reconcile',
+        );
+        return _refund(response.data['data'] as Map<String, dynamic>);
+      });
+
   Future<void> createReturn(Map<String, dynamic> data) =>
       warehouseRequest(() async {
         await _api.post(ApiEndpoints.orderReturns, data: data);

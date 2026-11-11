@@ -13,6 +13,7 @@ import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../data/models/order_response_model.dart';
 import '../providers/orders_provider.dart';
 import 'receive_return_dialog.dart';
+import 'vnpay_refund_dialog.dart';
 import '../widgets/payment_reservation_status.dart';
 import '../../../../theme/app_theme.dart';
 
@@ -136,6 +137,24 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     if (done == true) _refresh();
   }
 
+  Future<void> _openVnpayRefund(
+    OrderResponseModel order, [
+    ReturnResponseModel? document,
+  ]) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => VnPayRefundDialog(
+        orderId: order.id,
+        returnId: document?.id,
+        amount: document?.refundAmount ?? order.totalAmount,
+      ),
+    );
+    if (!mounted) return;
+    context.read<OrdersProvider>().loadItems();
+    setState(_load);
+  }
+
   Widget _buildSectionHeader(String title, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -249,7 +268,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         const SizedBox(height: 24),
         if (returns.isNotEmpty) ...[
           _buildSectionHeader('Phiếu trả hàng', Symbols.assignment_return),
-          ...returns.map(_returnCard),
+          ...returns.map((document) => _returnCard(order, document)),
           const SizedBox(height: 24),
         ],
         _buildSectionHeader('Lịch sử đơn hàng', Symbols.history),
@@ -637,7 +656,22 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if (context.watch<AuthProvider>().hasRole('ADMIN') && order.paymentStatus == 'REFUND_PENDING') {
+      if (context.watch<AuthProvider>().hasRole('SUPERADMIN') &&
+          order.vnpayRefundRequired &&
+          order.status == 'CANCELLED' &&
+          order.paymentStatus == 'REFUND_PENDING') {
+        actions.add(
+          _actionButton(
+            'Hoàn tiền VNPay',
+            Symbols.payments,
+            AppTheme.success,
+            () => _openVnpayRefund(order),
+          ),
+        );
+      }
+      if (context.watch<AuthProvider>().hasRole('ADMIN') &&
+          !order.vnpayRefundRequired &&
+          order.paymentStatus == 'REFUND_PENDING') {
         actions.add(
           _actionButton(
             'Ghi nhận đã hoàn tiền',
@@ -704,7 +738,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
-  Widget _returnCard(ReturnResponseModel r) {
+  Widget _returnCard(OrderResponseModel order, ReturnResponseModel r) {
+    final needsVnpayRefund = order.vnpayRefundRequired && r.refundAmount > 0;
     final provider = context.read<OrdersProvider>();
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -852,7 +887,16 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           ),
                           child: const Text('Nhận hàng'),
                         ),
-                      if (context.watch<AuthProvider>().hasRole('ADMIN') && r.status == 'RECEIVED')
+                      if (context.watch<AuthProvider>().hasRole('SUPERADMIN') &&
+                          r.status == 'RECEIVED' &&
+                          needsVnpayRefund)
+                        ElevatedButton(
+                          onPressed: _busy ? null : () => _openVnpayRefund(order, r),
+                          child: const Text('Hoàn tiền VNPay'),
+                        ),
+                      if (context.watch<AuthProvider>().hasRole('ADMIN') &&
+                          r.status == 'RECEIVED' &&
+                          !needsVnpayRefund)
                         ElevatedButton(
                           onPressed: _busy
                               ? null

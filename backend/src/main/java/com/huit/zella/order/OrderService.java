@@ -318,6 +318,7 @@ public class OrderService {
                 order.getCustomer().getCustomer() == null ? order.getCustomer().getUserName() : order.getCustomer().getCustomer().getFullName(),
             order.getRecipientName(), order.getRecipientPhone(), order.getAddress(), order.getNote(),
             order.getStatus().name(), order.getPaymentStatus(), order.getPaymentMethod(), order.isInventoryManaged(),
+            order.getOnlineTransactionId() != null && order.getOnlineTransactionId().startsWith("VNPAY-"),
             order.getSubtotal(), order.getShippingFee(), order.getTotalAmount(), order.getCreatedAt().atOffset(ZoneOffset.UTC),
             order.getItems().stream().map(i -> new OrderResponse.Item(i.getId(), i.getVariant().getId(),
                 i.getProductName(), i.getSku(), i.getQuantity(), i.getUnitPrice(),

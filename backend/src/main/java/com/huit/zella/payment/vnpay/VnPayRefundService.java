@@ -5,6 +5,7 @@ import com.huit.zella.common.exception.BusinessException;
 import com.huit.zella.order.*;
 import com.huit.zella.orderreturn.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -20,6 +21,7 @@ import java.time.format.*;
 import java.util.*;
 import java.util.function.Supplier;
 
+@Slf4j
 @Service @RequiredArgsConstructor
 public class VnPayRefundService {
     private final PaymentRefundRepository refunds;
@@ -51,6 +53,7 @@ public class VnPayRefundService {
         Map<String, String> result;
         try { result = gateway.refund(refund, orderClock.instant()); }
         catch (RuntimeException ex) {
+            logGatewayFailure("refund", refund.getId(), ex);
             return transaction(() -> {
                 orders.lock(refund.getOrderId());
                 PaymentRefund saved = refunds.findById(refund.getId()).orElseThrow();
@@ -75,9 +78,22 @@ public class VnPayRefundService {
         if (Set.of("SUCCEEDED", "REJECTED").contains(saved.getState())) return RefundView.from(saved);
         Map<String, String> result;
         try { result = gateway.query(saved, orderClock.instant()); }
-        catch (RuntimeException ex) { throw new BusinessException(HttpStatus.BAD_GATEWAY, "REFUND_QUERY_UNAVAILABLE",
-            "Chưa đối soát được với VNPay. Không gửi lại yêu cầu hoàn tiền; hãy thử đối soát sau"); }
+        catch (RuntimeException ex) {
+            logGatewayFailure("querydr", id, ex);
+            throw new BusinessException(HttpStatus.BAD_GATEWAY, "REFUND_QUERY_UNAVAILABLE",
+                "Chưa đối soát được với VNPay. Không gửi lại yêu cầu hoàn tiền; hãy thử đối soát sau");
+        }
         return transaction(() -> apply(id, result, true));
+    }
+
+    private void logGatewayFailure(String operation, Long refundId, RuntimeException error) {
+        String reason = switch (error) {
+            case VnPayGateway.GatewayFailure failure -> failure.getMessage();
+            case BusinessException failure -> failure.getCode();
+            default -> error.getClass().getSimpleName();
+        };
+        String cause = error.getCause() == null ? "-" : error.getCause().getClass().getSimpleName();
+        log.warn("VNPay {} failed for refundId={} reason={} cause={}", operation, refundId, reason, cause);
     }
 
     private Prepared prepare(Long orderId, Long returnId, String note, Long actorId) {
@@ -140,7 +156,13 @@ public class VnPayRefundService {
         if (query) {
             // The original query may describe an older partial refund. Only reconcile an already identified refund.
             matches = matches && transactionNo.equals(refund.getRefundTransactionNo());
-            if (!matches || !"00".equals(code)) return RefundView.from(refund);
+            if (!matches || !"00".equals(code)) {
+                String reason = refund.getRefundTransactionNo() == null
+                    ? "NO_REFUND_REFERENCE"
+                    : !matches ? "REFUND_REFERENCE_MISMATCH" : "QUERY_NOT_SUCCESSFUL";
+                log.warn("VNPay querydr inconclusive for refundId={} reason={}", id, reason);
+                return RefundView.from(refund);
+            }
         }
         if (code == null || !code.matches("[0-9]{2}") || (state != null && !state.matches("[0-9]{2}")))
             throw error("INVALID_GATEWAY_RESULT", "Kết quả hoàn tiền VNPay không hợp lệ, cần đối soát");

@@ -18,6 +18,16 @@ import java.util.*;
 /** JSON API uses pipe-separated HMAC data, unlike the payment URL signature. */
 @Component
 public class VnPayGateway {
+    static final class GatewayFailure extends IllegalStateException {
+        GatewayFailure(String reason) {
+            super(reason);
+        }
+
+        GatewayFailure(String reason, Throwable cause) {
+            super(reason, cause);
+        }
+    }
+
     private static final String[] REFUND_FIELDS = {"vnp_RequestId", "vnp_Version", "vnp_Command", "vnp_TmnCode",
         "vnp_TransactionType", "vnp_TxnRef", "vnp_Amount", "vnp_TransactionNo", "vnp_TransactionDate",
         "vnp_CreateBy", "vnp_CreateDate", "vnp_IpAddr", "vnp_OrderInfo"};
@@ -84,7 +94,7 @@ public class VnPayGateway {
     private Map<String, String> common(PaymentRefund refund, String requestId, Instant now) {
         ensureConfigured();
         if (!properties.getTmnCode().equals(refund.getMerchantCode()))
-            throw new IllegalStateException("Refund merchant changed");
+            throw new GatewayFailure("MERCHANT_CHANGED");
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put("vnp_RequestId", requestId); fields.put("vnp_Version", "2.1.0");
         fields.put("vnp_TmnCode", refund.getMerchantCode()); fields.put("vnp_TxnRef", refund.getOrderId().toString());
@@ -102,7 +112,8 @@ public class VnPayGateway {
             var response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
             byte[] bytes;
             try (var body = response.body()) { bytes = body.readNBytes(65537); }
-            if (response.statusCode() != 200 || bytes.length > 65536) throw new IllegalStateException("Invalid VNPay HTTP response");
+            if (response.statusCode() != 200) throw new GatewayFailure("HTTP_" + response.statusCode());
+            if (bytes.length > 65536) throw new GatewayFailure("RESPONSE_TOO_LARGE");
             Map<String, Object> raw = json.readValue(bytes, new TypeReference<>() {});
             Map<String, String> result = new LinkedHashMap<>();
             for (var field : raw.entrySet()) {
@@ -112,9 +123,9 @@ public class VnPayGateway {
                 else if ((scalar instanceof Integer || scalar instanceof Long || scalar instanceof java.math.BigInteger)
                         && Set.of("vnp_Amount", "vnp_TransactionNo", "vnp_PromotionAmount").contains(field.getKey())) value = scalar.toString();
                 else if (scalar == null && Set.of("vnp_PayDate", "vnp_PromotionCode", "vnp_PromotionAmount").contains(field.getKey())) value = "";
-                else throw new IllegalStateException("Invalid VNPay response field");
+                else throw new GatewayFailure("INVALID_RESPONSE_FIELD");
                 if (value.length() > 4096)
-                    throw new IllegalStateException("Invalid VNPay response field");
+                    throw new GatewayFailure("INVALID_RESPONSE_FIELD");
                 result.put(field.getKey(), value);
             }
             String received = result.get("vnp_SecureHash");
@@ -125,15 +136,19 @@ public class VnPayGateway {
                     || !fields.get("vnp_Command").equals(result.get("vnp_Command"))
                     || !fields.get("vnp_TmnCode").equals(result.get("vnp_TmnCode"))
                     || !fields.get("vnp_TxnRef").equals(result.get("vnp_TxnRef")))
-                throw new IllegalStateException("Unverified VNPay response");
+                throw new GatewayFailure("UNVERIFIED_RESPONSE");
             if (!query && (!fields.get("vnp_Amount").equals(result.get("vnp_Amount"))
                     || !fields.get("vnp_TransactionType").equals(result.get("vnp_TransactionType"))
                     || !fields.get("vnp_OrderInfo").equals(result.get("vnp_OrderInfo"))))
-                throw new IllegalStateException("Refund response mismatch");
+                throw new GatewayFailure("REFUND_RESPONSE_MISMATCH");
             return result;
         } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt(); throw new IllegalStateException("VNPay request interrupted", ex);
-        } catch (java.io.IOException ex) { throw new IllegalStateException("VNPay response unavailable", ex); }
+            Thread.currentThread().interrupt(); throw new GatewayFailure("REQUEST_INTERRUPTED", ex);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+            throw new GatewayFailure("INVALID_JSON", ex);
+        } catch (java.io.IOException ex) {
+            throw new GatewayFailure("TRANSPORT_ERROR", ex);
+        }
     }
 
     static String minorAmount(PaymentRefund refund) { return refund.getAmount().movePointRight(2).toBigIntegerExact().toString(); }

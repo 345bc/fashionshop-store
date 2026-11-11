@@ -11,6 +11,7 @@ import 'package:zella_admin_flutter/features/orders/presentation/dialogs/return_
 import 'package:zella_admin_flutter/features/orders/presentation/screens/orders_screen.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/dialogs/order_detail_dialog.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/dialogs/receive_return_dialog.dart';
+import 'package:zella_admin_flutter/features/orders/presentation/dialogs/vnpay_refund_dialog.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/providers/orders_provider.dart';
 
 class FakeInventory extends InventoryProvider {
@@ -19,6 +20,22 @@ class FakeInventory extends InventoryProvider {
 }
 
 class FakeOrders extends OrdersProvider {
+  int? reconciledRefundId;
+  bool reconcileFails = false;
+
+  @override
+  Future<List<VnPayRefund>> vnpayRefunds(int orderId) async => [
+    (id: 25, returnId: null, state: 'SUCCEEDED'),
+    (id: 24, returnId: 7, state: 'UNKNOWN'),
+  ];
+
+  @override
+  Future<VnPayRefund> reconcileVnpayRefund(int refundId) async {
+    reconciledRefundId = refundId;
+    if (reconcileFails) throw Exception('Chưa đối soát được với VNPay');
+    return (id: refundId, returnId: 7, state: 'SUCCEEDED');
+  }
+
   int requestedPage = 0;
   String requestedQuery = '', requestedStatus = 'ALL';
   bool queueFails = false;
@@ -158,6 +175,33 @@ Future<void> openDialog(
 }
 
 void main() {
+  testWidgets('VNPay reconciliation can reload after a gateway error', (
+    tester,
+  ) async {
+    dotenv.loadFromString(envString: 'API_BASE_URL=http://localhost:8080/api/v1');
+    final provider = FakeOrders()..reconcileFails = true;
+    await openDialog(
+      tester,
+      provider,
+      const VnPayRefundDialog(orderId: 10, returnId: 7, amount: 300000),
+    );
+    expect(find.text('Gửi yêu cầu hoàn tiền'), findsNothing);
+    await tester.tap(find.text('Đối soát VNPay'));
+    await tester.pumpAndSettle();
+    expect(provider.reconciledRefundId, 24);
+    expect(find.textContaining('Chưa đối soát được với VNPay'), findsOneWidget);
+
+    await tester.tap(find.text('Tải lại trạng thái'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Gửi yêu cầu hoàn tiền'), findsNothing);
+
+    provider.reconcileFails = false;
+    await tester.tap(find.text('Đối soát VNPay'));
+    await tester.pumpAndSettle();
+    expect(find.text('VNPay đã xác nhận hoàn tiền.'), findsOneWidget);
+  });
+
   setUpAll(
     () => dotenv.loadFromString(
       envString: 'API_BASE_URL=http://localhost:8080/api/v1',
@@ -174,7 +218,9 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-        ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuth()),
+            ChangeNotifierProvider<AuthProvider>(
+              create: (_) => FakeAuth(role: 'WAREHOUSE'),
+            ),
             ChangeNotifierProvider<OrdersProvider>.value(value: provider),
             ChangeNotifierProvider<InventoryProvider>(
               create: (_) => FakeInventory(),
