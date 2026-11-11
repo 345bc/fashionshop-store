@@ -27,7 +27,7 @@ class LoyaltyServiceTest {
         customer=new Customer();customer.setId(3L);customer.setUser(user);customer.setRewardPoints(1000);
         when(customers.lockByUserId(7L)).thenReturn(Optional.of(customer));
         order=new Order();order.setId(10L);order.setCode("ORD-TEST");order.setCustomer(user);order.setStatus(OrderStatus.DELIVERED);order.setPaymentStatus("PAID");
-        order.setSubtotal(new BigDecimal("519999"));order.setDiscountAmount(new BigDecimal("50000"));
+        order.setOriginalSubtotal(new BigDecimal("519999"));order.setSubtotal(new BigDecimal("519999"));order.setDiscountAmount(new BigDecimal("50000"));
         reward=new Voucher();reward.setId(1L);reward.setDescription("Voucher 50K");reward.setRedeemable(true);reward.setPointsRequired(500);
         reward.setDiscountType("FIXED");reward.setDiscountValue(new BigDecimal("50000"));reward.setStartDate(LocalDateTime.now(clock).minusDays(1));reward.setEndDate(LocalDateTime.now(clock).plusDays(1));
         when(vouchers.lock(1L)).thenReturn(Optional.of(reward));
@@ -46,12 +46,12 @@ class LoyaltyServiceTest {
     @Test void returnKeepsBalanceAtZeroAndNextDeliverySettlesAdjustment() {
         customer.setRewardPoints(0);order.setPointsEarned(51);
         when(ledger.existsByReferenceKey("ORDER-EARN-10")).thenReturn(true);
-        when(returns.receivedValue(10L)).thenReturn(new BigDecimal("110000"));
+        when(returns.receivedOriginalValue(10L)).thenReturn(new BigDecimal("110000"));
         service.reverse(order,2L,new BigDecimal("100000"));
         assertEquals(40,order.getPointsEarned());assertEquals(0,customer.getRewardPoints());assertEquals(11,customer.getRewardPointAdjustment());
         when(ledger.existsByReferenceKey("ORDER-RETURN-2")).thenReturn(true);
         service.reverse(order,2L,new BigDecimal("100000"));assertEquals(0,customer.getRewardPoints());assertEquals(11,customer.getRewardPointAdjustment());
-        order.setId(11L);order.setSubtotal(new BigDecimal("100000"));order.setDiscountAmount(BigDecimal.ZERO);
+        order.setId(11L);order.setOriginalSubtotal(new BigDecimal("100000"));order.setSubtotal(new BigDecimal("100000"));order.setDiscountAmount(BigDecimal.ZERO);
         service.earned(order);assertEquals(0,customer.getRewardPoints());assertEquals(1,customer.getRewardPointAdjustment());
         order.setId(12L);service.earned(order);assertEquals(9,customer.getRewardPoints());assertEquals(0,customer.getRewardPointAdjustment());
     }

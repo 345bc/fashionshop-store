@@ -14,7 +14,7 @@ class CheckoutPricingServiceTest {
     private Order order(String subtotal) { Order order=new Order();order.setSubtotal(new BigDecimal(subtotal));return order; }
     @Test void tiersUseApprovedPercentagesAndGuestsHaveNoMembershipDiscount() {
         Customer customer=new Customer();when(customers.findByUserId(1L)).thenReturn(Optional.of(customer));
-        for(var rate:java.util.Map.of("STANDARD",5,"SILVER",7,"GOLD",10).entrySet()) {
+        for(var rate:java.util.Map.of("STANDARD",0,"SILVER",5,"GOLD",7,"PLATINUM",10).entrySet()) {
             customer.setMembershipTier(rate.getKey());Order order=order("500000");pricing.prepare(order,1L,"STANDARD");
             assertEquals(0,BigDecimal.valueOf(rate.getValue()).compareTo(order.getMembershipDiscountPercent()));
             assertEquals(0,BigDecimal.valueOf(5000L*rate.getValue()).compareTo(order.getMembershipDiscountAmount()));
@@ -27,10 +27,11 @@ class CheckoutPricingServiceTest {
         Order eligible=order("600000");pricing.prepare(eligible,null,"STANDARD");assertEquals(0,new BigDecimal("15000").compareTo(eligible.getShippingFee()));
         assertEquals(0,new BigDecimal("35000").compareTo(pricing.snapshot(eligible).shippingBaseFee()));
     }
-    @Test void defaultShippingStaysZeroAndPersistedAmountsSurvivePolicyChanges() {
-        Customer customer=new Customer();when(customers.findByUserId(1L)).thenReturn(Optional.of(customer));
-        Order order=order("519000");pricing.prepare(order,1L,"STANDARD");assertEquals(BigDecimal.ZERO,order.getShippingFee());
+    @Test void defaultShippingIsChargedAndPersistedAmountsSurvivePolicyChanges() {
+        Customer customer=new Customer();customer.setMembershipTier("SILVER");when(customers.findByUserId(1L)).thenReturn(Optional.of(customer));
+        Order order=order("519000");pricing.prepare(order,1L,"STANDARD");assertEquals(0,new BigDecimal("30000").compareTo(order.getShippingFee()));
         assertEquals(0,new BigDecimal("25950").compareTo(order.getDiscountAmount()));
-        policy.setStandardDiscountPercent(new BigDecimal("20"));assertEquals(0,new BigDecimal("5").compareTo(pricing.snapshot(order).membershipDiscountPercent()));
+        policy.setStandardShippingFee(new BigDecimal("40000"));
+        assertEquals(0,new BigDecimal("30000").compareTo(pricing.snapshot(order).shippingFee()));assertEquals(0,new BigDecimal("5").compareTo(pricing.snapshot(order).membershipDiscountPercent()));
     }
 }
