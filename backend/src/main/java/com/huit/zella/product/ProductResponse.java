@@ -19,9 +19,14 @@ public record ProductResponse(
         Long sizeGuideId,
         String sizeGuideName,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String imageUrl
 ) {
     public static ProductResponse from(Product product) {
+        return from(product, null);
+    }
+
+    public static ProductResponse from(Product product, String imageUrl) {
         return new ProductResponse(
                 product.getId(),
                 product.getName(),
@@ -38,7 +43,8 @@ public record ProductResponse(
                 product.getSizeGuide() != null ? product.getSizeGuide().getId() : null,
                 product.getSizeGuide() != null ? product.getSizeGuide().getName() : null,
                 product.getCreatedAt(),
-                product.getUpdatedAt()
+                product.getUpdatedAt(),
+                imageUrl
         );
     }
 }
