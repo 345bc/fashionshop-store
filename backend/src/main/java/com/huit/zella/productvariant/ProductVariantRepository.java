@@ -1,5 +1,6 @@
 package com.huit.zella.productvariant;
 
+import com.huit.zella.inventory.InventoryStockAlerts;
 import com.huit.zella.variantimage.VariantImage;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
@@ -42,8 +43,9 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
             select v from ProductVariant v join v.product p join p.category c join v.size sz join v.color cl
             left join p.supplier s
             where (:supplierId is null or s.id = :supplierId)
-              and (:status is null or (:status = 'out' and v.stockQuantity - v.reservedQuantity = 0)
-                  or (:status = 'available' and v.stockQuantity - v.reservedQuantity > 0))
+              and (:status is null or (:status = 'out' and v.stockQuantity - v.reservedQuantity <= 0)
+                  or (:status = 'available' and v.stockQuantity - v.reservedQuantity > 0)
+                  or (:status = 'low' and v.stockQuantity - v.reservedQuantity between 1 and :lowStockThreshold))
               and (:query = '' or lower(v.sku) like lower(concat('%', :query, '%'))
                   or lower(p.name) like lower(concat('%', :query, '%'))
                   or lower(c.name) like lower(concat('%', :query, '%'))
@@ -51,7 +53,17 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
                   or lower(cl.name) like lower(concat('%', :query, '%')))
             """)
     Page<ProductVariant> searchInventory(@Param("query") String query, @Param("supplierId") Long supplierId,
-            @Param("status") String status, Pageable pageable);
+            @Param("status") String status, @Param("lowStockThreshold") int lowStockThreshold, Pageable pageable);
+
+    @Query("""
+            select new com.huit.zella.inventory.InventoryStockAlerts(
+                coalesce(sum(case when v.stockQuantity - v.reservedQuantity between 1 and :lowStockThreshold
+                    then 1 else 0 end), 0L),
+                coalesce(sum(case when v.stockQuantity - v.reservedQuantity <= 0
+                    then 1 else 0 end), 0L))
+            from ProductVariant v
+            """)
+    InventoryStockAlerts countInventoryStockAlerts(@Param("lowStockThreshold") int lowStockThreshold);
 
 
     @Query("""

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../../../core/network/api_endpoints.dart';
 import '../../../../widgets/common/feature_header.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
 import '../../../../widgets/common/status_badge.dart';
@@ -18,9 +19,6 @@ import '../../../../widgets/common/zella_toast.dart';
 
 import '../providers/products_provider.dart';
 import '../../data/models/product_response_model.dart';
-import '../dialogs/product_edit_dialog.dart';
-import '../dialogs/product_create_dialog.dart';
-import '../dialogs/product_detail_dialog.dart';
 import '../../../../main.dart';
 import '../../../categories/presentation/providers/categories_provider.dart';
 
@@ -33,6 +31,43 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   Set<int> selectedIds = {};
+
+  PopupMenuItem<String> _attributeOption(
+    String route,
+    String label,
+    IconData icon,
+  ) {
+    return PopupMenuItem<String>(
+      value: route,
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 17, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: AppTheme.text),
+            ),
+          ),
+          const Icon(
+            Symbols.chevron_right,
+            size: 16,
+            color: AppTheme.textMuted,
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -61,23 +96,44 @@ class _ProductsScreenState extends State<ProductsScreen> {
               children: [
                 FeatureHeader(
                   showAction: context.watch<AuthProvider>().hasRole('ADMIN'),
-                  title: 'Sản phẩm & Bộ sưu tập',
-                  subtitle: 'Quản lý hàng hoá, giá bán và thuộc tính',
+                  title: 'Sản phẩm ',
+                  subtitle: 'Quản lý sản phẩm, giá bán và thuộc tính',
                   secondaryAction:
                       context.watch<AuthProvider>().hasRole('ADMIN')
                       ? PopupMenuButton<String>(
                           tooltip: 'Thuộc tính sản phẩm',
+                          position: PopupMenuPosition.under,
+                          offset: const Offset(0, 8),
+                          color: Colors.white,
+                          surfaceTintColor: Colors.transparent,
+                          elevation: 4,
+                          shadowColor: Colors.black.withValues(alpha: 0.12),
+                          menuPadding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(
+                            minWidth: 230,
+                            maxWidth: 230,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: const BorderSide(color: AppTheme.borderLight),
+                          ),
                           onSelected: (route) =>
                               MainScreen.of(context).navigate(route),
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: '/sizes', child: Text('Size')),
-                            PopupMenuItem(
-                              value: '/colors',
-                              child: Text('Màu sắc'),
+                          itemBuilder: (_) => [
+                            _attributeOption(
+                              '/sizes',
+                              'Kích thước',
+                              Symbols.straighten,
                             ),
-                            PopupMenuItem(
-                              value: '/sizeguides',
-                              child: Text('Bảng size'),
+                            _attributeOption(
+                              '/colors',
+                              'Màu sắc',
+                              Symbols.palette,
+                            ),
+                            _attributeOption(
+                              '/sizeguides',
+                              'Bảng kích thước',
+                              Symbols.table_chart,
                             ),
                           ],
                           child: Container(
@@ -86,8 +142,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              border: Border.all(color: AppTheme.borderLight),
-                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.white,
+                              border: Border.all(color: AppTheme.border),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
@@ -101,6 +158,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
+                                SizedBox(width: 12),
+                                Icon(
+                                  Symbols.expand_more,
+                                  size: 18,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ],
                             ),
                           ),
@@ -110,10 +173,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   actionIcon: Symbols.add,
                   onExportPressed: () {},
                   onActionPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => const ProductCreateDialog(),
-                    );
+                    MainScreen.of(context).navigate('/products/new');
                   },
                 ),
                 const SizedBox(height: 32),
@@ -286,9 +346,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     },
                   ),
                   const SizedBox(width: 16),
-                  Expanded(flex: 3, child: _headerText('SẢN PHẨM')),
+                  Expanded(flex: 5, child: _headerText('SẢN PHẨM')),
+                  const SizedBox(width: 24),
                   Expanded(flex: 2, child: _headerText('DANH MỤC')),
+                  const SizedBox(width: 24),
                   Expanded(flex: 2, child: _headerText('GIÁ BÁN')),
+                  const SizedBox(width: 24),
                   Expanded(flex: 2, child: _headerText('TRẠNG THÁI')),
                   const SizedBox(width: 48),
                 ],
@@ -343,191 +406,167 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  void _showProductDetail(BuildContext context, ProductResponseModel product) {
-    showDialog(
-      context: context,
-      builder: (_) => ProductDetailDialog(
-        productId: product.id,
-        onManageVariants: (details) =>
-            MainScreen.of(context).navigate('/product-variants', details),
-      ),
-    );
-  }
-
   Widget _buildDataRow(BuildContext context, ProductResponseModel product) {
     final statusDisplay = product.isActive ? 'Hoạt động' : 'Đã ẩn';
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _showProductDetail(context, product),
-        hoverColor: AppTheme.surface,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Row(
-            children: [
-              ZellaCheckbox(
-                value: selectedIds.contains(product.id),
-                onChanged: (val) {
-                  setState(() {
-                    if (val == true) {
-                      selectedIds.add(product.id);
-                    } else {
-                      selectedIds.remove(product.id);
-                    }
-                  });
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Row(
+          children: [
+            ZellaCheckbox(
+              value: selectedIds.contains(product.id),
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    selectedIds.add(product.id);
+                  } else {
+                    selectedIds.remove(product.id);
+                  }
+                });
+              },
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 5,
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 48,
+                      height: 56,
+                      color: AppTheme.surface,
+                      child:
+                          product.imageUrl == null || product.imageUrl!.isEmpty
+                          ? const Icon(
+                              Symbols.image,
+                              size: 22,
+                              color: AppTheme.textMuted,
+                            )
+                          : Image.network(
+                              Uri.parse(product.imageUrl!).hasScheme
+                                  ? product.imageUrl!
+                                  : '${Uri.parse(ApiEndpoints.baseUrl).origin}${product.imageUrl!.startsWith('/') ? '' : '/'}${product.imageUrl}',
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, _, _) => const Icon(
+                                Symbols.broken_image,
+                                size: 22,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              flex: 2,
+              child: Text(
+                product.categoryName,
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              flex: 2,
+              child: Text(
+                _fmtVND(product.basePrice),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: StatusBadge(
+                  text: statusDisplay,
+                  textColor: product.isActive
+                      ? AppTheme.success
+                      : AppTheme.danger,
+                  backgroundColor: product.isActive
+                      ? AppTheme.success.withAlpha(25)
+                      : AppTheme.danger.withAlpha(25),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 48,
+              child: ActionMenu(
+                items: [
+                  if (context.watch<AuthProvider>().hasRole('MARKETING'))
+                    const ActionMenuItem(
+                      value: 'content',
+                      label: 'Sửa nội dung',
+                      icon: Symbols.edit,
+                    ),
+                  if (context.watch<AuthProvider>().hasRole('ADMIN'))
+                    const ActionMenuItem(
+                      value: 'edit',
+                      label: 'Chỉnh sửa',
+                      icon: Symbols.edit,
+                    ),
+                  if (context.watch<AuthProvider>().hasRole('ADMIN') ||
+                      context.watch<AuthProvider>().hasRole('WAREHOUSE'))
+                    const ActionMenuItem(
+                      value: 'variants',
+                      label: 'Quản lý biến thể',
+                      icon: Symbols.inventory_2,
+                    ),
+                  // ActionMenuItem.divider(),
+                  // const ActionMenuItem(
+                  //   value: 'delete',
+                  //   label: 'Xóa sản phẩm',
+                  //   icon: Symbols.delete,
+                  //   color: AppTheme.danger,
+                  // ),
+                ],
+                onSelected: (value) {
+                  if (value == 'content') {
+                    showDialog(
+                      context: context,
+                      builder: (_) =>
+                          ProductContentDialog(product: product.toJson()),
+                    );
+                  } else if (value == 'edit') {
+                    MainScreen.of(context)
+                        .navigate('/products/edit', product.toJson());
+                  } else if (value == 'variants') {
+                    MainScreen.of(context)
+                        .navigate('/product-variants', product.toJson());
+                  }
                 },
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 3,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withAlpha(25),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Text(
-                          product.name.isNotEmpty
-                              ? product.name.substring(0, 1).toUpperCase()
-                              : 'P',
-                          style: const TextStyle(
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            product.slug,
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 13,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text(
-                  product.categoryName,
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text(
-                  _fmtVND(product.basePrice),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: StatusBadge(
-                    text: statusDisplay,
-                    textColor: product.isActive
-                        ? AppTheme.success
-                        : AppTheme.danger,
-                    backgroundColor: product.isActive
-                        ? AppTheme.success.withAlpha(25)
-                        : AppTheme.danger.withAlpha(25),
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 48,
-                child: ActionMenu(
-                  items: [
-                    const ActionMenuItem(
-                      value: 'view',
-                      label: 'Xem chi tiết',
-                      icon: Symbols.visibility,
-                    ),
-                    if (context.watch<AuthProvider>().hasRole('MARKETING'))
-                      const ActionMenuItem(
-                        value: 'content',
-                        label: 'Sửa nội dung',
-                        icon: Symbols.edit,
-                      ),
-                    if (context.watch<AuthProvider>().hasRole('ADMIN'))
-                      const ActionMenuItem(
-                        value: 'edit',
-                        label: 'Chỉnh sửa',
-                        icon: Symbols.edit,
-                      ),
-                    if (context.watch<AuthProvider>().hasRole('ADMIN') ||
-                        context.watch<AuthProvider>().hasRole('WAREHOUSE'))
-                      const ActionMenuItem(
-                        value: 'variants',
-                        label: 'Quản lý biến thể',
-                        icon: Symbols.inventory_2,
-                      ),
-                    // ActionMenuItem.divider(),
-                    // const ActionMenuItem(
-                    //   value: 'delete',
-                    //   label: 'Xóa sản phẩm',
-                    //   icon: Symbols.delete,
-                    //   color: AppTheme.danger,
-                    // ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'view') {
-                      _showProductDetail(context, product);
-                    } else if (value == 'content') {
-                      showDialog(
-                        context: context,
-                        builder: (_) =>
-                            ProductContentDialog(product: product.toJson()),
-                      );
-                    } else if (value == 'edit') {
-                      showDialog(
-                        context: context,
-                        builder: (_) =>
-                            ProductEditDialog(product: product.toJson()),
-                      );
-                    } else if (value == 'variants') {
-                      MainScreen.of(context)
-                          .navigate('/product-variants', product.toJson());
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

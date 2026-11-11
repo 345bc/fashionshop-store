@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -175,6 +176,7 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(CreateUserRequest req) {
+        if (req.roles().contains(RoleEnum.SUPERADMIN)) requireSuperadmin();
         if (user_repository.findByEmailIgnoreCase(normalizeEmail(req.email())).isPresent()
                 || user_repository.findByUserNameIgnoreCase(normalizeUserName(req.username())).isPresent()) {
             throw informationAlreadyExists();
@@ -205,10 +207,10 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public Page<UserResponse> listUser(String query, String role, Pageable pageable) {
+    public Page<UserResponse> listUser(String query, String role, Boolean active, Pageable pageable) {
         String safeQuery = (query == null || query.isBlank()) ? null : query.trim();
         String safeRole = (role == null || role.isBlank()) ? null : role.trim();
-        Page<User> page = user_repository.searchUsers(safeQuery, safeRole, pageable);
+        Page<User> page = user_repository.searchUsers(safeQuery, safeRole, active, pageable);
         return page.map(UserResponse::from);
     }
 
@@ -221,6 +223,14 @@ public class UserService {
     public UserResponse update(Long id, UpdateUserRequest update) {
         var lockedAccounts = user_repository.lockAccounts();
         User feature = requireFeature(id);
+        boolean wasSuperadmin = hasAssignedRole(feature, RoleEnum.SUPERADMIN);
+        boolean willBeSuperadmin = update.roles().contains(RoleEnum.SUPERADMIN);
+        if (wasSuperadmin || willBeSuperadmin) requireSuperadmin();
+        if (wasSuperadmin && feature.isActive() && (!update.isActive() || !willBeSuperadmin)
+                && lockedAccounts.stream().noneMatch(u -> !u.getId().equals(id) && u.isActive() && hasAssignedRole(u, RoleEnum.SUPERADMIN))) {
+            throw new BusinessException(HttpStatus.CONFLICT, "LAST_SUPERADMIN",
+                    "Không thể khóa hoặc thu hồi quyền quản trị viên cấp cao cuối cùng");
+        }
         boolean wasAdmin = feature.isActive() && feature.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getRoleCode()));
         if (wasAdmin && (!update.isActive() || !update.roles().contains(RoleEnum.ADMIN))
                 && lockedAccounts.stream().noneMatch(u -> !u.getId().equals(id) && u.isActive() && u.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getRoleCode())))) {
@@ -282,13 +292,27 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long id) {
-        User user = requireFeature(id);
+        User user = user_repository.lockById(id).orElseThrow(() -> new BusinessException(
+                HttpStatus.NOT_FOUND, "ID_NOT_FOUND", "User not found"));
+        boolean superadmin = hasAssignedRole(user, RoleEnum.SUPERADMIN);
+        if (superadmin) requireSuperadmin();
         if(staffRepository.existsByUserId(id)) throw new BusinessException(HttpStatus.CONFLICT,"STAFF_HISTORY_PRESERVED","Nhân sự cần được khóa tài khoản để giữ lịch sử");
-        if(user.isActive()&&user.getRoles().stream().anyMatch(r->"ADMIN".equals(r.getRoleCode()))) throw new BusinessException(HttpStatus.CONFLICT,"ADMIN_DELETE_BLOCKED","Khóa tài khoản quản trị trước khi xóa");
+        if(user.isActive() && (superadmin || hasAssignedRole(user, RoleEnum.ADMIN))) throw new BusinessException(HttpStatus.CONFLICT,"ADMIN_DELETE_BLOCKED","Khóa tài khoản quản trị trước khi xóa");
         user_repository.delete(user);
     }
 
+    private boolean hasAssignedRole(User user, RoleEnum role) {
+        return user.getRoles().stream().anyMatch(assigned -> role.name().equals(assigned.getRoleCode()));
+    }
 
+    private void requireSuperadmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication.getAuthorities().stream().noneMatch(a -> "ROLE_SUPERADMIN".equals(a.getAuthority()))) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "SUPERADMIN_REQUIRED",
+                    "Chỉ quản trị viên cấp cao mới được cấp quyền hoặc thay đổi tài khoản quản trị viên cấp cao");
+        }
+    }
     String normalizeEmail(String email) {
         if (email == null || email.isBlank()) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "EMAIL_REQUIRED", "Email là bắt buộc");

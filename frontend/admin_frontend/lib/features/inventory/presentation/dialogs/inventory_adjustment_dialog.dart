@@ -66,7 +66,7 @@ class _InventoryAdjustmentDialogState extends State<InventoryAdjustmentDialog> {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            Text(widget.item.label),
+            Text(widget.item.variantLabel),
             const SizedBox(height: 16),
             Text(
               'Tồn hiện tại: ${widget.item.stockQuantity} • Đã giữ: ${widget.item.reservedQuantity}',

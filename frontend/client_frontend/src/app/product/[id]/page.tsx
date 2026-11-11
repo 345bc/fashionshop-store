@@ -3,6 +3,8 @@
 import GoogleSymbol from "@/components/ui/GoogleSymbol";
 
 import ProductReviews from "@/components/product/ProductReviews";
+import MaterialAndCareSample from "@/components/product/MaterialAndCareSample";
+import DeliveryAndReturnsSample from "@/components/product/DeliveryAndReturnsSample";
 import { useState, useEffect, useRef, use } from "react";
 import galleryStyles from "./ProductGallery.module.css";
 import Header from "@/components/Header";
@@ -69,6 +71,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
   const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
+  const [imageDirection, setImageDirection] = useState<"next" | "previous">("next");
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
@@ -81,13 +84,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     const revealSelectedThumbnail = () => {
       const selected = track.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
       if (!selected || track.clientHeight === 0) return;
-      const top = selected.offsetTop;
-      const bottom = top + selected.offsetHeight;
-      const visibleTop = track.scrollTop;
-      const visibleBottom = visibleTop + track.clientHeight;
-      const target = top < visibleTop ? top : bottom > visibleBottom ? bottom - track.clientHeight : null;
+      const horizontal = track.scrollWidth > track.clientWidth;
+      const top = horizontal ? selected.offsetLeft : selected.offsetTop;
+      const bottom = top + (horizontal ? selected.offsetWidth : selected.offsetHeight);
+      const visibleTop = horizontal ? track.scrollLeft : track.scrollTop;
+      const extent = horizontal ? track.clientWidth : track.clientHeight;
+      const visibleBottom = visibleTop + extent;
+      const target = top < visibleTop ? top : bottom > visibleBottom ? bottom - extent : null;
       if (target !== null) track.scrollTo({
-        top: target,
+        ...(horizontal ? { left: target } : { top: target }),
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
       });
     };
@@ -177,11 +182,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const activeIndex = galleryImages.findIndex(img => img.id === activeImage?.id);
   const handlePrevImage = () => {
     if (galleryImages.length <= 1) return;
+    setImageDirection("previous");
     const newIdx = activeIndex > 0 ? activeIndex - 1 : galleryImages.length - 1;
     setSelectedImageId(galleryImages[newIdx].id);
   };
   const handleNextImage = () => {
     if (galleryImages.length <= 1) return;
+    setImageDirection("next");
     const newIdx = activeIndex < galleryImages.length - 1 ? activeIndex + 1 : 0;
     setSelectedImageId(galleryImages[newIdx].id);
   };
@@ -189,18 +196,38 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <Header />
-      <main className="container mx-auto px-3 sm:px-4 main-content" style={{ paddingBottom: 0 }}>
+      <main className={`main-content ${galleryStyles.page}`}>
 
-        {/* ── OUTER 3/5 + 2/5 LAYOUT ── */}
-        <div className="product-page-layout" style={{ marginBottom: 0 }}>
+        {/* Gallery, purchase panel, then product details on small screens. */}
+        <div className={`product-page-layout ${galleryStyles.layout}`} style={{ marginBottom: 0 }}>
 
-          {/* LEFT COL – 3/5: gallery + description + reviews */}
-          <div className="product-left-col">
 
-            {/* Gallery */}
-            <div className="gallery-container">
-              <div className={galleryStyles.thumbnailViewport}>
-                <div ref={thumbnailTrack} className={galleryStyles.thumbnailTrack} aria-label="Danh sách ảnh sản phẩm">
+          <div data-direction={imageDirection} className={`${galleryStyles.stage} ${galleryImages.length < 2 ? galleryStyles.singleImage : ''}`}>
+            {displayImage ? <>
+              <div className={galleryStyles.imagePanel}>
+                <Image key={displayImage} src={displayImage} alt={product.name} fill priority
+                  sizes="(max-width: 600px) 100vw, (max-width: 900px) 50vw, 36vw" />
+              </div>
+              {galleryImages.length > 1 && <div className={`${galleryStyles.imagePanel} ${galleryStyles.secondImage}`}>
+                <Image key={galleryImages[(activeIndex + 1) % galleryImages.length].id} src={galleryImages[(activeIndex + 1) % galleryImages.length].imageUrl}
+                  alt={`${product.name} - góc nhìn tiếp theo`} fill
+                  sizes="(max-width: 900px) 50vw, 36vw" />
+              </div>}
+              {galleryImages.length > 1 && <>
+                <button type="button" className={`${galleryStyles.imageArrow} ${galleryStyles.previousImage}`}
+                  onClick={handlePrevImage} aria-label="Ảnh trước"><GoogleSymbol name="chevron_left" size={30} /></button>
+                <button type="button" className={`${galleryStyles.imageArrow} ${galleryStyles.nextImage}`}
+                  onClick={handleNextImage} aria-label="Ảnh tiếp theo"><GoogleSymbol name="chevron_right" size={30} /></button>
+                <span className={galleryStyles.imageCounter}>{activeIndex + 1} / {galleryImages.length}</span>
+              </>}
+            </> : <div className={galleryStyles.emptyImage}>Biến thể chưa có ảnh</div>}
+          </div>
+
+          {/* RIGHT COL – 2/5: sticky info panel */}
+          <div className="product-right-col">
+            <div className="detail-info detail-info-sticky">
+              <div className={galleryStyles.thumbnailStrip}>
+                <div ref={thumbnailTrack} className={galleryStyles.stripTrack} aria-label="Danh sách ảnh sản phẩm">
                   {galleryImages.map((image, index) => (
                     <button
                       key={image.id}
@@ -209,92 +236,38 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       aria-label={`Xem ảnh ${index + 1} của ${product.name}`}
                       aria-pressed={activeImage?.id === image.id}
                       onClick={() => setSelectedImageId(image.id)}
-                      style={{ padding: 0, background: "#CDCDCD", border: 0, borderRadius: 8, flexShrink: 0 }}
+
                     >
                       <Image src={image.imageUrl} alt={`${product.name} - ảnh ${index + 1}`} width={120} height={160} style={{ objectFit: "contain" }} />
                     </button>
                   ))}
                 </div>
               </div>
-
-              <div className="gallery-main" style={{ aspectRatio: "4 / 5", alignSelf: "flex-start", minWidth: 0, position: "relative", background: "#CDCDCD", border: 0, borderRadius: 8 }}>
-                {displayImage ? (
-                  <>
-                    <Image
-                      src={displayImage}
-                      alt={product.name}
-                      width={700}
-                      height={875}
-                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                      priority
-                      onLoad={(event) => {
-                        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-                          event.currentTarget.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: "ease-out" });
-                        }
-                      }}
-                    />
-                    {galleryImages.length > 1 && (
-                      <>
-                        <button type="button" onClick={handlePrevImage} aria-label="Ảnh trước" style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.8)", border: "none", display: "grid", placeItems: "center", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.1)" }}>
-                          <span className="material-symbols-outlined">chevron_left</span>
-                        </button>
-                        <button type="button" onClick={handleNextImage} aria-label="Ảnh tiếp theo" style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.8)", border: "none", display: "grid", placeItems: "center", cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.1)" }}>
-                          <span className="material-symbols-outlined">chevron_right</span>
-                        </button>
-                      </>
-                    )}
-                  </>
-                ) : <div style={{ height: "100%", display: "grid", placeItems: "center", color: "var(--ink-secondary)" }}>Biến thể chưa có ảnh</div>}
-              </div>
-            </div>
-
-            {/* ── DESCRIPTION ── */}
-            <section className="product-description-section">
-              <h2>Mô tả</h2>
-              <p className="desc-subtitle">Mã sản phẩm: {selectedVariant ? selectedVariant.sku : product.id}</p>
-
-              <div className="desc-accordions">
-                <ProductAccordion title="Điểm nổi bật" defaultOpen={true}>
-                  <p style={{ whiteSpace: 'pre-wrap' }}>{product.description}</p>
-                </ProductAccordion>
-                <ProductAccordion title="Chi Tiết">
-                  <p>- Có túi kangaroo phía trước.</p>
-                  <p>- Mũ trùm đầu rộng rãi.</p>
-                  <p>- Bo viền cổ tay và vạt áo chắc chắn.</p>
-                </ProductAccordion>
-                <ProductAccordion title="Chất liệu / Cách chăm sóc">
-                  <p>- 75% Cotton, 25% Polyester.</p>
-                  <p>- Giặt máy nước lạnh, chế độ nhẹ nhàng.</p>
-                  <p>- Không sử dụng thuốc tẩy.</p>
-                </ProductAccordion>
-                <ProductAccordion title="Giao Hàng / Đổi / Trả Hàng">
-                  <p>- Miễn phí giao hàng cho đơn từ 600.000 VND.</p>
-                  <p>- Thời gian giao hàng: 2–4 ngày làm việc.</p>
-                  <p>- Đổi trả linh hoạt trong vòng 14 ngày.</p>
-                </ProductAccordion>
-                <ProductAccordion title="Sản xuất">
-                  <p>- Xuất xứ: Việt Nam / Bangladesh / Indonesia.</p>
-                </ProductAccordion>
-              </div>
-            </section>
-
-            {/* ── REVIEWS – vertical list ── */}
-            {hasReviews && product.reviews && <ProductReviews key={product.id} productId={product.id} initial={product.reviews} average={product.averageRating} count={product.reviewsCount} />}
-          </div>
-
-          {/* RIGHT COL – 2/5: sticky info panel */}
-          <div className="product-right-col">
-            <div className="detail-info detail-info-sticky">
               <div className="detail-heading">
                 <p className="detail-brand">ZELLA</p>
                 <h1 className="detail-title">{product.name.normalize("NFC")}</h1>
-                {product.categoryName && <p className="detail-subtitle">{product.categoryName}</p>}
+              </div>
+
+              {/* Price + Rating */}
+              <div className="detail-price-row">
+                <div className="detail-price" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ color: formattedOriginalPrice ? 'red' : 'inherit' }}>{formattedPrice}</span>
+                  {formattedOriginalPrice && (
+                    <span style={{ textDecoration: 'line-through', color: '#888', fontWeight: 'normal', fontSize: '0.65em' }}>{formattedOriginalPrice}</span>
+                  )}
+                  {discountBadge && (
+                    <span style={{ background: '#e00', color: 'white', fontSize: '0.55em', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>{discountBadge}</span>
+                  )}
+                </div>
               </div>
 
               {/* Color */}
               <div className="detail-section detail-color-section">
+                <div className={galleryStyles.colorHeading}>
                 <div className="detail-section-label">
                   Màu sắc: <span>{selectedColorObj?.name}</span>
+                </div>
+
                 </div>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                   {product.colors?.map((c) => {
@@ -317,8 +290,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
               {/* Size */}
               <div className="detail-section">
+                <div className={galleryStyles.colorHeading}>
                 <div className="detail-section-label">
                   Kích cỡ: <span>{selectedSizeObj?.name}</span>
+                </div>
+                <div className={galleryStyles.inlineSizeGuide}>
+                  <button type="button" onClick={() => setShowSizeGuide(true)} className="size-guide-btn">
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>straighten</span>
+                    Kích cỡ
+                  </button>
+                </div>
                 </div>
                 <div className="size-btn-group" style={{ flexWrap: "wrap" }}>
                   {product.sizes?.map((sz) => {
@@ -339,25 +320,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     );
                   })}
                 </div>
-                <div className="size-guide-link">
-                  <button type="button" onClick={() => setShowSizeGuide(true)} className="size-guide-btn">
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>straighten</span>
-                    Kích cỡ
-                  </button>
-                </div>
-              </div>
 
-              {/* Price + Rating */}
-              <div className="detail-price-row">
-                <div className="detail-price" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ color: formattedOriginalPrice ? 'red' : 'inherit' }}>{formattedPrice}</span>
-                  {formattedOriginalPrice && (
-                    <span style={{ textDecoration: 'line-through', color: '#888', fontWeight: 'normal', fontSize: '0.65em' }}>{formattedOriginalPrice}</span>
-                  )}
-                  {discountBadge && (
-                    <span style={{ background: '#e00', color: 'white', fontSize: '0.55em', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>{discountBadge}</span>
-                  )}
-                </div>
               </div>
 
               {/* Cart */}
@@ -385,6 +348,35 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   ? `Còn hàng (${selectedVariant.stockQuantity})`
                   : "Hết hàng"}
               </div>
+              <section className={galleryStyles.productDetails} aria-label="Thông tin sản phẩm">
+                <ProductAccordion title="Mô tả">
+                  <div className={galleryStyles.descriptionContent}>
+                    <h3>{product.name}</h3>
+                    <p style={{ whiteSpace: 'pre-wrap' }}>{product.description || 'Một gợi ý cho tủ đồ hằng ngày, dễ kết hợp cùng những món đồ yêu thích để tạo nên phong cách riêng.'}</p>
+                    <dl>
+                      {product.categoryName && <div><dt>Danh mục</dt><dd>{product.categoryName}</dd></div>}
+                      {product.style && <div><dt>Phong cách</dt><dd>{product.style}</dd></div>}
+                      {product.occasion && <div><dt>Dịp sử dụng</dt><dd>{product.occasion}</dd></div>}
+                      {selectedColorObj && <div><dt>Màu đang chọn</dt><dd>{selectedColorObj.name}</dd></div>}
+                      {product.sizes?.length > 0 && <div><dt>Kích cỡ</dt><dd>{product.sizes.map(size => size.name).join(', ')}</dd></div>}
+                    </dl>
+                    <h3>Gợi ý phối đồ</h3>
+                    <p>Kết hợp cùng các thiết kế màu trung tính và phụ kiện tối giản để tạo tổng thể hài hòa. Tham khảo bảng kích cỡ để chọn size phù hợp với số đo của bạn.</p>
+                  </div>
+                </ProductAccordion>
+                <ProductAccordion title="Chất liệu & chăm sóc">
+                  <MaterialAndCareSample />
+                </ProductAccordion>
+                <ProductAccordion title="Giao hàng & đổi trả">
+                  <DeliveryAndReturnsSample />
+                </ProductAccordion>
+                {hasReviews && product.reviews && <ProductAccordion title={`Đánh giá khách hàng (${product.reviewsCount})`}>
+                  <div className={galleryStyles.reviewsDialog}>
+                    <ProductReviews key={product.id} productId={product.id} initial={product.reviews} average={product.averageRating} count={product.reviewsCount} />
+                  </div>
+                </ProductAccordion>}
+              </section>
+
             </div>
           </div>
         </div>{/* end product-page-layout */}
@@ -427,7 +419,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", zIndex: 10000, display: "flex", justifyContent: "center", alignItems: "center" }}
           onClick={() => setShowCartPopup(false)}
         >
-          <div style={{ backgroundColor: "#fff", width: "90%", maxWidth: "800px", padding: "48px", position: "relative", boxShadow: "0 20px 40px rgba(0,0,0,0.1)", borderRadius: "12px" }} onClick={(e) => e.stopPropagation()}>
+          <div className={galleryStyles.cartPopup} onClick={(e) => e.stopPropagation()}>
             <button
               style={{ position: "absolute", top: "24px", right: "24px", background: "none", border: "none", cursor: "pointer", color: "#111", display: "flex", alignItems: "center", justifyContent: "center" }}
               onClick={() => setShowCartPopup(false)}
@@ -440,8 +432,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <p style={{ fontSize: "0.85rem", color: "#777", marginBottom: "32px", fontWeight: 300 }}>Phí giao hàng sẽ được tính tại bước đặt hàng.</p>
 
             {/* Added Product Info */}
-            <div style={{ borderTop: "1px solid #eaeaea", borderBottom: "1px solid #eaeaea", padding: "32px 0", display: "flex", gap: "32px", marginBottom: "40px" }}>
-              <div style={{ width: "160px", flexShrink: 0 }}>
+            <div className={galleryStyles.cartProduct}>
+              <div className={galleryStyles.cartImage}>
                 {displayImage && <Image src={displayImage} alt={product.name} width={300} height={400} style={{ width: "100%", height: "auto", objectFit: "contain", borderRadius: "8px" }} />}
               </div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
@@ -456,7 +448,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Actions */}
-            <div style={{ display: "flex", gap: "20px" }}>
+            <div className={galleryStyles.cartActions}>
               <button type="button" onClick={() => { setShowCartPopup(false); cart.openCart(); }} style={{ flex: 1, padding: "16px", backgroundColor: "#000", color: "#fff", border: "1px solid #000", fontWeight: 400, fontSize: "0.9rem", letterSpacing: "1px", textTransform: "uppercase", cursor: "pointer", transition: "all 0.3s", display: "flex", justifyContent: "center", alignItems: "center", textDecoration: "none" }}>
                 Xem giỏ hàng
               </button>

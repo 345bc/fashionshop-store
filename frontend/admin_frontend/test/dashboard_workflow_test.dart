@@ -1,6 +1,12 @@
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
+
+import 'support/csv_file_picker.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:zella_admin_flutter/features/dashboard/data/analytics_calculations.dart';
@@ -263,32 +269,20 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets('CSV copies all filtered rows, not just visible page', (
+  testWidgets('CSV exports all filtered rows, not just visible page', (
     tester,
   ) async {
     final p = provider();
     p.setSection(AnalyticsSection.orders);
-    String? copied;
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (call) async {
-        if (call.method == 'Clipboard.setData') {
-          copied = (call.arguments as Map)['text'] as String;
-        }
-        return null;
-      },
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        null,
-      ),
-    );
+    final picker = CsvFilePicker();
+    FilePicker.platform = picker;
     await mount(tester, p);
-    await tester.tap(find.text('Sao chép CSV'));
+    await tester.tap(find.text('Xuất CSV'));
     await tester.pumpAndSettle();
-    expect(copied, contains(p.table.rows.last.first));
-    expect(copied!.split('\r\n').length, p.table.rows.length + 4);
+    final exported = utf8.decode(picker.capturedBytes!);
+    expect(picker.suggestedName, endsWith('.csv'));
+    expect(exported, contains(p.table.rows.last.first));
+    expect(exported.split('\r\n').length, p.table.rows.length + 4);
     expect(tester.takeException(), isNull);
   });
 }

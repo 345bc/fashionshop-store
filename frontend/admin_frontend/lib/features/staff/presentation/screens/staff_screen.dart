@@ -1,3 +1,5 @@
+import '../../../../widgets/common/action_menu.dart';
+
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -7,10 +9,7 @@ import '../../../../widgets/common/feature_toolbar.dart';
 import '../../../../widgets/common/filter_dropdown.dart';
 import '../dialogs/staff_edit_dialog.dart';
 
-const staffStatuses = {
-  'true': 'Đang làm việc',
-  'false': 'Ngừng làm việc',
-};
+const staffStatuses = {'true': 'Đang làm việc', 'false': 'Ngừng làm việc'};
 
 class StaffScreen extends StatefulWidget {
   const StaffScreen({super.key});
@@ -186,13 +185,15 @@ class _StaffScreenState extends State<StaffScreen> {
                                     ),
                                     DataCell(Text(s['phone'] ?? '—')),
                                     DataCell(
-                                      IconButton(
-                                        tooltip: 'Sửa hồ sơ',
-                                        onPressed: () => _edit(s),
-                                        icon: const Icon(
-                                          Symbols.edit,
-                                          size: 18,
-                                        ),
+                                      ActionMenu(
+                                        items: const [
+                                          ActionMenuItem(
+                                            value: 'edit',
+                                            label: 'Chỉnh sửa',
+                                            icon: Symbols.edit,
+                                          ),
+                                        ],
+                                        onSelected: (_) => _edit(s),
                                       ),
                                     ),
                                   ],

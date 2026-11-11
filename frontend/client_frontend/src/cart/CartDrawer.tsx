@@ -64,13 +64,12 @@ export default function CartDrawer() {
     document.addEventListener("keydown", keydown);
     return () => { document.body.style.overflow = overflow; document.removeEventListener("keydown", keydown); previousFocus?.focus(); };
   }, [drawerOpen, closeCart]);
-  if (!drawerOpen) return null;
-  return <div className="cart-drawer-backdrop" onClick={closeCart}>
+  return <div className="cart-drawer-backdrop" data-open={drawerOpen} aria-hidden={!drawerOpen} inert={!drawerOpen} onClick={closeCart}>
     <aside ref={panel} tabIndex={-1} className="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title" onClick={event => event.stopPropagation()}>
       <header className="cart-drawer-header"><div><h2 id="cart-drawer-title">Giỏ hàng</h2><p className="cart-muted">{cart.totalQuantity} sản phẩm</p></div><button type="button" className="cart-close" onClick={closeCart} aria-label="Đóng giỏ hàng"><GoogleSymbol name="close" size={20} /></button></header>
       <div className="cart-drawer-body"><CartItems selectable />
         {!showSkeleton && !!cart.items.length && <button type="button" className="cart-text-button cart-clear" disabled={cart.busy || !!cart.error} onClick={() => setConfirmClear(true)}>Xóa toàn bộ giỏ</button>}
-        {confirmClear && <Notification open title="Xóa giỏ hàng" message="Bạn muốn xóa tất cả sản phẩm khỏi giỏ?" confirmText="Xóa tất cả" onConfirm={cart.clear} onClose={() => setConfirmClear(false)} />}
+        {drawerOpen && confirmClear && <Notification open title="Xóa giỏ hàng" message="Bạn muốn xóa tất cả sản phẩm khỏi giỏ?" confirmText="Xóa tất cả" onConfirm={cart.clear} onClose={() => setConfirmClear(false)} />}
       </div>
       <footer className="cart-drawer-footer">{showSkeleton ? <CartSummarySkeleton /> : <><p className="cart-muted">Đã chọn <strong>{cart.selectedItems.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm</strong></p><div className="cart-total"><span>Tạm tính</span><strong>{money(cart.selectedSubtotal)}</strong></div><p className="cart-muted">Phí giao hàng được tính khi đặt hàng. Giỏ chưa giữ tồn kho.</p>
         {cart.selectedItems.some(item => !item.purchasable) && <p className="cart-error">Giảm số lượng hoặc bỏ chọn sản phẩm không đủ hàng.</p>}

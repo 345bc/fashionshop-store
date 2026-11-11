@@ -1,5 +1,7 @@
 "use client";
 import GoogleSymbol from "@/components/ui/GoogleSymbol";
+import mobileStyles from "./HeaderMobile.module.css";
+import catalogStyles from "./HeaderCatalog.module.css";
 
 
 import { FormEvent, useEffect, useRef, useState } from "react";
@@ -19,6 +21,41 @@ interface category {
   imageUrl: string
 }
 
+function MobileCategoryGroup({ parent, onNavigate }: { parent: category; onNavigate: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const [result, setResult] = useState<{ items: category[]; error: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!expanded || result) return;
+    let disposed = false;
+    getCategories(parent.id)
+      .then(response => {
+        if (!disposed) setResult({ items: Array.isArray(response?.data) ? response.data : [], error: false });
+      })
+      .catch(() => {
+        if (!disposed) setResult({ items: [], error: true });
+      });
+    return () => { disposed = true; };
+  }, [expanded, parent.id, result]);
+
+  return <div>
+    <button type="button" className={mobileStyles.categoryToggle}
+      aria-expanded={expanded} aria-controls={`mobile-category-${parent.id}`}
+      onClick={() => setExpanded(value => !value)}>
+      {parent.name}
+      <GoogleSymbol name={expanded ? "expand_less" : "expand_more"} size={18} />
+    </button>
+    {expanded && <div id={`mobile-category-${parent.id}`} className={mobileStyles.children}>
+      {!result ? <p role="status">Đang tải danh mục...</p>
+        : result.error ? <div role="alert"><p>Không tải được danh mục.</p><button type="button" onClick={() => setResult(null)}>Thử lại</button></div>
+          : result.items.length === 0 ? <p>Chưa có danh mục con.</p>
+            : result.items.map(item => <Link key={item.id}
+              href={`/products?cat=${item.id}&categoryName=${encodeURIComponent(item.name)}`}
+              onClick={onNavigate}>{item.name}</Link>)}
+    </div>}
+  </div>;
+}
+
 export default function Header() {
   const auth = useAuth();
   const pathname = usePathname();
@@ -33,12 +70,42 @@ export default function Header() {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const mobileSearchRef = useRef<HTMLInputElement>(null);
+  const mobileMenuRef = useRef<HTMLElement>(null);
   const [categoryParent, setCategoryParent] = useState<category[] | null>(null);
   const [category, setCategory] = useState<category[] | null>(null);
   const [loadingSubCategories, setLoadingSubCategories] = useState(false);
 
-  const activeParent = (categoryParent || []).find((c) => c.id === activeSection);
-  const activeParentName = activeParent?.name || "danh mục";
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const menu = mobileMenuRef.current;
+    menu?.querySelector<HTMLElement>('button[aria-label="Đóng menu"]')?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || !menu) return;
+      const focusable = Array.from(menu.querySelectorAll<HTMLElement>('a[href], button, input'))
+        .filter(element => !element.hasAttribute("disabled") && element.getClientRects().length > 0);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first?.focus();
+      }
+    };
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => { if (desktop.matches) setMobileOpen(false); };
+    desktop.addEventListener("change", closeOnDesktop);
+    document.addEventListener("keydown", trapFocus);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", trapFocus);
+      desktop.removeEventListener("change", closeOnDesktop);
+      previousFocus?.focus({ preventScroll: true });
+    };
+  }, [mobileOpen]);
 
 
 
@@ -163,6 +230,7 @@ export default function Header() {
             className="grid size-10 place-items-center rounded-full text-black transition-colors hover:bg-black/5 lg:hidden"
             aria-label="Mở menu"
             aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation"
             onClick={() => setMobileOpen(true)}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 24 }}>menu</span>
@@ -207,6 +275,10 @@ export default function Header() {
           <div className="flex items-center justify-end gap-1.5">
             <button type="button" className="grid size-10 place-items-center rounded-full text-black transition-colors hover:bg-black/5" aria-label="Tìm kiếm" onClick={openSearch}>
               <span className="material-symbols-outlined" style={{ fontSize: 22 }}>search</span>
+            </button>
+            <button type="button" onClick={openCart} className="relative grid size-10 place-items-center rounded-full border-0 bg-transparent text-black transition-colors hover:bg-black/5" aria-label={`Mở giỏ hàng, ${cart.totalQuantity} sản phẩm`} aria-expanded={cart.drawerOpen}>
+              <span className="material-symbols-outlined" style={{ fontSize: 22 }}>shopping_bag</span>
+              <span className="absolute top-1.5 right-1.5 grid size-3.75 place-items-center rounded-full bg-black text-[8px] font-bold text-white shadow-sm">{cart.totalQuantity}</span>
             </button>
             <div ref={accountRef} className="relative">
               <button type="button" onClick={() => { setCatalogOpen(false); setMobileOpen(false); setAccountOpen(open => !open); }} aria-expanded={accountOpen} aria-controls="account-menu" className="grid size-10 place-items-center rounded-full text-black transition-colors hover:bg-black/5" aria-label="Mở menu tài khoản">
@@ -271,10 +343,6 @@ export default function Header() {
                 )}
               </div>
             </div>
-            <button type="button" onClick={openCart} className="relative grid size-10 place-items-center rounded-full border-0 bg-transparent text-black transition-colors hover:bg-black/5" aria-label={`Mở giỏ hàng, ${cart.totalQuantity} sản phẩm`} aria-expanded={cart.drawerOpen}>
-              <span className="material-symbols-outlined" style={{ fontSize: 22 }}>shopping_bag</span>
-              <span className="absolute top-1.5 right-1.5 grid size-3.75 place-items-center rounded-full bg-black text-[8px] font-bold text-white shadow-sm">{cart.totalQuantity}</span>
-            </button>
           </div>
         </div>
 
@@ -322,42 +390,34 @@ export default function Header() {
             </form>
 
             {loadingSubCategories ? (
-              <div className="grid grid-cols-4 gap-x-4 gap-y-6 xl:grid-cols-8 animate-pulse">
-                {Array.from({ length: 8 }).map((_, index) => (
+              <div className={`${catalogStyles.categories} animate-pulse`} aria-label="Đang tải danh mục" aria-busy="true">
+                {Array.from({ length: 6 }).map((_, index) => (
                   <div key={index} className="min-w-0">
-                    <div className="aspect-[3/4] rounded-[12px] bg-black/5" />
+                    <div className={`${catalogStyles.image} bg-black/5`} />
                     <div className="mt-2.5 h-3.5 w-3/4 rounded bg-black/5" />
                   </div>
                 ))}
               </div>
             ) : category && category.length > 0 ? (
-              <div role="tabpanel" className="grid grid-cols-4 gap-x-4 gap-y-6 xl:grid-cols-8">
+              <div key={activeSection} role="tabpanel" tabIndex={0} aria-label="Danh mục sản phẩm, cuộn để xem thêm" className={catalogStyles.categories}>
                 {category.map((item) => (
                   <Link
                     key={item.id}
                     href={`/products?cat=${item.id}&categoryName=${encodeURIComponent(item.name)}`}
                     onClick={closeNavigation}
-                    className="group min-w-0"
+                    className={`group ${catalogStyles.item}`}
                   >
-                    <div className="relative aspect-[3/4] overflow-hidden rounded-[12px] ">
+                    <div className={catalogStyles.image}>
                       <Image
                         src={item.imageUrl || "/assets/images/v7_1795.png"}
                         alt={item.name || ""}
                         fill
-                        sizes="(max-width: 1280px) 25vw, 160px"
-                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]"
+                        sizes="104px"
+                        className="object-contain transition-transform duration-500 ease-out group-hover:scale-[1.035]"
                       />
                     </div>
-                    <div className="mt-2.5 flex items-center justify-between gap-2">
-                      <span className="truncate text-[12px] font-medium text-[#2b2e29] transition-colors group-hover:text-black">
+                    <div className={catalogStyles.label}>
                         {item.name}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className="translate-x-0 text-[13px] text-[#9a9c95] transition-all group-hover:translate-x-0.5 group-hover:text-black"
-                      >
-                        <GoogleSymbol name="arrow_forward" size={16} />
-                      </span>
                     </div>
                   </Link>
                 ))}
@@ -382,30 +442,32 @@ export default function Header() {
       }
 
       <div className={`fixed inset-0 z-60 bg-[#171914]/35 transition-opacity duration-200 lg:hidden ${mobileOpen ? "visible opacity-100" : "invisible pointer-events-none opacity-0"}`} onClick={() => setMobileOpen(false)} />
-      <aside className={`fixed top-0 bottom-0 left-0 z-70 w-[min(390px,90vw)] overflow-y-auto bg-(--z-bg) px-5 py-5 shadow-2xl transition-transform duration-300 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`} aria-hidden={!mobileOpen}>
-        <div className="flex items-center justify-between border-b border-black/10 pb-4">
+      <aside ref={mobileMenuRef} id="mobile-navigation" role="dialog" aria-modal={mobileOpen ? true : undefined} aria-label="Menu điều hướng" inert={!mobileOpen} className={`${mobileStyles.drawer} fixed top-0 left-0 z-70 shadow-2xl transition-transform duration-300 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`} aria-hidden={!mobileOpen}>
+        <div className={`${mobileStyles.head} flex items-center justify-between border-b border-black/10 pb-4`}>
           <Link href="/" onClick={closeNavigation} className="text-[19px] font-bold tracking-[0.2em] text-[#1d211c]">ZELLA</Link>
-          <button type="button" onClick={() => setMobileOpen(false)} className="grid size-9 place-items-center rounded-full bg-black/5" aria-label="Đóng menu"><span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span></button>
+          <button type="button" onClick={() => setMobileOpen(false)} className={`${mobileStyles.close} grid place-items-center rounded-full bg-black/5`} aria-label="Đóng menu"><span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span></button>
         </div>
 
-        <form onSubmit={handleSearch} className="my-5 grid h-11 grid-cols-[20px_1fr] items-center gap-2 rounded-full border border-black/15 bg-white px-4">
+        <form onSubmit={handleSearch} className={`${mobileStyles.search} my-5 grid h-12 grid-cols-[20px_1fr] items-center gap-2 rounded-full border border-black/15 bg-white px-4`}>
           <button type="button" aria-label="Nhập từ khóa tìm kiếm" onClick={() => mobileSearchRef.current?.focus()} className="grid place-items-center text-[#777a72]"><span className="material-symbols-outlined" style={{ fontSize: 17 }}>search</span></button>
           <input ref={mobileSearchRef} value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 border-0 bg-transparent text-[13px] outline-none placeholder:text-[#9a9c95]" placeholder="Tìm kiếm sản phẩm" aria-label="Từ khóa tìm kiếm" />
         </form>
 
-        <nav aria-label="Điều hướng di động" className="flex flex-col">
+        <nav aria-label="Điều hướng di động" className={`${mobileStyles.navigation} flex flex-col`}>
           <Link href="/" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Trang chủ</Link>
           <button type="button" className="flex items-center justify-between border-b border-black/10 bg-transparent py-4 text-left text-[14px] font-medium" aria-expanded={mobileProductsOpen} onClick={() => setMobileProductsOpen((open) => !open)}>
             Sản phẩm
             <span className={`material-symbols-outlined transition-transform ${mobileProductsOpen ? "rotate-180" : ""}`} style={{ fontSize: 16 }}>expand_more</span>
           </button>
-          {categoryParent?.map(item => <Link key={item.id} href={`/products?cat=${item.id}&categoryName=${encodeURIComponent(item.name)}`} onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">{item.name}</Link>)}
+          {mobileProductsOpen && <div className={mobileStyles.categories}>
+            {categoryParent?.map(item => <MobileCategoryGroup key={item.id} parent={item} onNavigate={closeNavigation} />)}
+          </div>}
           <Link href="/blog" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Bài viết</Link>
 
           <Link href="/loyalty" onClick={closeNavigation} className="border-b border-black/10 py-4 text-[14px] font-medium">Điểm thưởng</Link>
         </nav>
 
-        <div className="mt-6">
+        <div className={mobileStyles.account}>
           <Link href={auth.user ? "/profile" : "/login"} onClick={closeNavigation} className="flex items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-3 py-3 text-[11px] font-medium"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>person</span> Tài khoản</Link>
         </div>
       </aside>

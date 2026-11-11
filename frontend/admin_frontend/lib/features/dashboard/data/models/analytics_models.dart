@@ -27,7 +27,7 @@ enum AnalyticsPeriod {
 }
 
 String reportMoney(int value) =>
-    '${NumberFormat.decimalPattern('vi').format(value)} đ';
+    '${NumberFormat.decimalPattern('vi_VN').format(value)} VND';
 String reportDate(DateTime date) => DateFormat('dd/MM/yyyy').format(date);
 String orderStatusLabel(String status) =>
     const {

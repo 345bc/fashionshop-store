@@ -44,7 +44,7 @@
     --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.12);
 
     --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-    --max-w: 1280px;
+    --max-w: 1480px;
   }
 
   /* Base resets & typography */
@@ -3438,7 +3438,7 @@
 
   /* ── Container for constrained sections ── */
   .modern-container {
-    max-width: 1480px;
+    max-width: var(--max-w);
     margin: 0 auto;
     padding: 0;
   }
@@ -7923,12 +7923,6 @@ body {
   opacity: 1;
   transform: translateY(0);
 }
-/* --- PRODUCT CARD SIZE OVERRIDE --- */
-.product-rail {
-  grid-auto-columns: calc((100% - 42px) / 4) !important;
-  gap: 14px !important;
-}
-
 /* --- LIFEWEAR BANNER STYLE OVERRIDE --- */
 .lifewear-panel > div.lifewear-content {
   display: flex !important;
@@ -8038,5 +8032,21 @@ body {
 /* Khóa thanh cuộn màn hình khi dialog/modal lỗi kết nối đang mở */
 html:has(dialog[open]) {
   overflow: hidden !important;
+}
+
+
+/* Shared page width; individual sections retain their responsive gutters. */
+.container {
+  width: 100%;
+  max-width: var(--max-w);
+}
+
+@media (min-width: 768px) {
+  .container,
+  .modern-container {
+    width: calc(100% - 64px);
+    max-width: var(--max-w);
+    margin-inline: auto;
+  }
 }
 

@@ -83,9 +83,6 @@ class SuppliersProvider extends ChangeNotifier {
     }
   }
 
-  Future<SupplierResponseModel> loadDetail(int id) async =>
-      SupplierResponseModel.fromJson(await _repository.getById(id));
-
   Future<void> loadOptions() async {
     optionsError = null;
     try {

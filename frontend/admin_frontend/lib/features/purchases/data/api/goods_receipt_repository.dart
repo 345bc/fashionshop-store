@@ -9,6 +9,8 @@ class GoodsReceiptRepository {
     int size = 15,
     String? query,
     String? status,
+    String? paymentStatus,
+    int? supplierId,
   }) => warehouseRequest(() async {
     final response = await _api.get(
       ApiEndpoints.goodsReceipts,
@@ -17,6 +19,8 @@ class GoodsReceiptRepository {
         'size': size,
         'q': ?query,
         'status': ?status,
+        'paymentStatus': ?paymentStatus,
+        'supplierId': ?supplierId,
       },
     );
     return Map<String, dynamic>.from(response.data['data'] as Map);

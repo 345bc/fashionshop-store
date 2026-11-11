@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:typed_data';
 
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/common/searchable_select_field.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../../data/models/category_response_model.dart';
 import '../providers/categories_provider.dart';
@@ -155,136 +156,191 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
       title: widget.category == null
           ? 'Thêm danh mục mới'
           : 'Chỉnh sửa danh mục',
-      width: (size.width * 2 / 3).clamp(480.0, 1100.0),
-      height: size.height * 2 / 3,
+      subtitle: 'Cập nhật thông tin, phân loại và ảnh danh mục.',
+      width: 620,
+      height: size.height * 0.85,
       confirmText: widget.category == null ? 'Thêm danh mục' : 'Lưu thay đổi',
       isLoading: _saving,
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _submit,
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Thông tin cơ bản',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: 'Tên danh mục *'),
-                maxLength: 100,
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Vui lòng nhập tên danh mục'
-                    : null,
-              ),
-              const SizedBox(height: 16),
-              FutureBuilder<List<CategoryResponseModel>>(
-                future: _parentsFuture,
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return Text(
-                      snapshot.hasError
-                          ? 'Không tải được danh mục cha: ${snapshot.error}'
-                          : 'Đang tải danh mục cha',
-                    );
-                  }
-                  final byId = {
-                    for (final item in snapshot.data!) item.id: item,
-                  };
-                  final choices = snapshot.data!
-                      .where((item) => _canBeParent(item, byId))
-                      .toList();
-                  final validParent = choices.any(
-                    (item) => item.id == _parentId,
-                  );
-                  return DropdownButtonFormField<int?>(
-                    key: ValueKey(_parentId),
-                    initialValue: validParent ? _parentId : null,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Danh mục cha *',
-                    ),
-                    items: [
-                      ...choices.map(
-                        (item) => DropdownMenuItem<int?>(
-                          value: item.id,
-                          child: Text(item.name),
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) => setState(() => _parentId = value),
-                    validator: (_) {
-                      if (_parentId == null) {
-                        return 'Vui lòng chọn danh mục cha';
-                      }
-                      return _parentId != null && !validParent
-                          ? 'Danh mục cha không hợp lệ'
-                          : null;
-                    },
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Trạng thái hoạt động'),
-                value: _isActive,
-                activeThumbColor: AppTheme.primary,
-                onChanged: (value) => setState(() => _isActive = value),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Ảnh danh mục',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              if (_imageBytes != null)
-                Image.memory(
-                  _imageBytes!,
-                  height: 160,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) =>
-                      const Text('Không thể xem trước ảnh'),
-                )
-              else if (_imageUrl != null)
-                Image.network(
-                  _imageUrl!,
-                  height: 160,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) =>
-                      const Text('Không tải được ảnh danh mục'),
+      content: Theme(
+        data: Theme.of(context).copyWith(
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 15,
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppTheme.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppTheme.primary),
+            ),
+          ),
+        ),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 8, right: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Thông tin cơ bản',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _saving ? null : _pickImage,
-                    icon: const Icon(Symbols.upload_file),
-                    label: const Text('Chọn ảnh từ máy'),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _name,
+                  decoration: const InputDecoration(
+                    labelText: 'Tên danh mục *',
+                    hintText: 'Nhập tên danh mục',
                   ),
-                  if (_imageBytes != null || _imageUrl != null)
-                    TextButton.icon(
-                      onPressed: _saving
-                          ? null
-                          : () => setState(() {
-                              _imageBytes = null;
-                              _imageName = null;
-                              _imageUrl = null;
-                            }),
-                      icon: const Icon(Symbols.delete),
-                      label: const Text('Bỏ ảnh'),
+                  maxLength: 100,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Vui lòng nhập tên danh mục'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                FutureBuilder<List<CategoryResponseModel>>(
+                  future: _parentsFuture,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return Text(
+                        snapshot.hasError
+                            ? 'Không tải được danh mục cha: ${snapshot.error}'
+                            : 'Đang tải danh mục cha',
+                      );
+                    }
+                    final byId = {
+                      for (final item in snapshot.data!) item.id: item,
+                    };
+                    final choices = snapshot.data!
+                        .where((item) => _canBeParent(item, byId))
+                        .toList();
+                    final validParent = choices.any(
+                      (item) => item.id == _parentId,
+                    );
+                    return SearchableSelectField<int>(
+                      key: ValueKey(_parentId),
+                      initialValue: validParent ? _parentId : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Danh mục cha *',
+                      ),
+                      items: [
+                        ...choices.map(
+                          (item) => DropdownMenuItem<int>(
+                            value: item.id,
+                            child: Text(item.name),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) => setState(() => _parentId = value),
+                      validator: (_) {
+                        if (_parentId == null) {
+                          return 'Vui lòng chọn danh mục cha';
+                        }
+                        return _parentId != null && !validParent
+                            ? 'Danh mục cha không hợp lệ'
+                            : null;
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  tileColor: AppTheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  title: const Text('Trạng thái hoạt động'),
+                  subtitle: const Text(
+                    'Cho phép hiển thị danh mục',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
                     ),
-                ],
-              ),
-              const Text(
-                'Ảnh được tải lên khi lưu danh mục. Hỗ trợ JPG, PNG, GIF, WebP.',
-                style: TextStyle(color: AppTheme.textSecondary),
-              ),
-            ],
+                  ),
+                  value: _isActive,
+                  activeThumbColor: AppTheme.primary,
+                  onChanged: (value) => setState(() => _isActive = value),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Ảnh danh mục',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 152,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.borderLight),
+                  ),
+                  child: _imageBytes != null
+                      ? Image.memory(
+                          _imageBytes!,
+                          height: 160,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, _, _) =>
+                              const Text('Không thể xem trước ảnh'),
+                        )
+                      : _imageUrl != null
+                      ? Image.network(
+                          _imageUrl!,
+                          height: 160,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, _, _) =>
+                              const Text('Không tải được ảnh danh mục'),
+                        )
+                      : const Center(
+                          child: Icon(
+                            Symbols.add_photo_alternate,
+                            size: 32,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _saving ? null : _pickImage,
+                      icon: const Icon(Symbols.upload_file),
+                      label: const Text('Chọn ảnh từ máy'),
+                    ),
+                    if (_imageBytes != null || _imageUrl != null)
+                      TextButton.icon(
+                        onPressed: _saving
+                            ? null
+                            : () => setState(() {
+                                _imageBytes = null;
+                                _imageName = null;
+                                _imageUrl = null;
+                              }),
+                        icon: const Icon(Symbols.delete),
+                        label: const Text('Bỏ ảnh'),
+                      ),
+                  ],
+                ),
+                const Text(
+                  'Hỗ trợ JPG, PNG, GIF, WebP.',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ),
       ),

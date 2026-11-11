@@ -35,7 +35,6 @@ final List<NavGroup> navGroups = [
   NavGroup('SẢN PHẨM & KHO', [
     NavItem('Danh mục sản phẩm', Symbols.category, '/categories'),
     NavItem('Sản phẩm', Symbols.inventory_2, '/products'),
-    NavItem('Gợi ý mua kèm', Symbols.shopping_bag, '/bought-together'),
     NavItem('Tồn kho', Symbols.storage, '/inventory'),
     NavItem('Nhập hàng', Symbols.local_shipping, '/purchases'),
     NavItem('Nhà cung cấp', Symbols.business_center, '/suppliers'),
@@ -47,14 +46,14 @@ final List<NavGroup> navGroups = [
   NavGroup('HỆ THỐNG', [
     NavItem('Tài khoản', Symbols.security, '/users'),
     NavItem('Nhân sự', Symbols.badge, '/staff'),
-    NavItem('Cài đặt', Symbols.settings, '/settings'),
   ]),
   NavGroup('BÀI VIẾT', [
     NavItem('Bài viết', Symbols.article, '/posts'),
     NavItem('Danh mục bài viết', Symbols.folder_open, '/post-categories'),
   ]),
-  NavGroup('GIAO DIỆN', [
+  NavGroup('CÀI ĐẶT', [
     NavItem('Giao diện trang chủ', Symbols.web, '/home-appearance'),
+    NavItem('Gợi ý mua kèm', Symbols.shopping_bag, '/bought-together'),
   ]),
 ];
 
@@ -77,27 +76,25 @@ class AppLayout extends StatefulWidget {
 class _AppLayoutState extends State<AppLayout> {
   bool _sidebarOpen = true;
 
-  List<NavGroup> get _visibleGroups {
-    final role = context.watch<AuthProvider>().user?.activeRole;
-    return navGroups
-        .map(
-          (group) => NavGroup(
-            group.title,
-            group.items
-                .where((item) => RoleAccess.canOpen(role, item.route))
-                .toList(),
-          ),
-        )
-        .where((group) => group.items.isNotEmpty)
-        .toList();
-  }
-
   bool _isActive(NavItem item) =>
       widget.currentRoute == item.route ||
-      (item.route == '/' && widget.currentRoute == '/reports') ||
+      (item.route == '/products' &&
+          (widget.currentRoute.startsWith('/products/') ||
+              widget.currentRoute == '/product-variants')) ||
+      (item.route == '/inventory' &&
+          widget.currentRoute == '/inventory/detail') ||
+      (item.route == '/purchases' &&
+          widget.currentRoute == '/purchases/detail') ||
+      (item.route == '/suppliers' &&
+          widget.currentRoute == '/suppliers/form') ||
+      (item.route == '/posts' && widget.currentRoute == '/posts/form') ||
+      (item.route == '/post-categories' &&
+          widget.currentRoute == '/post-categories/form') ||
       (item.route == '/promotions' &&
           (widget.currentRoute == '/vouchers' ||
-              widget.currentRoute == '/promotion-programs'));
+              widget.currentRoute == '/promotion-programs' ||
+              widget.currentRoute == '/vouchers/form' ||
+              widget.currentRoute == '/promotion-programs/form'));
 
   Widget _compactSidebar() => OverflowBox(
     alignment: Alignment.centerLeft,
@@ -118,7 +115,7 @@ class _AppLayoutState extends State<AppLayout> {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
             children: [
-              for (final group in _visibleGroups) ...[
+              for (final group in navGroups) ...[
                 for (final item in group.items)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 3),
@@ -139,7 +136,7 @@ class _AppLayoutState extends State<AppLayout> {
                       icon: Icon(item.icon, size: 20),
                     ),
                   ),
-                if (group != _visibleGroups.last) const Divider(height: 16),
+                if (group != navGroups.last) const Divider(height: 16),
               ],
             ],
           ),
@@ -195,9 +192,9 @@ class _AppLayoutState extends State<AppLayout> {
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
-                                itemCount: _visibleGroups.length,
+                                itemCount: navGroups.length,
                                 itemBuilder: (context, groupIndex) {
-                                  final group = _visibleGroups[groupIndex];
+                                  final group = navGroups[groupIndex];
                                   return Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -219,16 +216,7 @@ class _AppLayoutState extends State<AppLayout> {
                                         ),
                                       ),
                                       ...group.items.map((item) {
-                                        final isActive =
-                                            widget.currentRoute == item.route ||
-                                            (item.route == '/' &&
-                                                widget.currentRoute ==
-                                                    '/reports') ||
-                                            (item.route == '/promotions' &&
-                                                (widget.currentRoute ==
-                                                        '/vouchers' ||
-                                                    widget.currentRoute ==
-                                                        '/promotion-programs'));
+                                        final isActive = _isActive(item);
                                         return Padding(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 16,
@@ -321,7 +309,12 @@ class _AppLayoutState extends State<AppLayout> {
                   Container(
                     height: 70,
                     padding: const EdgeInsets.symmetric(horizontal: 32),
-                    decoration: const BoxDecoration(color: AppTheme.background),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.background,
+                      border: Border(
+                        bottom: BorderSide(color: AppTheme.border),
+                      ),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

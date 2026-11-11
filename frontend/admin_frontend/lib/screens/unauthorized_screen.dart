@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
-import '../main.dart';
 
 class UnauthorizedScreen extends StatelessWidget {
-  const UnauthorizedScreen({super.key});
+  const UnauthorizedScreen({
+    super.key,
+    required this.onBack,
+    required this.onHome,
+  });
+
+  final VoidCallback onBack;
+  final VoidCallback onHome;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +44,7 @@ class UnauthorizedScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Bạn không có quyền truy cập vào chức năng này.\nVui lòng chuyển sang tài khoản có quyền hạn phù hợp.',
+                'Vai trò đang dùng không có quyền truy cập chức năng này.',
                 style: TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 16,
@@ -47,17 +53,13 @@ class UnauthorizedScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 16,
+                runSpacing: 12,
                 children: [
                   OutlinedButton(
-                    onPressed: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        MainScreen.of(context).navigate('/');
-                      }
-                    },
+                    onPressed: onBack,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.text,
                       side: const BorderSide(color: AppTheme.border),
@@ -77,11 +79,8 @@ class UnauthorizedScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
                   ElevatedButton(
-                    onPressed: () {
-                      MainScreen.of(context).navigate('/');
-                    },
+                    onPressed: onHome,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       foregroundColor: Colors.white,

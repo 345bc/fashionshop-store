@@ -77,6 +77,24 @@ public class DashboardRepository {
                 .addValue("offset", (long) q.page()*q.size()).addValue("size", q.size());
     }
 
+    public List<Map<String,Object>> recentOrders(DashboardQuery q) {
+        return jdbc.queryForList(FACTS + """
+          SELECT TOP (5) f.id, f.order_code code, f.order_status status, f.total_amount total,
+            first_item.product_name productName, c.name categoryName, picture.image_url imageUrl,
+            (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=f.id) itemCount
+          FROM facts f
+          OUTER APPLY (SELECT TOP (1) i.product_id,i.product_name FROM order_items i
+            WHERE i.order_id=f.id ORDER BY i.id) first_item
+          LEFT JOIN products p ON p.id=first_item.product_id
+          LEFT JOIN categories c ON c.id=p.category_id
+          OUTER APPLY (SELECT TOP (1) pi.image_url FROM product_images pi
+            WHERE pi.product_id=first_item.product_id ORDER BY pi.is_primary DESC,pi.display_order,pi.id) picture
+          WHERE f.created_at>=:start AND f.created_at<:end
+            AND (:status IS NULL OR f.order_status=:status)
+          ORDER BY f.created_at DESC,f.id DESC
+          """, params(q));
+    }
+
     public List<Map<String,Object>> daily(DashboardQuery q) {
         return jdbc.queryForList(FACTS + """
           SELECT CONVERT(varchar(10),DATEADD(hour,7,at),23) day,

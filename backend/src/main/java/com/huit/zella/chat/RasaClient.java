@@ -10,12 +10,10 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,13 +24,11 @@ public class RasaClient {
     public record Result(List<ChatResponse.Message> messages, String intent, boolean fallback) {}
 
     private final String baseUrl;
-    private final String token;
     private final Duration timeout;
     private final ObjectMapper json = new ObjectMapper();
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
-    public RasaClient(@Value("${app.chat.rasa.base-url:http://127.0.0.1:5005}") String baseUrl,
-                      @Value("${app.chat.rasa.auth-token:}") String token,
+    public RasaClient(@Value("${app.chat.rasa.base-url:http://127.0.0.1:9090}") String baseUrl,
                       @Value("${app.chat.rasa.timeout-seconds:60}") long timeoutSeconds) {
         URI uri = URI.create(baseUrl);
         if (!("http".equals(uri.getScheme()) || "https".equals(uri.getScheme())) || uri.getHost() == null
@@ -40,13 +36,12 @@ public class RasaClient {
             throw new IllegalArgumentException("RASA_BASE_URL must be an HTTP(S) service URL");
         }
         this.baseUrl = baseUrl.replaceAll("/+$", "");
-        this.token = token;
         this.timeout = Duration.ofSeconds(Math.clamp(timeoutSeconds, 1, 120));
     }
 
     public Result send(String sender, String message) {
         try {
-            HttpRequest request = HttpRequest.newBuilder(endpoint("/webhooks/rest/webhook"))
+            HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/api/chat"))
                     .timeout(timeout).header("Content-Type", "application/json").header("Accept", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("sender", sender, "message", message))))
                     .build();
@@ -54,8 +49,9 @@ public class RasaClient {
             if (response.statusCode() != 200) {
                 throw unavailable();
             }
-            List<ChatResponse.Message> messages = parse(response.body());
-            String intent = readIntent(sender);
+            var reply = parse(response.body());
+            List<ChatResponse.Message> messages = reply.messages();
+            String intent = reply.intent();
             boolean fallback = messages.isEmpty() || "nlu_fallback".equals(intent);
             if (messages.isEmpty()) {
                 messages = List.of(new ChatResponse.Message(
@@ -75,13 +71,20 @@ public class RasaClient {
         }
     }
 
-    private List<ChatResponse.Message> parse(String body) {
+    private record GatewayReply(List<ChatResponse.Message> messages, String intent) {}
+
+    private GatewayReply parse(String body) {
         try {
             if (body.length() > 800_000) throw invalidResponse();
             JsonNode root = json.readTree(body);
-            if (root == null || !root.isArray() || root.size() > 30) throw invalidResponse();
+            if (root == null || !root.isObject()) throw invalidResponse();
+            JsonNode rawMessages = root.path("messages");
+            if (!rawMessages.isArray() || rawMessages.size() > 30) throw invalidResponse();
+            JsonNode rawIntent = root.path("intent");
+            String intent = rawIntent.isTextual() && rawIntent.textValue().matches("[A-Za-z0-9_]{1,100}")
+                    ? rawIntent.textValue() : null;
             List<ChatResponse.Message> messages = new ArrayList<>();
-            for (JsonNode item : root) {
+            for (JsonNode item : rawMessages) {
                 if (!item.isObject()) throw invalidResponse();
                 String text = optionalText(item, "text", 12_000);
                 String image = optionalText(item, "image", 4096);
@@ -107,35 +110,12 @@ public class RasaClient {
                     messages.add(new ChatResponse.Message(text, image, List.copyOf(buttons), custom));
                 }
             }
-            return List.copyOf(messages);
+            return new GatewayReply(List.copyOf(messages), intent);
         } catch (BusinessException exception) {
             throw exception;
         } catch (Exception exception) {
             throw invalidResponse();
         }
-    }
-
-    private String readIntent(String sender) {
-        // Tracker data is optional: do not fail or retry an already delivered message if it is unavailable.
-        try {
-            HttpRequest request = HttpRequest.newBuilder(endpoint("/conversations/" + sender + "/tracker?include_events=NONE"))
-                    .timeout(Duration.ofSeconds(2)).GET().build();
-            var response = http.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200 || response.body().length() > 100_000) return null;
-            String intent = json.readTree(response.body()).path("latest_message").path("intent").path("name").asText("");
-            return intent.matches("[A-Za-z0-9_]{1,100}") ? intent : null;
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            return null;
-        } catch (Exception exception) {
-            return null;
-        }
-    }
-
-    private URI endpoint(String path) {
-        String authentication = token.isBlank() ? "" : (path.contains("?") ? "&" : "?")
-                + "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
-        return URI.create(baseUrl + path + authentication);
     }
 
     private static String optionalText(JsonNode node, String field, int maximum) {

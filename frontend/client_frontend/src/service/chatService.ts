@@ -1,13 +1,15 @@
 import { apiRequest, BACKEND_URL } from "@/api/apiClient";
 
 export type ChatButton = { title: string; payload: string };
-export type ChatProduct = { id: string; name: string; slug: string; price: number; imageUrl?: string };
+export type ChatProductReference = { name: string; slug: string };
+export type ChatProduct = ChatProductReference & { id: string; price: number; imageUrl?: string };
 export type SizeGuide = { product: string; slug?: string; sizes: string[]; chartUrl?: string };
 export type ChatReply = {
   text: string;
   botImage?: string;
   buttons?: ChatButton[];
   products?: ChatProduct[];
+  productReference?: ChatProductReference;
   sizeGuide?: SizeGuide;
 };
 export type ChatResult = { conversationId: string; messages: ChatReply[]; fallback: boolean };
@@ -41,7 +43,10 @@ function products(value: unknown): ChatProduct[] {
 
 function normalizeReply(value: unknown): ChatReply | undefined {
   if (!object(value)) return undefined;
-  const reply: ChatReply = { text: typeof value.text === "string" ? value.text : "" };
+  const text = typeof value.text === "string"
+    ? value.text.replace(/Mình chưa đọc được số đo từ ảnh để chốt size chỉ theo chiều cao\s*\/\s*cân nặng\.?/giu, "").trim()
+    : "";
+  const reply: ChatReply = { text: text.trimStart().startsWith("Cơ sở tìm:") ? "" : text };
   reply.botImage = safeChatMedia(value.image);
   if (Array.isArray(value.buttons)) {
     reply.buttons = value.buttons.slice(0, 20).flatMap(button =>
@@ -50,7 +55,15 @@ function normalizeReply(value: unknown): ChatReply | undefined {
         ? [{ title: button.title, payload: button.payload }] : []);
   }
   if (object(value.custom)) {
-    if (value.custom.type === "products") reply.products = products(value.custom.products);
+    const isRasaProductList = value.custom.type === "PRODUCT_LIST";
+    if (isRasaProductList || value.custom.type === "products") {
+      reply.products = products(value.custom.products);
+      if (isRasaProductList && reply.products.length) reply.text = "";
+    }
+    if (value.custom.type === "PRODUCT_DETAIL" && object(value.custom.product)) {
+      const { name, slug } = value.custom.product;
+      if (typeof name === "string" && name.trim() && validSlug(slug)) reply.productReference = { name, slug };
+    }
     if (value.custom.type === "size_guide" && typeof value.custom.product === "string") {
       reply.sizeGuide = {
         product: value.custom.product,
@@ -61,6 +74,30 @@ function normalizeReply(value: unknown): ChatReply | undefined {
     }
   }
   return reply.text.trim() || reply.botImage || reply.buttons?.length || reply.products?.length || reply.sizeGuide ? reply : undefined;
+}
+
+function normalizeReplies(values: unknown[]): ChatReply[] {
+  const replies = values.map(normalizeReply).filter((reply): reply is ChatReply => reply !== undefined);
+  const images = new Set(replies.map(reply => reply.botImage).filter(Boolean));
+  const guides = new Map(replies.flatMap(({ sizeGuide }) =>
+    sizeGuide?.chartUrl && sizeGuide.slug
+      ? [[sizeGuide.chartUrl, { name: sizeGuide.product, slug: sizeGuide.slug }] as const]
+      : []
+  ));
+  const productNames = new Set(replies.flatMap(reply => (reply.products ?? []).map(product => product.name.trim())));
+  return replies.flatMap(reply => {
+    const summary = reply.text.split(/\r?\n/).filter(line => {
+      const productRow = line.match(/^\s*\d+\.\s+(.+?)\s+[—–-]\s+[\d.,]+\s*[đ₫]/iu);
+      return !productRow || !productNames.has(productRow[1].trim());
+    }).join("\n").trim();
+    const text = summary === "Mình tìm được:" && productNames.size
+      ? `Mình tìm được ${productNames.size} mẫu phù hợp với yêu cầu của bạn. Bạn có thể mở thẻ để xem chi tiết hoặc gửi tên mẫu để mình kiểm tra còn hàng hay tư vấn size nhé.`
+      : summary;
+    const sizeGuide = reply.sizeGuide?.chartUrl && images.has(reply.sizeGuide.chartUrl) ? undefined : reply.sizeGuide;
+    return text || reply.botImage || reply.buttons?.length || reply.products?.length || sizeGuide
+      ? [{ ...reply, text, sizeGuide, productReference: reply.productReference ?? guides.get(reply.botImage ?? "") }]
+      : [];
+  });
 }
 
 export async function sendChatMessage(message: string, conversationId: string | undefined, signal: AbortSignal): Promise<ChatResult> {
@@ -77,7 +114,7 @@ export async function sendChatMessage(message: string, conversationId: string | 
   if (!object(data) || typeof data.conversationId !== "string" ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.conversationId) ||
       !Array.isArray(data.messages)) throw new Error("Phản hồi của trợ lý không hợp lệ. Bạn thử lại nhé.");
-  const messages = data.messages.map(normalizeReply).filter((reply): reply is ChatReply => reply !== undefined);
+  const messages = normalizeReplies(data.messages);
   if (!messages.length) throw new Error("Trợ lý chưa có phản hồi. Bạn thử hỏi lại nhé.");
   return { conversationId: data.conversationId, messages, fallback: data.fallback === true };
 }

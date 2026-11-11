@@ -3,11 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../../data/api/product_variant_repository.dart';
 import '../../data/api/variant_image_repository.dart';
 
-typedef ProductVariantDetails = ({
-  Map<String, dynamic> variant,
-  List<Map<String, dynamic>> images,
-});
-
 class ProductVariantsProvider extends ChangeNotifier {
   final ProductVariantRepository _repository = ProductVariantRepository();
   final VariantImageRepository _imageRepository = VariantImageRepository();
@@ -23,6 +18,7 @@ class ProductVariantsProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get items => _items;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  int get productId => _productId;
   int get currentPage => _currentPage;
   int get totalElements => _totalElements;
   int get pageSize => _pageSize;
@@ -106,17 +102,6 @@ class ProductVariantsProvider extends ChangeNotifier {
 
   Future<List<Map<String, dynamic>>> loadImages(int variantId) =>
       _imageRepository.getByVariantId(variantId);
-
-  Future<ProductVariantDetails> loadDetail(int variantId) async {
-    final variant = await _repository.getById(variantId);
-    List<Map<String, dynamic>> images = [];
-    try {
-      images = await _imageRepository.getByVariantId(variantId);
-    } catch (_) {
-      // Show variant fields even when images are temporarily unavailable.
-    }
-    return (variant: variant, images: images);
-  }
 
   Future<Map<String, dynamic>> uploadImage({
     required int variantId,

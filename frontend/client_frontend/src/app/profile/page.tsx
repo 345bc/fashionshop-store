@@ -4,6 +4,7 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AccountNav from "@/components/AccountNav";
+import styles from "@/components/account/AccountLayout.module.css";
 import AccountSessionGuard from "../../components/account/AccountSessionGuard";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -67,14 +68,14 @@ export default function ProfilePage() {
       <Header />
       <AccountSessionGuard key={String(auth.user?.id ?? "anonymous")}>
         <main className="container mx-auto px-5 lg:px-10 py-10 font-sans text-gray-900">
-          <div className="flex flex-col lg:flex-row gap-10">
+          <div className={styles.shell}>
             {/* Sidebar */}
-            <div className="w-full lg:w-1/4">
+            <div className={styles.sidebar}>
               <AccountNav active="profile" />
             </div>
 
             {/* Main Content */}
-            <div className="w-full lg:w-3/4">
+            <div className={styles.content}>
               <div className="mb-10">
                 <h1 className="text-3xl font-bold mb-2">Hồ sơ cá nhân</h1>
               </div>

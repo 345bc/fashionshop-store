@@ -1,10 +1,7 @@
 import 'package:intl/intl.dart';
 
-String money(num value) => NumberFormat.currency(
-  locale: 'vi_VN',
-  symbol: 'đ',
-  decimalDigits: 0,
-).format(value);
+String money(num value) =>
+    '${NumberFormat.decimalPattern('vi_VN').format(value)} VND';
 
 class InventoryResponseModel {
   final int variantId, stockQuantity, reservedQuantity, availableQuantity;
@@ -32,5 +29,6 @@ class InventoryResponseModel {
       costPrice = json['costPrice'] as num,
       price = json['price'] as num? ?? 0,
       isActive = json['isActive'] as bool;
-  String get label => '$productName — $sizeName / $colorName ($sku)';
+  String get variantLabel => '$productName — $sizeName / $colorName';
+  String get label => '$variantLabel ($sku)';
 }
