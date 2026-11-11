@@ -46,6 +46,8 @@ class RoleAccess {
         '/home-appearance',
         '/posts',
         '/post-categories',
+        '/posts/form',
+        '/post-categories/form',
         '/promotions',
         '/vouchers',
         '/promotion-programs',

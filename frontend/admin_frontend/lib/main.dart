@@ -8,6 +8,8 @@ import 'features/bought_together/bought_together_screen.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'features/posts/post_category_form_screen.dart';
+import 'features/posts/post_form_screen.dart';
 import 'features/posts/posts_screen.dart';
 import 'features/posts/post_categories_screen.dart';
 import 'core/security/role_access.dart';
@@ -226,6 +228,22 @@ class MainScreenState extends State<MainScreen> {
         return const HomeAppearanceScreen();
       case '/bought-together':
         return const BoughtTogetherScreen();
+      case '/posts/form':
+        final post = _currentArgs?['post'] as Map<String, dynamic>?;
+        final categories = _currentArgs?['categories'] as List<dynamic>? ?? [];
+        return PostFormScreen(
+          key: ValueKey(post?['id']),
+          post: post,
+          categories: categories,
+          onClose: () => navigate('/posts'),
+        );
+      case '/post-categories/form':
+        final category = _currentArgs?['category'] as Map<String, dynamic>?;
+        return PostCategoryFormScreen(
+          key: ValueKey(category?['id']),
+          category: category,
+          onClose: () => navigate('/post-categories'),
+        );
       case '/posts':
         return const PostsScreen();
       case '/post-categories':
