@@ -7,6 +7,7 @@ import java.util.List;
 public record OrderResponse(Long id, String code, Long customerUserId, String customerName,
                             String recipientName, String recipientPhone, String address, String note,
                             String status, String paymentStatus, String paymentMethod, boolean inventoryManaged,
+                            boolean vnpayRefundRequired,
                             BigDecimal subtotal, BigDecimal shippingFee, BigDecimal totalAmount,
                             OffsetDateTime createdAt,
                             List<Item> items, List<History> histories, OffsetDateTime paymentExpiresAt) {
