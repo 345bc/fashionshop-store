@@ -15,6 +15,8 @@ import java.util.*;
 
 @Service @RequiredArgsConstructor
 public class InventoryService {
+    private static final int LOW_STOCK_THRESHOLD = 5;
+
     private final ProductVariantRepository variants;
     private final InventoryMovementRepository movements;
     private final InventoryAdjustmentRepository adjustments;
@@ -24,8 +26,13 @@ public class InventoryService {
     public Page<InventoryResponse> list(String query, Long supplierId, String status, Pageable pageable) {
         String q = query == null ? "" : query.trim();
         String filter = status == null || "all".equals(status) ? null : status;
-        Page<ProductVariant> page = variants.searchInventory(q, supplierId, filter, pageable);
+        Page<ProductVariant> page = variants.searchInventory(q, supplierId, filter, LOW_STOCK_THRESHOLD, pageable);
         return page.map(InventoryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public InventoryStockAlerts stockAlerts() {
+        return variants.countInventoryStockAlerts(LOW_STOCK_THRESHOLD);
     }
 
     @Transactional(readOnly = true)

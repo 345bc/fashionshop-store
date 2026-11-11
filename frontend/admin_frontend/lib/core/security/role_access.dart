@@ -26,6 +26,7 @@ class RoleAccess {
       'WAREHOUSE' => [
         '/orders',
         '/inventory',
+        '/inventory/detail',
         '/purchases',
         '/suppliers',
         '/products',

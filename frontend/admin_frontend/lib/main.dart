@@ -22,6 +22,8 @@ import 'widgets/app_layout.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'features/products/presentation/screens/products_screen.dart';
+import 'features/inventory/data/models/inventory_response_model.dart';
+import 'features/inventory/presentation/screens/inventory_detail_screen.dart';
 import 'features/inventory/presentation/screens/inventory_screen.dart';
 import 'features/promotions/presentation/screens/promotions_screen.dart';
 import 'features/promotions/presentation/screens/campaign_management_screen.dart';
@@ -207,6 +209,14 @@ class MainScreenState extends State<MainScreen> {
         );
       case '/product-variants':
         return ProductVariantsScreen(product: _currentArgs);
+      case '/inventory/detail':
+        final item = _currentArgs?['item'] as InventoryResponseModel?;
+        if (item == null) return const InventoryScreen();
+        return InventoryDetailScreen(
+          key: ValueKey(item.variantId),
+          item: item,
+          onClose: () => navigate('/inventory'),
+        );
       case '/inventory':
         return const InventoryScreen();
       case '/home-appearance':
