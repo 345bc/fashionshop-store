@@ -13,6 +13,8 @@ class PurchasesProvider extends ChangeNotifier {
   bool isLoading = false;
   String? error;
   String query = '', status = 'all';
+  String paymentStatus = 'all';
+  int? supplierId;
   int currentPage = 0;
   final int pageSize = 15;
   int totalElements = 0;
@@ -28,6 +30,16 @@ class PurchasesProvider extends ChangeNotifier {
     status = value;
     currentPage = 0;
     loadItems();
+  }
+
+  void filterPaymentStatus(String value) {
+    paymentStatus = value;
+    page(0);
+  }
+
+  void filterSupplier(int? value) {
+    supplierId = value;
+    page(0);
   }
 
   void page(int value) {
@@ -46,6 +58,8 @@ class PurchasesProvider extends ChangeNotifier {
         size: pageSize,
         query: query,
         status: status,
+        paymentStatus: paymentStatus,
+        supplierId: supplierId,
       );
       if (requestId != _requestId) return;
       items = (data['content'] as List)
@@ -81,8 +95,7 @@ class PurchasesProvider extends ChangeNotifier {
     })
   >
   options() async {
-    final suppliers = (await SupplierRepository().getOptions())
-        .map((j) => SupplierResponseModel.fromJson(j as Map<String, dynamic>))
+    final suppliers = (await supplierOptions())
         .where((s) => s.isActive)
         .toList();
     final variants = await InventoryRepository().getOptions();
@@ -91,6 +104,14 @@ class PurchasesProvider extends ChangeNotifier {
       variants: variants.where((v) => v.isActive).toList(),
     );
   }
+
+  Future<List<SupplierResponseModel>> supplierOptions() async =>
+      (await SupplierRepository().getOptions())
+          .map(
+            (json) =>
+                SupplierResponseModel.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
 
   Future<void> save(Map<String, dynamic> data, {int? id}) async {
     await _repository.save(data, id: id);

@@ -33,6 +33,7 @@ import 'features/orders/presentation/screens/orders_screen.dart';
 import 'features/orders/presentation/providers/orders_provider.dart';
 import 'features/customers/presentation/screens/customers_screen.dart';
 import 'features/customers/presentation/providers/customers_provider.dart';
+import 'features/purchases/presentation/screens/goods_receipt_detail_screen.dart';
 import 'features/purchases/presentation/screens/purchases_screen.dart';
 import 'features/purchases/presentation/providers/purchases_provider.dart';
 import 'features/inventory/presentation/providers/inventory_provider.dart';
@@ -237,6 +238,14 @@ class MainScreenState extends State<MainScreen> {
         return const OrdersScreen();
       case '/customers':
         return const CustomersScreen();
+      case '/purchases/detail':
+        final receiptId = _currentArgs?['receiptId'] as int?;
+        if (receiptId == null) return const PurchasesScreen();
+        return GoodsReceiptDetailScreen(
+          key: ValueKey(receiptId),
+          receiptId: receiptId,
+          onClose: () => navigate('/purchases'),
+        );
       case '/purchases':
         return const PurchasesScreen();
       case '/suppliers':
