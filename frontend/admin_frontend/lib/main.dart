@@ -1,3 +1,5 @@
+import 'features/suppliers/data/models/supplier_response_model.dart';
+import 'features/suppliers/presentation/screens/supplier_form_screen.dart';
 import 'features/products/presentation/screens/product_form_screen.dart';
 import 'features/products/presentation/screens/variant_form_screen.dart';
 import 'features/home_appearance/home_appearance_screen.dart';
@@ -248,6 +250,13 @@ class MainScreenState extends State<MainScreen> {
         );
       case '/purchases':
         return const PurchasesScreen();
+      case '/suppliers/form':
+        final supplier = _currentArgs?['supplier'] as SupplierResponseModel?;
+        return SupplierFormScreen(
+          key: ValueKey(supplier?.id),
+          supplier: supplier,
+          onClose: () => navigate('/suppliers'),
+        );
       case '/suppliers':
         return const SuppliersScreen();
       case '/feedback':

@@ -30,6 +30,7 @@ class RoleAccess {
         '/purchases',
         '/purchases/detail',
         '/suppliers',
+        '/suppliers/form',
         '/products',
         '/product-variants',
         '/products/variants/new',
