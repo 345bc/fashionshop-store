@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   experimental: {
     // Image inference can outlast Next.js's default 30-second rewrite timeout.
     proxyTimeout: 130000,
