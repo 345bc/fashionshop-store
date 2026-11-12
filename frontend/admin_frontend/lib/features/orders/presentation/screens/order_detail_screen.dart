@@ -1,10 +1,10 @@
 import '../../../auth/presentation/provider/auth_provider.dart';
+
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../widgets/dialogs/zella_dialog.dart';
 import '../../../../widgets/dialogs/zella_confirm_dialog.dart';
 import '../../../../widgets/dialogs/operation_note_dialog.dart';
 import '../../../../widgets/dialogs/quantity_selection_dialog.dart';
@@ -12,20 +12,25 @@ import '../../../inventory/data/models/inventory_response_model.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../data/models/order_response_model.dart';
 import '../providers/orders_provider.dart';
-import 'receive_return_dialog.dart';
-import 'vnpay_refund_dialog.dart';
+import '../dialogs/receive_return_dialog.dart';
+import '../dialogs/vnpay_refund_dialog.dart';
 import '../widgets/payment_reservation_status.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/zella_toast.dart';
 
-class OrderDetailDialog extends StatefulWidget {
+class OrderDetailScreen extends StatefulWidget {
   final int orderId;
-  const OrderDetailDialog({super.key, required this.orderId});
+  final VoidCallback? onBack;
+  const OrderDetailScreen({super.key, required this.orderId, this.onBack});
   @override
-  State<OrderDetailDialog> createState() => _OrderDetailDialogState();
+  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
 }
 
-class _OrderDetailDialogState extends State<OrderDetailDialog> {
+class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  static final _standardVariantSku = RegExp(
+    r'^[a-z0-9]+(?:-[a-z0-9]+)*-([A-Z][A-Z0-9_]{0,9})-(XXS|XS|S|M|L|XL|XXL|[2-9]XL|[0-9]{2,3})$',
+  );
+
   late Future<
     ({
       OrderResponseModel order,
@@ -265,7 +270,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       children: [
         _buildSectionHeader('Danh sách sản phẩm', Symbols.inventory_2),
         _buildItemsList(order),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
+        _buildSectionHeader('Thanh toán', Symbols.payments),
+        _buildPaymentSummary(order),
+        const SizedBox(height: 32),
         if (returns.isNotEmpty) ...[
           _buildSectionHeader('Phiếu trả hàng', Symbols.assignment_return),
           ...returns.map((document) => _returnCard(order, document)),
@@ -293,26 +301,16 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 8, runSpacing: 8,
-          children: [
-            _statusBadge(
-              orderStatuses[order.status] ?? order.status,
-              _getStatusColor(order.status),
-            ),
-            _statusBadge(
-              orderPaymentStatuses[order.paymentStatus] ?? order.paymentStatus,
-              _getPaymentStatusColor(order.paymentStatus),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
         _buildSectionHeader('Thông tin khách hàng', Symbols.person),
         _buildCustomerInfo(order),
-        const SizedBox(height: 24),
-        _buildSectionHeader('Thanh toán', Symbols.payments),
-        _buildPaymentSummary(order),
-        const SizedBox(height: 24),
+        const Divider(height: 40),
+        _buildSectionHeader('Địa chỉ giao hàng', Symbols.location_on),
+        _infoRow(Symbols.location_on, 'Địa chỉ', order.address),
+        if (order.note?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: 16),
+          _infoRow(Symbols.notes, 'Ghi chú', order.note!),
+        ],
+        const Divider(height: 40),
         _buildSectionHeader('Thao tác', Symbols.touch_app),
         if (actions.isEmpty)
           Container(
@@ -354,12 +352,6 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           _infoRow(Symbols.person, 'Người nhận', order.recipientName),
           const SizedBox(height: 12),
           _infoRow(Symbols.call, 'Số điện thoại', order.recipientPhone),
-          const SizedBox(height: 12),
-          _infoRow(Symbols.location_on, 'Địa chỉ', order.address),
-          if (order.note?.isNotEmpty == true) ...[
-            const SizedBox(height: 12),
-            _infoRow(Symbols.notes, 'Ghi chú', order.note!),
-          ],
         ],
       ),
     );
@@ -382,7 +374,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 'Tạm tính',
                 style: TextStyle(color: AppTheme.textSecondary),
               ),
-              Text(money(order.totalAmount - order.shippingFee)),
+              Text(money(order.subtotal)),
             ],
           ),
           const SizedBox(height: 12),
@@ -396,6 +388,21 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               Text(money(order.shippingFee)),
             ],
           ),
+          if (order.subtotal + order.shippingFee > order.totalAmount) ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Giảm giá',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+                Text(
+                  '-${money(order.subtotal + order.shippingFee - order.totalAmount)}',
+                ),
+              ],
+            ),
+          ],
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(height: 1),
@@ -439,6 +446,20 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           final i = e.value;
           final isLast = e.key == order.items.length - 1;
           final returnedQty = i['returnedQuantity'] as int;
+          final color = (i['colorName'] as String?)?.trim();
+          final size = (i['sizeName'] as String?)?.trim();
+          final sku = (i['sku'] as String?)?.trim() ?? '';
+          final skuVariant = _standardVariantSku.firstMatch(sku);
+          final displaySize = size?.isNotEmpty == true
+              ? size
+              : skuVariant?.group(2);
+          final variantLabels = [
+            if (color?.isNotEmpty == true)
+              'Màu: $color'
+            else if (skuVariant != null)
+              'Mã màu: ${skuVariant.group(1)}',
+            if (displaySize != null) 'Kích cỡ: $displaySize',
+          ];
           return Column(
             children: [
               Padding(
@@ -466,9 +487,38 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                             i['productName'] as String,
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
+                          if (variantLabels.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                for (final label in variantLabels)
+                                  DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.surface,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      child: Text(
+                                        label,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 4),
                           Text(
-                            'SKU: ${i["sku"]}',
+                            'SKU: $sku',
                             style: const TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 12,
@@ -518,38 +568,74 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   Widget _buildHistoryList(OrderResponseModel order) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.borderLight),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: order.histories.asMap().entries.map((e) {
-          final h = e.value;
-          final isLast = e.key == order.histories.length - 1;
-          return Column(
-            children: [
-              ListTile(
-                leading: const CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppTheme.surface,
-                  child: Icon(
-                    Symbols.history,
-                    size: 16,
-                    color: AppTheme.textSecondary,
+    if (order.histories.isEmpty) {
+      return const Text('Chưa có lịch sử đơn hàng.');
+    }
+    final events = order.histories.toList()
+      ..sort(
+        (a, b) =>
+            DateTime.parse(b['createdAt'] as String)
+                .compareTo(DateTime.parse(a['createdAt'] as String)),
+      );
+    return Column(
+      children: [
+        for (final (index, event) in events.indexed)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: 24,
+                  child: Stack(
+                    alignment: Alignment.topCenter,
+                    children: [
+                      if (index < events.length - 1)
+                        const Positioned(
+                          top: 12,
+                          bottom: 0,
+                          child: VerticalDivider(
+                            width: 1,
+                            thickness: 1,
+                            color: AppTheme.borderLight,
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Icon(
+                          Icons.circle,
+                          size: 10,
+                          color: index == 0
+                              ? AppTheme.primary
+                              : AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                title: Text(h['note']?.toString() ?? ''),
-                subtitle: Text(
-                  '${DateFormat("dd/MM/yyyy HH:mm").format(DateTime.parse(h["createdAt"] as String).toLocal())} • ${h["createdBy"]}',
-                  style: const TextStyle(fontSize: 12),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(event['note']?.toString() ?? ''),
+                        const SizedBox(height: 5),
+                        Text(
+                          '${DateFormat("dd/MM/yyyy HH:mm").format(DateTime.parse(event["createdAt"] as String).toLocal())} • ${event["createdBy"]}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              if (!isLast) const Divider(height: 1),
-            ],
-          );
-        }).toList(),
-      ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -593,7 +679,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     }
 
     if (order.inventoryManaged) {
-      if (context.watch<AuthProvider>().hasRole('ADMIN') && simulationEnabled &&
+      if (context.watch<AuthProvider>().hasRole('ADMIN') &&
+          simulationEnabled &&
           order.status == 'PENDING' &&
           order.paymentStatus == 'PENDING') {
         actions.add(
@@ -609,7 +696,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('SALES')) && order.status == 'CONFIRMED' && order.paymentStatus == 'PAID') {
+      if ((context.watch<AuthProvider>().hasRole('ADMIN') ||
+              context.watch<AuthProvider>().hasRole('SALES')) &&
+          order.status == 'CONFIRMED' &&
+          order.paymentStatus == 'PAID') {
         actions.add(
           _actionButton(
             'Xuất kho',
@@ -623,7 +713,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('SALES')) && order.status == 'SHIPPED' &&
+      if ((context.watch<AuthProvider>().hasRole('ADMIN') ||
+              context.watch<AuthProvider>().hasRole('SALES')) &&
+          order.status == 'SHIPPED' &&
           returns.every(
             (r) => r.status == 'CANCELLED' || r.status == 'REJECTED',
           )) {
@@ -640,7 +732,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('SALES')) && (order.status == 'PENDING' || order.status == 'CONFIRMED')) {
+      if ((context.watch<AuthProvider>().hasRole('ADMIN') ||
+              context.watch<AuthProvider>().hasRole('SALES')) &&
+          (order.status == 'PENDING' || order.status == 'CONFIRMED')) {
         actions.add(
           _actionButton(
             'Hủy đơn',
@@ -686,7 +780,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
         );
       }
-      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('CUSTOMER_SUPPORT')) && (order.status == 'SHIPPED' || order.status == 'DELIVERED') &&
+      if ((context.watch<AuthProvider>().hasRole('ADMIN') ||
+              context.watch<AuthProvider>().hasRole('CUSTOMER_SUPPORT')) &&
+          (order.status == 'SHIPPED' || order.status == 'DELIVERED') &&
           canReturn) {
         actions.add(
           _actionButton(
@@ -820,7 +916,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      if (context.watch<AuthProvider>().hasRole('ADMIN') && r.status == 'PENDING')
+                      if (context.watch<AuthProvider>().hasRole('ADMIN') &&
+                          r.status == 'PENDING')
                         ElevatedButton(
                           onPressed: _busy
                               ? null
@@ -835,7 +932,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           ),
                           child: const Text('Duyệt'),
                         ),
-                      if (context.watch<AuthProvider>().hasRole('ADMIN') && r.status == 'PENDING')
+                      if (context.watch<AuthProvider>().hasRole('ADMIN') &&
+                          r.status == 'PENDING')
                         OutlinedButton(
                           onPressed: _busy
                               ? null
@@ -854,7 +952,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           ),
                           child: const Text('Từ chối'),
                         ),
-                      if (context.watch<AuthProvider>().hasRole('ADMIN') && (r.status == 'PENDING' || r.status == 'APPROVED'))
+                      if (context.watch<AuthProvider>().hasRole('ADMIN') &&
+                          (r.status == 'PENDING' || r.status == 'APPROVED'))
                         OutlinedButton(
                           onPressed: _busy
                               ? null
@@ -869,7 +968,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                                 ),
                           child: const Text('Hủy phiếu'),
                         ),
-                      if ((context.watch<AuthProvider>().hasRole('ADMIN') || context.watch<AuthProvider>().hasRole('WAREHOUSE')) && r.status == 'APPROVED')
+                      if ((context.watch<AuthProvider>().hasRole('ADMIN') ||
+                              context.watch<AuthProvider>().hasRole(
+                                'WAREHOUSE',
+                              )) &&
+                          r.status == 'APPROVED')
                         ElevatedButton(
                           onPressed: _busy
                               ? null
@@ -891,7 +994,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           r.status == 'RECEIVED' &&
                           needsVnpayRefund)
                         ElevatedButton(
-                          onPressed: _busy ? null : () => _openVnpayRefund(order, r),
+                          onPressed: _busy
+                              ? null
+                              : () => _openVnpayRefund(order, r),
                           child: const Text('Hoàn tiền VNPay'),
                         ),
                       if (context.watch<AuthProvider>().hasRole('ADMIN') &&
@@ -939,27 +1044,33 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return ZellaDialog(
-      width: MediaQuery.sizeOf(context).width * 2 / 3,
-      height: MediaQuery.sizeOf(context).height * .85,
+    return ColoredBox(
+      color: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Chi tiết đơn hàng',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'Quay lại danh sách đơn hàng',
+                  onPressed: _busy
+                      ? null
+                      : widget.onBack ?? () => Navigator.maybePop(context),
+                  icon: const Icon(Symbols.arrow_back),
                 ),
-              ),
-              IconButton(
-                onPressed: _busy ? null : () => Navigator.pop(context),
-                icon: const Icon(Symbols.close),
-              ),
-            ],
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Chi tiết đơn hàng',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const Divider(),
+          const Divider(height: 1),
           if (_busy) const LinearProgressIndicator(),
           Expanded(
             child: FutureBuilder(
@@ -982,61 +1093,89 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     ),
                   );
                 }
-                final order = snapshot.data!.order;
-                final returns = snapshot.data!.returns;
+                final detail = snapshot.data!;
+                final order = detail.order;
                 final canReturn = order.items.any(
                   (i) =>
                       (i['quantity'] as int) > (i['returnedQuantity'] as int),
                 );
+                final sidebar = _buildRightColumn(
+                  order,
+                  detail.returns,
+                  canReturn,
+                  detail.simulationEnabled,
+                );
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Row(
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide = constraints.maxWidth >= 820;
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.all(wide ? 32 : 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
+                          SelectableText(
                             order.code,
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(height: 6),
                           Text(
                             'Ngày tạo: ${DateFormat("dd/MM/yyyy HH:mm").format(order.createdAt)}',
                             style: const TextStyle(
                               color: AppTheme.textSecondary,
                             ),
                           ),
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surface,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _statusBadge(
+                                  orderStatuses[order.status] ?? order.status,
+                                  _getStatusColor(order.status),
+                                ),
+                                _statusBadge(
+                                  orderPaymentStatuses[order.paymentStatus] ??
+                                      order.paymentStatus,
+                                  _getPaymentStatusColor(order.paymentStatus),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          if (wide)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: _buildLeftColumn(
+                                    order,
+                                    detail.returns,
+                                  ),
+                                ),
+                                const SizedBox(width: 28),
+                                Expanded(child: _sidebarPanel(sidebar)),
+                              ],
+                            )
+                          else ...[
+                            _buildLeftColumn(order, detail.returns),
+                            const SizedBox(height: 24),
+                            _sidebarPanel(sidebar),
+                          ],
                         ],
                       ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: _buildLeftColumn(order, returns),
-                            ),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              flex: 3,
-                              child: _buildRightColumn(
-                                order,
-                                returns,
-                                canReturn,
-                                snapshot.data!.simulationEnabled,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 );
               },
             ),
@@ -1045,4 +1184,14 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       ),
     );
   }
+
+  Widget _sidebarPanel(Widget child) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: AppTheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppTheme.borderLight),
+    ),
+    child: child,
+  );
 }

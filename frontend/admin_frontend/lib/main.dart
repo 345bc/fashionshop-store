@@ -36,6 +36,7 @@ import 'features/promotions/presentation/screens/campaign_management_screen.dart
 import 'features/promotions/presentation/providers/campaigns_provider.dart';
 import 'features/promotions/data/models/campaign_model.dart';
 import 'features/orders/presentation/screens/orders_screen.dart';
+import 'features/orders/presentation/screens/order_detail_screen.dart';
 import 'features/orders/presentation/providers/orders_provider.dart';
 import 'features/customers/presentation/screens/customers_screen.dart';
 import 'features/customers/presentation/providers/customers_provider.dart';
@@ -270,7 +271,21 @@ class MainScreenState extends State<MainScreen> {
       case '/promotion-programs':
         return const CampaignManagementScreen(kind: CampaignKind.promotion);
       case '/orders':
-        return const OrdersScreen();
+        return OrdersScreen(
+          onOpenOrder: (id) => navigate('/orders/detail', {'id': id}),
+        );
+      case '/orders/detail':
+        final orderId = _currentArgs?['id'];
+        if (orderId is! int) {
+          return OrdersScreen(
+            onOpenOrder: (id) => navigate('/orders/detail', {'id': id}),
+          );
+        }
+        return OrderDetailScreen(
+          key: ValueKey(orderId),
+          orderId: orderId,
+          onBack: () => navigate('/orders'),
+        );
       case '/customers':
         return const CustomersScreen();
       case '/purchases/form':

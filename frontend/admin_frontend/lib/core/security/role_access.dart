@@ -13,6 +13,7 @@ class RoleAccess {
       role != 'USER' && labels.containsKey(role);
 
   static bool canOpen(String? role, String route) {
+    if (route == '/orders/detail') route = '/orders';
     return switch (role) {
       'SUPERADMIN' => true,
       'ADMIN' => [

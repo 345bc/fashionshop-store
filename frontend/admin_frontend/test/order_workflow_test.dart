@@ -11,7 +11,7 @@ import 'package:zella_admin_flutter/features/orders/data/models/order_response_m
 import 'package:zella_admin_flutter/features/orders/data/models/return_order_summary.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/dialogs/return_management_dialog.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/screens/orders_screen.dart';
-import 'package:zella_admin_flutter/features/orders/presentation/dialogs/order_detail_dialog.dart';
+import 'package:zella_admin_flutter/features/orders/presentation/screens/order_detail_screen.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/dialogs/receive_return_dialog.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/dialogs/vnpay_refund_dialog.dart';
 import 'package:zella_admin_flutter/features/orders/presentation/providers/orders_provider.dart';
@@ -22,6 +22,7 @@ class FakeInventory extends InventoryProvider {
 }
 
 class FakeOrders extends OrdersProvider {
+  bool legacyVariantPayload = false;
   int? reconciledRefundId;
   bool reconcileFails = false;
 
@@ -113,11 +114,13 @@ class FakeOrders extends OrdersProvider {
         'id': 30,
         'variantId': 1,
         'productName': 'Áo nữ',
-        'sku': 'SKU-1',
+        'sku': legacyVariantPayload ? 'ao-so-mi-relaxed-linen-PRWK-M' : 'SKU-1',
         'quantity': 2,
         'unitPrice': 300000,
         'subtotal': 600000,
         'returnedQuantity': 0,
+        if (!legacyVariantPayload) 'colorName': 'Xanh nhạt',
+        if (!legacyVariantPayload) 'sizeName': 'L',
       },
     ],
     'histories': <Map<String, dynamic>>[],
@@ -166,18 +169,20 @@ Future<void> openDialog(
       ],
       child: MaterialApp(
         home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () =>
-                  showDialog(context: context, builder: (_) => dialog),
-              child: const Text('Open'),
-            ),
-          ),
+          body: dialog is OrderDetailScreen
+              ? dialog
+              : Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () =>
+                        showDialog(context: context, builder: (_) => dialog),
+                    child: const Text('Open'),
+                  ),
+                ),
         ),
       ),
     ),
   );
-  await tester.tap(find.text('Open'));
+  if (dialog is! OrderDetailScreen) await tester.tap(find.text('Open'));
   await tester.pumpAndSettle();
 }
 
@@ -253,6 +258,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      int? orderId;
       await tester.pumpWidget(
         MultiProvider(
           providers: [
@@ -264,7 +270,17 @@ void main() {
               create: (_) => FakeInventory(),
             ),
           ],
-          child: const MaterialApp(home: Scaffold(body: OrdersScreen())),
+          child: MaterialApp(
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, update) => orderId == null
+                    ? OrdersScreen(
+                        onOpenOrder: (id) => update(() => orderId = id),
+                      )
+                    : OrderDetailScreen(orderId: orderId!),
+              ),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -276,7 +292,9 @@ void main() {
       expect(find.textContaining('2 yêu cầu ·'), findsOneWidget);
       await tester.tap(find.text('ORD-RETURN-10'));
       await tester.pumpAndSettle();
-      expect(find.byType(OrderDetailDialog), findsOneWidget);
+      expect(find.byType(OrderDetailScreen), findsOneWidget);
+      expect(find.text('Màu: Xanh nhạt'), findsOneWidget);
+      expect(find.text('Kích cỡ: L'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       provider.dispose();
@@ -323,7 +341,7 @@ void main() {
     tester,
   ) async {
     final provider = FakeOrders();
-    await openDialog(tester, provider, const OrderDetailDialog(orderId: 10));
+    await openDialog(tester, provider, const OrderDetailScreen(orderId: 10));
     await tester.ensureVisible(find.text('Xuất kho'));
     await tester.tap(find.text('Xuất kho'));
     await tester.pumpAndSettle();
@@ -377,8 +395,12 @@ void main() {
   testWidgets(
     'Pending online order has countdown and no manual confirmation or collection buttons',
     (tester) async {
-      final provider = FakeOrders()..pending = true;
-      await openDialog(tester, provider, const OrderDetailDialog(orderId: 10));
+      final provider = FakeOrders()
+        ..pending = true
+        ..legacyVariantPayload = true;
+      await openDialog(tester, provider, const OrderDetailScreen(orderId: 10));
+      expect(find.text('Mã màu: PRWK'), findsOneWidget);
+      expect(find.text('Kích cỡ: M'), findsOneWidget);
       expect(find.text('Xác nhận đơn'), findsNothing);
       expect(find.text('Ghi nhận đã thu tiền'), findsNothing);
       expect(find.text('Xuất kho'), findsNothing);
@@ -393,7 +415,7 @@ void main() {
       final provider = FakeOrders()
         ..pending = true
         ..simulation = true;
-      await openDialog(tester, provider, const OrderDetailDialog(orderId: 10));
+      await openDialog(tester, provider, const OrderDetailScreen(orderId: 10));
       final button = find.text('TEST • Xác nhận đơn');
       expect(button, findsOneWidget);
       await tester.ensureVisible(button);

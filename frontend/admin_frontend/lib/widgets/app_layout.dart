@@ -79,6 +79,7 @@ class _AppLayoutState extends State<AppLayout> {
 
   bool _isActive(NavItem item) =>
       widget.currentRoute == item.route ||
+      (item.route == '/orders' && widget.currentRoute == '/orders/detail') ||
       (item.route == '/products' &&
           (widget.currentRoute.startsWith('/products/') ||
               widget.currentRoute == '/product-variants')) ||

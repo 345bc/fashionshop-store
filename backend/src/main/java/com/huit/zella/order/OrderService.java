@@ -320,12 +320,21 @@ public class OrderService {
             order.getStatus().name(), order.getPaymentStatus(), order.getPaymentMethod(), order.isInventoryManaged(),
             order.getOnlineTransactionId() != null && order.getOnlineTransactionId().startsWith("VNPAY-"),
             order.getSubtotal(), order.getShippingFee(), order.getTotalAmount(), order.getCreatedAt().atOffset(ZoneOffset.UTC),
-            order.getItems().stream().map(i -> new OrderResponse.Item(i.getId(), i.getVariant().getId(),
-                i.getProductName(), i.getSku(), i.getQuantity(), i.getUnitPrice(),
-                i.getUnitPrice().multiply(BigDecimal.valueOf(i.getQuantity())), Math.toIntExact(returnRepository.committedQuantity(i.getId())))).toList(),
+            order.getItems().stream().map(this::orderItemResponse).toList(),
             order.getHistories().stream().map(h -> new OrderResponse.History(h.getOldStatus(), h.getNewStatus(),
                 h.getNote(), h.getCreatedBy() == null ? "Hệ thống" : h.getCreatedBy().getUserName(), h.getCreatedAt().atOffset(ZoneOffset.UTC))).toList(),
             order.getPaymentExpiresAt() == null ? null : order.getPaymentExpiresAt().atOffset(ZoneOffset.UTC));
+    }
+
+    private OrderResponse.Item orderItemResponse(OrderItem item) {
+        var variant = item.getVariant();
+        var color = variant.getColor();
+        var size = variant.getSize();
+        return new OrderResponse.Item(item.getId(), variant.getId(), item.getProductName(), item.getSku(),
+                item.getQuantity(), item.getUnitPrice(),
+                item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())),
+                Math.toIntExact(returnRepository.committedQuantity(item.getId())),
+                color == null ? null : color.getName(), size == null ? null : size.getName());
     }
 
     private List<OrderItem> orderedItems(Order order) {
