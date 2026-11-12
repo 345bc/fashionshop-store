@@ -9,6 +9,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../theme/app_theme.dart';
 import '../../data/models/campaign_model.dart';
 import '../providers/campaigns_provider.dart';
+import '../../../../widgets/common/searchable_select_field.dart';
 import '../../../../widgets/common/zella_toast.dart';
 
 class CampaignFormScreen extends StatefulWidget {
@@ -113,7 +114,7 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
         _imageBytes == null &&
         (_imageUrl == null || _imageUrl!.isEmpty)) {
       setState(
-        () => _error = 'Vui lòng chọn ảnh chương trình để hiển thị banner.',
+        () => _error = 'Vui lòng chọn ảnh hoặc video để hiển thị banner.',
       );
       return;
     }
@@ -231,18 +232,18 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
     });
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickBanner() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4'],
         withData: true,
       );
       if (result == null || !mounted) return;
       final file = result.files.single;
       if (file.bytes == null || file.size > 10 * 1024 * 1024) {
         setState(
-          () => _error = 'Chọn ảnh JPG, PNG, GIF hoặc WebP tối đa 10 MB.',
+          () => _error = 'Chọn tệp JPG, PNG, GIF, WebP hoặc MP4 tối đa 10 MB.',
         );
         return;
       }
@@ -628,21 +629,13 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
         Row(
           children: [
             Expanded(
-              child: DropdownButtonFormField<int>(
-                key: ValueKey('cat_filter_$_categoryId'),
-                initialValue: _categoryId ?? -1,
-                isDense: true,
-                decoration: const InputDecoration(
-                  labelText: 'Lọc danh mục',
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                  prefixIcon: Icon(Symbols.category, size: 18),
-                ),
+              child: SearchableSelectField<int>(
+                initialValue: _categoryId ?? 0,
+                enabled: !_saving,
+                decoration: const InputDecoration(hintText: 'Chọn danh mục'),
                 items: [
                   const DropdownMenuItem(
-                    value: -1,
+                    value: 0,
                     child: Text('Tất cả danh mục'),
                   ),
                   for (final entry in entries)
@@ -651,11 +644,10 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
                       child: Text(entry.value),
                     ),
                 ],
-                onChanged: _saving
-                    ? null
-                    : (value) => setState(
-                        () => _categoryId = value == -1 ? null : value,
-                      ),
+                onChanged: (id) {
+                  if (_saving) return;
+                  setState(() => _categoryId = id == 0 ? null : id);
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -898,14 +890,15 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
   }
 
   Widget _buildBannerCard() {
-    final hasImage =
+    final hasBanner =
         _imageBytes != null || (_imageUrl != null && _imageUrl!.isNotEmpty);
+    final isVideo = isCampaignBannerVideo(_imageName ?? _imageUrl);
 
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader(Symbols.image, 'Ảnh & Banner hiển thị'),
+          _sectionHeader(Symbols.image, 'Banner hiển thị'),
           const SizedBox(height: 12),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -921,7 +914,7 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
             onChanged: _saving ? null : (v) => setState(() => _isDisplay = v),
           ),
           const SizedBox(height: 12),
-          if (hasImage) ...[
+          if (hasBanner) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Stack(
@@ -930,7 +923,14 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
                     height: 140,
                     width: double.infinity,
                     color: AppTheme.surface,
-                    child: _imageBytes != null
+                    child: isVideo
+                        ? Center(
+                            child: ListTile(
+                              leading: const Icon(Symbols.play_circle),
+                              title: Text(_imageName ?? 'Video banner MP4'),
+                            ),
+                          )
+                        : _imageBytes != null
                         ? Image.memory(_imageBytes!, fit: BoxFit.cover)
                         : Image.network(
                             _imageUrl!,
@@ -957,7 +957,7 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
                           size: 14,
                           color: Colors.white,
                         ),
-                        tooltip: 'Xóa ảnh',
+                        tooltip: 'Xóa banner',
                         onPressed: _saving
                             ? null
                             : () => setState(() {
@@ -975,12 +975,12 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
           ],
           OutlinedButton.icon(
             icon: const Icon(Symbols.upload_file, size: 18),
-            label: Text(hasImage ? 'Đổi ảnh banner' : 'Chọn ảnh banner'),
-            onPressed: _saving ? null : _pickImage,
+            label: Text(hasBanner ? 'Đổi banner' : 'Chọn ảnh hoặc video'),
+            onPressed: _saving ? null : _pickBanner,
           ),
           const SizedBox(height: 6),
           const Text(
-            'Hỗ trợ JPG, PNG, WebP (tối đa 10 MB)',
+            'Hỗ trợ JPG, PNG, GIF, WebP và MP4 (tối đa 10 MB)',
             style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
           ),
         ],
