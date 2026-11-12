@@ -81,9 +81,40 @@ public class VnPayRefundService {
         catch (RuntimeException ex) {
             logGatewayFailure("querydr", id, ex);
             throw new BusinessException(HttpStatus.BAD_GATEWAY, "REFUND_QUERY_UNAVAILABLE",
-                "Chưa đối soát được với VNPay. Không gửi lại yêu cầu hoàn tiền; hãy thử đối soát sau");
+                "Chưa đối soát được với VNPay (lần hoàn #" + id + "). " + reconciliationFailure(ex)
+                    + " Hãy thử đối soát lại khi đã xử lý nguyên nhân.");
         }
         return transaction(() -> apply(id, result, true));
+    }
+
+    private String reconciliationFailure(RuntimeException error) {
+        if (error instanceof BusinessException failure && "REFUND_NOT_CONFIGURED".equals(failure.getCode())) {
+            return "Cấu hình API hoàn tiền của backend đang chạy chưa hợp lệ.";
+        }
+        if (error instanceof VnPayGateway.GatewayFailure failure) {
+            String reason = failure.getMessage();
+            if (reason.matches("HTTP_[1-5][0-9]{2}")) {
+                return "VNPay trả về lỗi HTTP " + reason.substring(5) + ".";
+            }
+            return switch (reason) {
+                case "MERCHANT_CHANGED" -> "Mã merchant của lần hoàn khác mã đang cấu hình.";
+                case "TRANSPORT_ERROR", "REQUEST_INTERRUPTED" -> "Backend chưa hoàn tất kết nối hoặc truy vấn VNPay.";
+                case "MISSING_RESPONSE_SIGNATURE" -> "Phản hồi VNPay không có chữ ký." + unverifiedCode(failure);
+                case "INVALID_RESPONSE_SIGNATURE_FORMAT" -> "Chữ ký phản hồi VNPay sai định dạng." + unverifiedCode(failure);
+                case "RESPONSE_SIGNATURE_MISMATCH" -> "Chữ ký phản hồi VNPay không khớp.";
+                case "RESPONSE_COMMAND_MISMATCH" -> "Loại phản hồi VNPay không khớp yêu cầu đối soát.";
+                case "RESPONSE_TRANSACTION_MISMATCH" -> "Merchant hoặc mã tham chiếu trong phản hồi VNPay không khớp giao dịch.";
+                case "INVALID_JSON", "INVALID_RESPONSE_FIELD", "RESPONSE_TOO_LARGE" -> "Phản hồi VNPay không đúng định dạng.";
+                default -> "Xem log backend theo mã lần hoàn để biết thêm chi tiết.";
+            };
+        }
+        return "Xem log backend theo mã lần hoàn để biết thêm chi tiết.";
+    }
+
+    private String unverifiedCode(VnPayGateway.GatewayFailure failure) {
+        return failure.responseCode() == null
+            ? " Phản hồi cũng không có mã VNPay hợp lệ."
+            : " Mã phản hồi chưa xác minh: " + failure.responseCode() + ".";
     }
 
     private void logGatewayFailure(String operation, Long refundId, RuntimeException error) {
@@ -93,7 +124,9 @@ public class VnPayRefundService {
             default -> error.getClass().getSimpleName();
         };
         String cause = error.getCause() == null ? "-" : error.getCause().getClass().getSimpleName();
-        log.warn("VNPay {} failed for refundId={} reason={} cause={}", operation, refundId, reason, cause);
+        String responseCode = error instanceof VnPayGateway.GatewayFailure failure ? failure.responseCode() : null;
+        log.warn("VNPay {} failed for refundId={} reason={} cause={} unverifiedResponseCode={}",
+            operation, refundId, reason, cause, responseCode == null ? "-" : responseCode);
     }
 
     private Prepared prepare(Long orderId, Long returnId, String note, Long actorId) {

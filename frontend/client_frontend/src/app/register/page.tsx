@@ -6,6 +6,8 @@ import { useAuth } from "@/auth/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import FieldError from "@/utils/FieldError";
 import FieldSuccess from "@/utils/FieldSuccess";
+import AuthNavbar from "@/components/AuthNavbar";
+import styles from "@/components/PasswordRecoveryForm.module.css";
 
 export default function RegisterPage() {
   return (
@@ -17,6 +19,8 @@ export default function RegisterPage() {
 
 function RegisterContent() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   const auth = useAuth();
@@ -37,9 +41,13 @@ function RegisterContent() {
 
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
     setError(null);
     setSuccess(null);
+    if (password !== confirmation) {
+      setError("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+    setSubmitted(true);
     try {
       const res = await auth.register(email, password, username, fullName, phone) as { message?: string };
       setSuccess(`${res?.message || "Đăng ký thành công!"} Vui lòng đăng nhập. Đang chuyển hướng...`);
@@ -52,139 +60,78 @@ function RegisterContent() {
     }
   };
 
-  return (
-    <>
-      <header className="sticky top-0 z-50 flex items-center justify-center border-b border-zinc-200 bg-white h-16 lg:h-18">
-        <Link
-          href="/"
-          className="whitespace-nowrap text-[20px] font-bold tracking-[0.2em] text-zinc-900"
-          aria-label="Zella Studio - Trang chủ"
-        >
-          ZELLA
-        </Link>
-      </header>
+  const fieldClass = "grid min-w-0 gap-1 text-[15px] font-medium";
+  const inputClass = "w-full min-w-0 h-11 rounded-[10px] border border-[#dbe2ec] bg-white px-3.5 font-normal shadow-xs placeholder:text-[#53657d]";
+  const toggleClass = "absolute inset-y-0 right-0 grid w-11 cursor-pointer place-items-center rounded-[10px] text-[#53657d] hover:text-slate-900";
+  const linkClass = "underline underline-offset-4 hover:text-slate-900";
 
-      <main className="min-h-[calc(100vh-72px)] bg-zinc-50 flex flex-col items-center justify-center p-4 py-10">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-          <div className="px-6 py-8 sm:p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Tạo tài khoản</h1>
-              <p className="text-[13.5px] text-zinc-500 mt-2">Điền thông tin bên dưới để tham gia cùng Zella Studio.</p>
+  return (
+    <div className="flex min-h-svh flex-col">
+      <AuthNavbar />
+      <main className={`${styles.page} ${styles.withNavbar}`}>
+        <section className={`${styles.layout} ${styles.card}`} aria-labelledby="register-title">
+          <h1 id="register-title">Tạo tài khoản</h1>
+          <p className={styles.description}>
+            Đã có tài khoản? <Link href={loginUrl} className={linkClass}>Đăng nhập</Link>
+          </p>
+
+          <FieldError error={error} className="mb-3" />
+          <FieldSuccess success={success} className="mb-3" />
+
+          <form onSubmit={handleSubmit} className="grid gap-3">
+            <label className={fieldClass}>
+              Email
+              <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" className={inputClass} required />
+            </label>
+
+            <label className={fieldClass}>
+              Họ và tên
+              <input type="text" autoComplete="name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Nguyễn Văn A" className={inputClass} required />
+            </label>
+
+            <div className="grid gap-3 min-[420px]:grid-cols-2">
+              <label className={fieldClass}>
+                Tên đăng nhập
+                <input type="text" autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="nguyenvana" className={inputClass} required />
+              </label>
+              <label className={fieldClass}>
+                Số điện thoại
+                <input type="tel" autoComplete="tel-national" value={phone} onChange={e => setPhone(e.target.value)} pattern="0[0-9]{9}" maxLength={10} title="Số điện thoại phải có 10 chữ số và bắt đầu bằng 0" placeholder="0123456789" className={inputClass} />
+              </label>
             </div>
 
-            <FieldError error={error} className="mb-5" />
-            <FieldSuccess success={success} className="mb-5" />
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4.5">
-              {/* Họ và tên */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-bold text-zinc-700">Họ và tên</label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Nguyễn Văn A"
-                  className="h-11 px-4 rounded-xl border border-zinc-300 bg-white text-[14px] text-zinc-900 font-medium focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors placeholder:text-zinc-400"
-                  required
-                />
+            <div className={fieldClass}>
+              <label htmlFor="register-password">Mật khẩu</label>
+              <div className="relative">
+                <input id="register-password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="********" minLength={6} className={inputClass + " pr-11"} required />
+                <button type="button" onClick={() => setShowPassword(value => !value)} className={toggleClass} aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}>
+                  <span className="material-symbols-outlined text-[19px]" aria-hidden="true">{showPassword ? "visibility" : "visibility_off"}</span>
+                </button>
               </div>
+            </div>
 
-              {/* Tên đăng nhập & Số điện thoại (Chia 2 cột) */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-bold text-zinc-700">Tên đăng nhập</label>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="nguyenvana"
-                    className="h-11 px-4 rounded-xl border border-zinc-300 bg-white text-[14px] text-zinc-900 font-medium focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors placeholder:text-zinc-400"
-                    required
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-bold text-zinc-700">Số điện thoại</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    pattern="0[0-9]{9}"
-                    maxLength={10}
-                    title="Số điện thoại phải có 10 chữ số và bắt đầu bằng 0"
-                    placeholder="0123456789"
-                    className="h-11 px-4 rounded-xl border border-zinc-300 bg-white text-[14px] text-zinc-900 font-medium focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors placeholder:text-zinc-400"
-                  />
-                </div>
+            <div className={fieldClass}>
+              <label htmlFor="register-confirmation">Xác nhận mật khẩu</label>
+              <div className="relative">
+                <input id="register-confirmation" type={showConfirmation ? "text" : "password"} autoComplete="new-password" value={confirmation} onChange={e => setConfirmation(e.target.value)} placeholder="********" className={inputClass + " pr-11"} required />
+                <button type="button" onClick={() => setShowConfirmation(value => !value)} className={toggleClass} aria-label={showConfirmation ? "Ẩn mật khẩu xác nhận" : "Hiện mật khẩu xác nhận"}>
+                  <span className="material-symbols-outlined text-[19px]" aria-hidden="true">{showConfirmation ? "visibility" : "visibility_off"}</span>
+                </button>
               </div>
+            </div>
 
-              {/* Email */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-bold text-zinc-700">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="h-11 px-4 rounded-xl border border-zinc-300 bg-white text-[14px] text-zinc-900 font-medium focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors placeholder:text-zinc-400"
-                  required
-                />
-              </div>
+            <label className="flex items-start gap-2 text-sm text-[#53657d]">
+              <input type="checkbox" required className="mt-1 size-4 shrink-0 cursor-pointer accent-slate-900" />
+              <span>Tôi đồng ý với <Link href="/terms" className={linkClass}>điều khoản sử dụng</Link> và <Link href="/privacy" className={linkClass}>chính sách bảo mật</Link>.</span>
+            </label>
 
-              {/* Mật khẩu */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-bold text-zinc-700">Mật khẩu</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Tối thiểu 6 ký tự"
-                    minLength={6}
-                    className="w-full h-11 px-4 pr-11 rounded-xl border border-zinc-300 bg-white text-[14px] text-zinc-900 font-medium focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors placeholder:text-zinc-400"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition-colors"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-                      {showPassword ? "visibility_off" : "visibility"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Điều khoản */}
-              <label className="flex items-start gap-3 mt-1 cursor-pointer group">
-                <div className="relative flex items-center justify-center shrink-0 mt-0.5">
-                  <input type="checkbox" required className="w-4 h-4 rounded border-zinc-300 text-zinc-900 focus:ring-black cursor-pointer peer appearance-none checked:bg-zinc-900 checked:border-zinc-900 transition-all" />
-                  <span className="material-symbols-outlined absolute text-white pointer-events-none opacity-0 peer-checked:opacity-100" style={{ fontSize: 14 }}>check</span>
-                </div>
-                <span className="text-[13px] text-zinc-500 font-medium leading-snug group-hover:text-zinc-700 transition-colors">
-                  Tôi đồng ý với <Link href="/terms" className="text-zinc-900 font-bold hover:underline">điều khoản sử dụng</Link> và <Link href="/privacy" className="text-zinc-900 font-bold hover:underline">chính sách bảo mật</Link>.
-                </span>
-              </label>
-
-              {/* Nút Đăng ký */}
-              <button
-                type="submit"
-                disabled={submitted}
-                className="h-12 w-full mt-3 bg-zinc-900 text-white rounded-xl text-[13px] font-bold tracking-wider uppercase hover:bg-black hover:shadow-lg hover:shadow-black/20 transition-all duration-300 active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
-              >
-                {submitted ? "Đang xử lý..." : "Tạo tài khoản"}
-              </button>
-            </form>
-
-            {/* Chuyển trang đăng nhập */}
-            {!submitted && (
-              <p className="mt-8 text-center text-[13.5px] text-zinc-500 font-medium">
-                Đã có tài khoản? <Link href="/login" className="text-zinc-900 font-bold hover:underline ml-1">Đăng nhập ngay</Link>
-              </p>
-            )}
-          </div>
-        </div>
+            <button type="submit" disabled={submitted} className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-slate-900 px-3 text-[15px] font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70">
+              <span className="material-symbols-outlined text-[19px]" aria-hidden="true">person_add</span>
+              {submitted ? "Đang xử lý..." : "Tạo tài khoản"}
+            </button>
+          </form>
+        </section>
       </main>
-    </>
+    </div>
   );
 }

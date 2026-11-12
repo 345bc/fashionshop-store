@@ -12,12 +12,16 @@ import { useCart } from "@/cart/CartContext";
 import { money } from "@/cart/types";
 import Footer from "@/components/Footer";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import errorStyles from "./ProductError.module.css";
 import ProductAccordion from "@/components/ProductAccordion";
 import ProductBoughtTogether from "@/components/ui/ProductBoughtTogether";
 import ProductSimilar from "@/components/ui/ProductSimilar";
 
 import ProductDetailSkeleton from "@/components/skeleton-ui/ProductDetailSkeleton";
 import { getProductDetail } from "@/service/productService";
+import { ApiClientError } from "@/api/apiClient";
 import type { PageResponse } from "@/type/api";
 
 interface Review {
@@ -64,6 +68,7 @@ interface Product {
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const cart = useCart();
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
@@ -75,7 +80,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [hasServerError, setHasServerError] = useState(false);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+  const loading = loadedId !== id;
   const thumbnailTrack = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -103,21 +110,27 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }, [loading, product, selectedImageId, selectedColorId, selectedSizeId]);
 
   useEffect(() => {
-    getProductDetail(id)
+    const controller = new AbortController();
+    getProductDetail(id, { signal: controller.signal })
       .then((res) => {
+        if (controller.signal.aborted) return;
         const data = res.data;
         setProduct(data);
         const firstVariant = data.variants?.[0];
         setSelectedColorId(firstVariant?.colorId ?? null);
         setSelectedSizeId(firstVariant?.sizeId ?? null);
         setSelectedImageId(null);
-        setLoading(false);
+        setHasServerError(false);
+        setLoadedId(id);
       })
       .catch((err) => {
+        if (controller.signal.aborted) return;
         console.error("Failed to fetch product:", err);
+        setHasServerError(err instanceof ApiClientError && err.status >= 500);
         setProduct(null);
-        setLoading(false);
+        setLoadedId(id);
       });
+    return () => controller.abort();
   }, [id]);
 
   if (loading) {
@@ -132,13 +145,28 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   if (!product) {
     return (
-      <>
-        <Header />
-        <main className="container mx-auto px-3 sm:px-4 main-content" style={{ padding: "100px 0", textAlign: "center" }}>
-          <p style={{ color: "var(--ink-secondary)", fontSize: "16px" }}>Sản phẩm không tồn tại hoặc đã ngừng kinh doanh.</p>
-        </main>
-        <Footer />
-      </>
+      <main className={errorStyles.page} aria-labelledby="product-error-title">
+        <div className={errorStyles.content}>
+          <p className={errorStyles.code}>{hasServerError ? "500" : "404"}</p>
+          <h1 id="product-error-title" className={errorStyles.title}>
+            {hasServerError ? "Đã xảy ra lỗi" : "Không tìm thấy sản phẩm"}
+          </h1>
+          <p className={errorStyles.description}>
+            {hasServerError
+              ? "Hiện chưa thể tải thông tin sản phẩm. Vui lòng thử lại sau."
+              : "Sản phẩm không tồn tại hoặc đã ngừng kinh doanh."}
+          </p>
+          <div className={errorStyles.actions}>
+            <button
+              type="button"
+              onClick={() => window.history.length > 1 ? router.back() : router.push("/")}
+            >
+              Quay lại
+            </button>
+            <Link href="/">Về trang chủ</Link>
+          </div>
+        </div>
+      </main>
     );
   }
 

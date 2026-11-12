@@ -5,8 +5,17 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/common/searchable_multi_select_field.dart';
 import '../../../../widgets/common/searchable_select_field.dart';
+import '../../../../widgets/common/zella_toast.dart';
 import '../providers/product_variants_provider.dart';
+
+typedef _Combination = ({int sizeId, int colorId});
+typedef _Options = ({
+  List<Map<String, dynamic>> sizes,
+  List<Map<String, dynamic>> colors,
+  Set<_Combination> existing,
+});
 
 class VariantFormScreen extends StatefulWidget {
   final int productId;
@@ -27,20 +36,26 @@ class VariantFormScreen extends StatefulWidget {
 class _VariantFormScreenState extends State<VariantFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _price;
-  late final Future<
-    ({List<Map<String, dynamic>> sizes, List<Map<String, dynamic>> colors})
-  >
-  _options;
+  late Future<_Options> _options;
   int? _sizeId;
   int? _colorId;
+  final _sizeIds = <int>{};
+  final _colorIds = <int>{};
+  final _prices = <_Combination, String>{};
   late bool _isActive;
   bool _saving = false;
   bool _imagesLoading = false;
   String? _imagesError;
-  final List<_VariantImageDraft> _images = [];
-  final List<int> _deletedImageIds = [];
-  _VariantImageDraft? _primaryImage;
-  int? _createdVariantId;
+  final _editImages = _VariantImages();
+  final _colorImages = <int, _VariantImages>{};
+  int? _imageColorId;
+  List<_VariantCreation>? _batch;
+  int _processed = 0;
+
+  _VariantImages? get _selectedImages {
+    if (widget.variant != null) return _editImages;
+    return _colorImages[_imageColorId];
+  }
 
   @override
   void initState() {
@@ -50,10 +65,21 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
     _colorId = (variant?['colorId'] as num?)?.toInt();
     _price = TextEditingController(text: variant?['price']?.toString() ?? '');
     _isActive = variant?['isActive'] == true || variant == null;
-    _options = context.read<ProductVariantsProvider>().loadOptions();
+    _options = _loadOptions();
     if (variant != null) {
       _loadImages((variant['id'] as num).toInt());
     }
+  }
+
+  Future<_Options> _loadOptions() async {
+    final provider = context.read<ProductVariantsProvider>();
+    final (options, existing) = await (
+      provider.loadOptions(),
+      widget.variant == null
+          ? provider.loadExistingCombinations(widget.productId)
+          : Future.value(<_Combination>{}),
+    ).wait;
+    return (sizes: options.sizes, colors: options.colors, existing: existing);
   }
 
   Future<void> _loadImages(int variantId) async {
@@ -67,18 +93,14 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _images
+        final imagesDraft = _editImages;
+        imagesDraft.images
           ..clear()
-          ..addAll(images.map(_VariantImageDraft.fromJson));
-        _images.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-        _primaryImage = null;
-        for (final image in _images) {
-          if (image.isPrimary) {
-            _primaryImage = image;
-            break;
-          }
-        }
-        _primaryImage ??= _images.isEmpty ? null : _images.first;
+          ..addAll(images.map(_VariantImageDraft.fromJson))
+          ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+        imagesDraft.primary =
+            imagesDraft.images.where((image) => image.isPrimary).firstOrNull ??
+            imagesDraft.images.firstOrNull;
       });
     } catch (error) {
       if (mounted) setState(() => _imagesError = error.toString());
@@ -88,6 +110,8 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
   }
 
   Future<void> _pickImages() async {
+    final draft = _selectedImages;
+    if (draft == null) return;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -95,47 +119,56 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
         allowMultiple: true,
         withData: true,
       );
-      if (!mounted || result == null || result.files.isEmpty) return;
+      if (!mounted ||
+          _saving ||
+          _batch != null ||
+          result == null ||
+          result.files.isEmpty) {
+        return;
+      }
       if (result.files.any(
         (file) => file.bytes == null || file.size == 0 || file.size > 10485760,
       )) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Mỗi ảnh cần có dung lượng từ 1 byte đến 10 MB.'),
-          ),
+        ZellaToast.show(
+          context,
+          message: 'Mỗi ảnh cần có dung lượng từ 1 byte đến 10 MB.',
+          type: ToastType.warning,
         );
         return;
       }
       setState(() {
         var nextOrder =
-            _images.fold<int>(
+            draft.images.fold<int>(
               -1,
               (maxOrder, image) =>
                   image.displayOrder > maxOrder ? image.displayOrder : maxOrder,
             ) +
             1;
         for (final file in result.files) {
-          _images.add(
+          draft.images.add(
             _VariantImageDraft(file: file, displayOrder: nextOrder++),
           );
         }
-        _primaryImage ??= _images.first;
+        draft.primary ??= draft.images.first;
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        ZellaToast.show(
           context,
-        ).showSnackBar(SnackBar(content: Text('Không thể chọn ảnh: $error')));
+          message: 'Không thể chọn ảnh: $error',
+          type: ToastType.error,
+        );
       }
     }
   }
 
   void _removeImage(_VariantImageDraft image) {
+    final draft = _selectedImages!;
     setState(() {
-      if (image.id != null) _deletedImageIds.add(image.id!);
-      _images.remove(image);
-      if (identical(_primaryImage, image)) {
-        _primaryImage = _images.isEmpty ? null : _images.first;
+      if (image.id != null) draft.deletedIds.add(image.id!);
+      draft.images.remove(image);
+      if (identical(draft.primary, image)) {
+        draft.primary = draft.images.firstOrNull;
       }
     });
   }
@@ -150,21 +183,28 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
   Future<void> _saveImages(
     ProductVariantsProvider provider,
     int variantId,
+    _VariantImages draft,
   ) async {
-    for (final image in _images) {
+    final primary = draft.primary;
+    for (final image in draft.images) {
       if (image.file == null) continue;
+      final isPrimary = identical(image, primary);
       final uploaded = await provider.uploadImage(
         variantId: variantId,
         fileName: image.file!.name,
         bytes: image.file!.bytes!,
-        isPrimary: false,
+        isPrimary: isPrimary,
         displayOrder: image.displayOrder,
       );
       image.id = (uploaded['id'] as num).toInt();
       image.imageUrl = uploaded['imageUrl'] as String;
       image.file = null;
+      if (isPrimary) {
+        for (final item in draft.images) {
+          item.isPrimary = identical(item, image);
+        }
+      }
     }
-    final primary = _primaryImage;
     if (primary != null && !primary.isPrimary) {
       await provider.updateImage(
         id: primary.id!,
@@ -173,13 +213,13 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
         isPrimary: true,
         displayOrder: primary.displayOrder,
       );
-      for (final image in _images) {
+      for (final image in draft.images) {
         image.isPrimary = identical(image, primary);
       }
     }
-    for (final id in List<int>.of(_deletedImageIds)) {
+    for (final id in List<int>.of(draft.deletedIds)) {
       await provider.deleteImage(id);
-      _deletedImageIds.remove(id);
+      draft.deletedIds.remove(id);
     }
   }
 
@@ -189,72 +229,148 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Map<String, dynamic> _variantData(_Combination combination, double price) => {
+    'productId': widget.productId,
+    'sizeId': combination.sizeId,
+    'colorId': combination.colorId,
+    'price': price,
+    'costPrice': widget.variant?['costPrice'] ?? 0,
+    'stockQuantity': widget.variant?['stockQuantity'] ?? 0,
+    'reservedQuantity': widget.variant?['reservedQuantity'] ?? 0,
+    'isActive': _isActive,
+  };
+
+  Future<void> _submit(
+    List<_Combination> combinations,
+    Map<int, String> sizeNames,
+    Map<int, String> colorNames,
+  ) async {
+    if (_saving) return;
     if (_imagesLoading || _imagesError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Chưa tải được ảnh biến thể. Vui lòng thử lại.'),
-        ),
+      ZellaToast.show(
+        context,
+        message: 'Chưa tải được ảnh biến thể. Vui lòng thử lại.',
+        type: ToastType.warning,
       );
       return;
     }
-    if (_formKey.currentState?.validate() != true) return;
+    if (_batch == null && _formKey.currentState?.validate() != true) return;
+    if (widget.variant == null && combinations.isEmpty && _batch == null) {
+      ZellaToast.show(
+        context,
+        message: 'Các tổ hợp đã chọn đều có biến thể.',
+        type: ToastType.warning,
+      );
+      return;
+    }
+    FocusScope.of(context).unfocus();
     setState(() => _saving = true);
-    var variantSaved = false;
+    final provider = context.read<ProductVariantsProvider>();
     try {
-      final data = {
-        'productId': widget.productId,
-        'sizeId': _sizeId,
-        'colorId': _colorId,
-        'price': double.parse(_price.text.trim()),
-        'costPrice': widget.variant?['costPrice'] ?? 0,
-        'stockQuantity': widget.variant?['stockQuantity'] ?? 0,
-        'reservedQuantity': widget.variant?['reservedQuantity'] ?? 0,
-        'isActive': _isActive,
-      };
-      final provider = context.read<ProductVariantsProvider>();
-      if (widget.variant == null) {
-        if (_createdVariantId == null) {
-          final created = await provider.createItem(data);
-          _createdVariantId = (created['id'] as num).toInt();
-        } else {
-          await provider.updateItem(_createdVariantId!, data);
+      final variant = widget.variant;
+      if (variant != null) {
+        final id = (variant['id'] as num).toInt();
+        final combination = (sizeId: _sizeId!, colorId: _colorId!);
+        final data = _variantData(
+          combination,
+          double.parse(_price.text.trim()),
+        );
+        await provider.updateItem(id, data, refresh: false);
+        try {
+          await _saveImages(provider, id, _editImages);
+        } catch (error) {
+          throw Exception('Biến thể đã lưu, nhưng ảnh chưa lưu xong: $error');
         }
       } else {
-        await provider.updateItem((widget.variant!['id'] as num).toInt(), data);
+        _batch ??= [
+          for (final combination in combinations)
+            _VariantCreation(
+              label:
+                  '${sizeNames[combination.sizeId]} · ${colorNames[combination.colorId]}',
+              data: _variantData(
+                combination,
+                double.tryParse(
+                      combinations.length > 1
+                          ? _prices[combination]?.trim() ?? ''
+                          : '',
+                    ) ??
+                    double.parse(_price.text.trim()),
+              ),
+              images:
+                  _colorImages[combination.colorId]?.copyForCreation() ??
+                  _VariantImages(),
+            ),
+        ];
+        if (!await _saveBatch(provider, _batch!)) return;
       }
-      variantSaved = true;
-      await _saveImages(
-        provider,
-        _createdVariantId ?? (widget.variant!['id'] as num).toInt(),
-      );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.variant == null
-                ? 'Thêm biến thể thành công'
-                : 'Cập nhật biến thể thành công',
-          ),
-        ),
+      ZellaToast.show(
+        context,
+        message: variant != null
+            ? 'Cập nhật biến thể thành công'
+            : 'Đã thêm ${_batch!.length} biến thể',
+        type: ToastType.success,
       );
       widget.onClose();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              variantSaved
-                  ? 'Biến thể đã lưu, nhưng ảnh chưa lưu xong: $error'
-                  : 'Không thể lưu biến thể: $error',
-            ),
-            backgroundColor: AppTheme.error,
-          ),
+        ZellaToast.show(
+          context,
+          message: 'Không thể hoàn tất lưu biến thể: $error',
+          type: ToastType.error,
         );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<bool> _saveBatch(
+    ProductVariantsProvider provider,
+    List<_VariantCreation> batch,
+  ) async {
+    const parallelism = 3;
+    final pending = batch.where((item) => !item.complete).toList();
+    final errors = <String>[];
+    _processed = batch.length - pending.length;
+    for (
+      var offset = 0;
+      mounted && offset < pending.length;
+      offset += parallelism
+    ) {
+      await Future.wait(
+        pending.skip(offset).take(parallelism).map((item) async {
+          try {
+            if (item.id == null) {
+              final created = await provider.createItem(
+                item.data,
+                refresh: false,
+              );
+              item.id = (created['id'] as num).toInt();
+            }
+            await _saveImages(provider, item.id!, item.images);
+            item.complete = true;
+          } catch (error) {
+            item.error = error.toString();
+            errors.add('${item.label}: $error');
+          } finally {
+            if (mounted) setState(() => _processed++);
+          }
+        }),
+      );
+    }
+    if (!mounted) return false;
+    if (errors.isEmpty) return true;
+    final complete = batch.where((item) => item.complete).length;
+    final created = batch.where((item) => item.id != null).length;
+    if (created == 0) _batch = null;
+    ZellaToast.show(
+      context,
+      message:
+          'Đã lưu xong $complete/${batch.length} biến thể. ${errors.first}',
+      type: created == 0 ? ToastType.error : ToastType.warning,
+    );
+    return false;
   }
 
   String? _moneyValidator(String? value, {bool positive = false}) {
@@ -328,13 +444,38 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                       if (!snapshot.hasData) {
                         return Center(
                           child: snapshot.hasError
-                              ? Text(
-                                  'Không tải được size và màu: ${snapshot.error}',
+                              ? Column(
+                                  children: [
+                                    Text(
+                                      'Không tải được dữ liệu biến thể: ${snapshot.error}',
+                                    ),
+                                    TextButton(
+                                      onPressed: () => setState(
+                                        () => _options = _loadOptions(),
+                                      ),
+                                      child: const Text('Thử lại'),
+                                    ),
+                                  ],
                                 )
                               : const CircularProgressIndicator(),
                         );
                       }
                       final options = snapshot.data!;
+                      final sizeNames = _optionNames(options.sizes);
+                      final colorNames = _optionNames(options.colors);
+                      final combinations = [
+                        for (final size in _sizeIds)
+                          for (final color in _colorIds)
+                            if (!options.existing.contains((
+                              sizeId: size,
+                              colorId: color,
+                            )))
+                              (sizeId: size, colorId: color),
+                      ];
+                      final skipped =
+                          _sizeIds.length * _colorIds.length -
+                          combinations.length;
+                      final draft = _selectedImages;
                       return Form(
                         key: _formKey,
                         child: Column(
@@ -348,56 +489,29 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                                   _columns([
                                     _field(
                                       'Kích cỡ *',
-                                      SearchableSelectField<int>(
-                                        initialValue: _sizeId,
-                                        decoration: const InputDecoration(
-                                          hintText: 'Chọn kích cỡ',
-                                        ),
-                                        items: [
-                                          for (final size in options.sizes)
-                                            DropdownMenuItem(
-                                              value: (size['id'] as num)
-                                                  .toInt(),
-                                              child: Text(
-                                                size['name']?.toString() ?? '',
+                                      isEditing
+                                          ? _singleChoice(
+                                              sizeNames,
+                                              _sizeId,
+                                              'kích cỡ',
+                                              (value) => setState(
+                                                () => _sizeId = value,
                                               ),
+                                            )
+                                          : _choices(
+                                              sizeNames,
+                                              _sizeIds,
+                                              'kích cỡ',
                                             ),
-                                        ],
-                                        onChanged: (value) =>
-                                            setState(() => _sizeId = value),
-                                        validator: (value) => value == null
-                                            ? 'Vui lòng chọn kích cỡ'
-                                            : null,
-                                      ),
                                     ),
                                     _field(
                                       'Màu sắc *',
-                                      SearchableSelectField<int>(
-                                        initialValue: _colorId,
-                                        decoration: const InputDecoration(
-                                          hintText: 'Chọn màu sắc',
-                                        ),
-                                        items: [
-                                          for (final color in options.colors)
-                                            DropdownMenuItem(
-                                              value: (color['id'] as num)
-                                                  .toInt(),
-                                              child: Text(
-                                                '${color['name']} (${color['code']})',
-                                              ),
-                                            ),
-                                        ],
-                                        onChanged: (value) =>
-                                            setState(() => _colorId = value),
-                                        validator: (value) => value == null
-                                            ? 'Vui lòng chọn màu sắc'
-                                            : null,
-                                      ),
+                                      _colorChoice(options.colors, isEditing),
                                     ),
                                   ]),
                                   const SizedBox(height: 20),
                                   _field(
-                                    'Giá bán *',
+                                    isEditing ? 'Giá bán *' : 'Giá bán chung *',
                                     TextFormField(
                                       controller: _price,
                                       keyboardType:
@@ -422,6 +536,18 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                                     onChanged: (value) =>
                                         setState(() => _isActive = value),
                                   ),
+                                  if (!isEditing && skipped > 0)
+                                    Text(
+                                      'Bỏ qua $skipped tổ hợp đã có biến thể.',
+                                    ),
+                                  if (combinations.length > 1) ...[
+                                    const SizedBox(height: 16),
+                                    _variantPrices(
+                                      combinations,
+                                      sizeNames,
+                                      colorNames,
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -431,7 +557,24 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  if (_imagesLoading)
+                                  if (!isEditing && _colorIds.isNotEmpty) ...[
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        for (final id in _colorIds)
+                                          _imageChoice(
+                                            id,
+                                            colorNames[id]!,
+                                            _colorImages[id],
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  if (draft == null)
+                                    const Text('Chọn màu sắc để thêm ảnh.')
+                                  else if (_imagesLoading)
                                     const Center(
                                       child: CircularProgressIndicator(),
                                     )
@@ -453,7 +596,7 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                                       ],
                                     )
                                   else ...[
-                                    if (_images.isEmpty)
+                                    if (draft.images.isEmpty)
                                       Material(
                                         color: AppTheme.surface,
                                         shape: RoundedRectangleBorder(
@@ -504,14 +647,14 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                                       spacing: 12,
                                       runSpacing: 12,
                                       children: [
-                                        for (final image in _images)
+                                        for (final image in draft.images)
                                           Container(
                                             width: 150,
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
                                               color:
                                                   identical(
-                                                    _primaryImage,
+                                                    draft.primary,
                                                     image,
                                                   )
                                                   ? AppTheme.surface
@@ -519,7 +662,7 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                                               border: Border.all(
                                                 color:
                                                     identical(
-                                                      _primaryImage,
+                                                      draft.primary,
                                                       image,
                                                     )
                                                     ? AppTheme.primary
@@ -591,12 +734,12 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                                                   onPressed: _saving
                                                       ? null
                                                       : () => setState(
-                                                          () => _primaryImage =
+                                                          () => draft.primary =
                                                               image,
                                                         ),
                                                   icon: Icon(
                                                     identical(
-                                                          _primaryImage,
+                                                          draft.primary,
                                                           image,
                                                         )
                                                         ? Symbols.check_circle
@@ -613,7 +756,7 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                                           ),
                                       ],
                                     ),
-                                    if (_images.isNotEmpty) ...[
+                                    if (draft.images.isNotEmpty) ...[
                                       const SizedBox(height: 12),
                                       Align(
                                         alignment: Alignment.centerLeft,
@@ -633,6 +776,14 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                               ),
                             ),
                             const SizedBox(height: 24),
+                            if (_batch != null && !_saving)
+                              for (final item in _batch!.where(
+                                (item) => !item.complete,
+                              ))
+                                Text(
+                                  '${item.label}: ${item.error ?? 'Chưa lưu'}',
+                                  style: const TextStyle(color: AppTheme.error),
+                                ),
                             Wrap(
                               alignment: WrapAlignment.end,
                               spacing: 12,
@@ -640,10 +791,18 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                               children: [
                                 TextButton(
                                   onPressed: widget.onClose,
-                                  child: const Text('Hủy'),
+                                  child: Text(
+                                    _batch == null ? 'Hủy' : 'Về danh sách',
+                                  ),
                                 ),
                                 FilledButton.icon(
-                                  onPressed: _saving ? null : _submit,
+                                  onPressed: _saving
+                                      ? null
+                                      : () => _submit(
+                                          combinations,
+                                          sizeNames,
+                                          colorNames,
+                                        ),
                                   style: FilledButton.styleFrom(
                                     backgroundColor: const Color(0xFF5364FF),
                                     padding: const EdgeInsets.symmetric(
@@ -665,6 +824,12 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
                                   label: Text(
                                     isEditing
                                         ? 'Lưu thay đổi'
+                                        : _saving && _batch != null
+                                        ? 'Đã xử lý $_processed/${_batch!.length}'
+                                        : _batch != null
+                                        ? 'Thử lưu lại'
+                                        : combinations.length > 1
+                                        ? 'Thêm ${combinations.length} biến thể'
                                         : 'Thêm biến thể',
                                   ),
                                 ),
@@ -681,6 +846,154 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Map<int, String> _optionNames(
+    List<Map<String, dynamic>> items, {
+    bool showCode = false,
+  }) => {
+    for (final item in items)
+      (item['id'] as num).toInt(): showCode && item['code'] != null
+          ? '${item['name']} (${item['code']})'
+          : item['name']?.toString() ?? '',
+  };
+
+  Widget _singleChoice(
+    Map<int, String> names,
+    int? selected,
+    String label,
+    ValueChanged<int?> onChanged,
+  ) => SearchableSelectField<int>(
+    initialValue: selected,
+    decoration: InputDecoration(hintText: 'Chọn $label'),
+    items: [
+      for (final entry in names.entries)
+        DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+    ],
+    onChanged: onChanged,
+    validator: (value) => value == null ? 'Vui lòng chọn $label' : null,
+  );
+
+  Widget _colorChoice(List<Map<String, dynamic>> colors, bool isEditing) {
+    final hexCodes = {
+      for (final color in colors)
+        (color['id'] as num).toInt(): color['hexCode'],
+    };
+    Widget? swatch(int id) => _colorSwatch(hexCodes[id]);
+
+    if (!isEditing) {
+      return _choices(
+        _optionNames(colors),
+        _colorIds,
+        'màu sắc',
+        leadingBuilder: swatch,
+      );
+    }
+    final selected = _colorId;
+    return SearchableMultiSelectField<int>(
+      values: {?selected},
+      decoration: const InputDecoration(hintText: 'Chọn màu sắc'),
+      options: _optionNames(colors, showCode: true),
+      leadingBuilder: swatch,
+      singleSelection: true,
+      validator: (values) =>
+          values == null || values.isEmpty ? 'Vui lòng chọn màu sắc' : null,
+      onChanged: (values) => setState(() => _colorId = values.single),
+    );
+  }
+
+  Widget? _colorSwatch(Object? hexCode) {
+    final hex = hexCode?.toString().trim() ?? '';
+    if (!RegExp(r'^#?[0-9a-fA-F]{6}$').hasMatch(hex)) return null;
+    final rgb = int.parse(hex.replaceFirst('#', ''), radix: 16);
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        color: Color(0xFF000000 | rgb),
+        shape: BoxShape.circle,
+        border: Border.all(color: AppTheme.border),
+      ),
+    );
+  }
+
+  Widget _choices(
+    Map<int, String> names,
+    Set<int> selected,
+    String label, {
+    Widget? Function(int)? leadingBuilder,
+  }) => SearchableMultiSelectField<int>(
+    values: selected,
+    decoration: InputDecoration(hintText: 'Chọn $label'),
+    options: names,
+    leadingBuilder: leadingBuilder,
+    validator: (values) =>
+        values == null || values.isEmpty ? 'Vui lòng chọn $label' : null,
+    onChanged: (values) => setState(() {
+      selected
+        ..clear()
+        ..addAll(values);
+      if (identical(selected, _colorIds)) {
+        for (final id in selected) {
+          _colorImages.putIfAbsent(id, _VariantImages.new);
+        }
+        if (!selected.contains(_imageColorId)) {
+          _imageColorId = selected.firstOrNull;
+        }
+      }
+    }),
+  );
+
+  Widget _variantPrices(
+    List<_Combination> combinations,
+    Map<int, String> sizes,
+    Map<int, String> colors,
+  ) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Text('Giá riêng theo biến thể'),
+      const SizedBox(height: 8),
+      for (final combination in combinations)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${sizes[combination.sizeId]} · ${colors[combination.colorId]}',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  key: ValueKey(combination),
+                  initialValue: _prices[combination],
+                  decoration: const InputDecoration(
+                    hintText: 'Dùng giá chung',
+                    suffixText: 'VND',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (value) => _prices[combination] = value,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? null
+                      : _moneyValidator(value, positive: true),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
+
+  Widget _imageChoice(int id, String label, _VariantImages? draft) {
+    final count = draft?.images.length ?? 0;
+    return ChoiceChip(
+      label: Text(count == 0 ? label : '$label ($count)'),
+      selected: _imageColorId == id,
+      onSelected: (_) => setState(() => _imageColorId = id),
     );
   }
 
@@ -721,11 +1034,11 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
     },
   );
 
-  Widget _section(String title, Widget content) => Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
+  Widget _section(String title, Widget content) => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFE4E7EC)),
+      side: const BorderSide(color: Color(0xFFE4E7EC)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -738,10 +1051,50 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
           ),
         ),
         const Divider(height: 1, color: Color(0xFFE4E7EC)),
-        Padding(padding: const EdgeInsets.all(24), child: content),
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: ExcludeFocus(
+            excluding: _saving || _batch != null,
+            child: AbsorbPointer(absorbing: _batch != null, child: content),
+          ),
+        ),
       ],
     ),
   );
+}
+
+class _VariantCreation {
+  final String label;
+  final Map<String, dynamic> data;
+  final _VariantImages images;
+  int? id;
+  bool complete = false;
+  String? error;
+
+  _VariantCreation({
+    required this.label,
+    required this.data,
+    required this.images,
+  });
+}
+
+class _VariantImages {
+  final images = <_VariantImageDraft>[];
+  final deletedIds = <int>[];
+  _VariantImageDraft? primary;
+
+  _VariantImages copyForCreation() {
+    final copy = _VariantImages();
+    for (final image in images) {
+      final draft = _VariantImageDraft(
+        file: image.file,
+        displayOrder: image.displayOrder,
+      );
+      copy.images.add(draft);
+      if (identical(image, primary)) copy.primary = draft;
+    }
+    return copy;
+  }
 }
 
 class _VariantImageDraft {

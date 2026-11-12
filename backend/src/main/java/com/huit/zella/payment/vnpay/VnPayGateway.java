@@ -19,12 +19,23 @@ import java.util.*;
 @Component
 public class VnPayGateway {
     static final class GatewayFailure extends IllegalStateException {
+        private final String responseCode;
+
         GatewayFailure(String reason) {
-            super(reason);
+            this(reason, null, null);
         }
 
         GatewayFailure(String reason, Throwable cause) {
+            this(reason, cause, null);
+        }
+
+        GatewayFailure(String reason, Throwable cause, String responseCode) {
             super(reason, cause);
+            this.responseCode = responseCode != null && responseCode.matches("[0-9]{2}") ? responseCode : null;
+        }
+
+        String responseCode() {
+            return responseCode;
         }
     }
 
@@ -86,6 +97,7 @@ public class VnPayGateway {
 
     public Map<String, String> query(PaymentRefund refund, Instant now) {
         var fields = common(refund, UUID.randomUUID().toString().replace("-", ""), now);
+        fields.remove("vnp_TransactionNo");
         fields.put("vnp_Command", "querydr");
         fields.put("vnp_OrderInfo", "Query refund " + refund.getRequestId());
         return exchange(fields, QUERY_FIELDS, true);
@@ -131,12 +143,19 @@ public class VnPayGateway {
             String received = result.get("vnp_SecureHash");
             String data = join(result, RESPONSE_FIELDS);
             if (query) data += "|" + result.getOrDefault("vnp_PromotionCode", "") + "|" + result.getOrDefault("vnp_PromotionAmount", "");
-            if (received == null || !received.matches("[a-fA-F0-9]{128}")
-                    || !MessageDigest.isEqual(HexFormat.of().parseHex(received), HexFormat.of().parseHex(VnPaySignature.signRaw(data, properties.getHashSecret())))
-                    || !fields.get("vnp_Command").equals(result.get("vnp_Command"))
-                    || !fields.get("vnp_TmnCode").equals(result.get("vnp_TmnCode"))
+            if (received == null || received.isBlank())
+                throw new GatewayFailure("MISSING_RESPONSE_SIGNATURE", null, result.get("vnp_ResponseCode"));
+            if (!received.matches("[a-fA-F0-9]{128}"))
+                throw new GatewayFailure("INVALID_RESPONSE_SIGNATURE_FORMAT", null, result.get("vnp_ResponseCode"));
+            if (!MessageDigest.isEqual(HexFormat.of().parseHex(received),
+                    HexFormat.of().parseHex(VnPaySignature.signRaw(data, properties.getHashSecret()))))
+                throw new GatewayFailure("RESPONSE_SIGNATURE_MISMATCH");
+            String command = result.getOrDefault("vnp_Command", "");
+            if (!(query && command.isEmpty()) && !fields.get("vnp_Command").equals(command))
+                throw new GatewayFailure("RESPONSE_COMMAND_MISMATCH");
+            if (!fields.get("vnp_TmnCode").equals(result.get("vnp_TmnCode"))
                     || !fields.get("vnp_TxnRef").equals(result.get("vnp_TxnRef")))
-                throw new GatewayFailure("UNVERIFIED_RESPONSE");
+                throw new GatewayFailure("RESPONSE_TRANSACTION_MISMATCH");
             if (!query && (!fields.get("vnp_Amount").equals(result.get("vnp_Amount"))
                     || !fields.get("vnp_TransactionType").equals(result.get("vnp_TransactionType"))
                     || !fields.get("vnp_OrderInfo").equals(result.get("vnp_OrderInfo"))))

@@ -46,6 +46,7 @@ class ProductVariantsProvider extends ChangeNotifier {
         page: page,
         size: _pageSize,
         query: _query,
+        groupByColor: true,
       );
       _items = (data['content'] as List<dynamic>).cast<Map<String, dynamic>>();
       _totalElements = (data['totalElements'] as num).toInt();
@@ -58,15 +59,45 @@ class ProductVariantsProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> createItem(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createItem(
+    Map<String, dynamic> data, {
+    bool refresh = true,
+  }) async {
     final variant = await _repository.create(data);
-    await loadItems(productId: _productId, page: _currentPage);
+    if (refresh) await loadItems(productId: _productId, page: _currentPage);
     return variant;
   }
 
-  Future<void> updateItem(int id, Map<String, dynamic> data) async {
+  Future<void> updateItem(
+    int id,
+    Map<String, dynamic> data, {
+    bool refresh = true,
+  }) async {
     await _repository.update(id, data);
-    await loadItems(productId: _productId, page: _currentPage);
+    if (refresh) await loadItems(productId: _productId, page: _currentPage);
+  }
+
+  Future<Set<({int sizeId, int colorId})>> loadExistingCombinations(
+    int productId,
+  ) async {
+    final combinations = <({int sizeId, int colorId})>{};
+    var page = 0;
+    while (true) {
+      final data = await _repository.getAll(
+        productId: productId,
+        page: page,
+        size: 100,
+      );
+      for (final item in data['content'] as List) {
+        final size = item['sizeId'] as num?;
+        final color = item['colorId'] as num?;
+        if (size != null && color != null) {
+          combinations.add((sizeId: size.toInt(), colorId: color.toInt()));
+        }
+      }
+      page++;
+      if (page >= (data['totalPages'] as num).toInt()) return combinations;
+    }
   }
 
   Future<void> toggleActiveBulk(List<int> ids, bool isActive) async {

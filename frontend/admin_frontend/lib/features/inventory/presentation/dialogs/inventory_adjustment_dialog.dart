@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../../data/models/inventory_response_model.dart';
 import '../providers/inventory_provider.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class InventoryAdjustmentDialog extends StatefulWidget {
   final InventoryResponseModel item;
@@ -47,8 +48,7 @@ class _InventoryAdjustmentDialogState extends State<InventoryAdjustmentDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ZellaToast.show(context, message: e.toString(), type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _saving = false);

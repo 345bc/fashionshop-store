@@ -89,7 +89,9 @@ void main() {
       expect(p.detail(1).adminReply, 'Shop cảm ơn bạn!');
       expect(p.selectedReview!.id, 3);
       expect(p.drafts.containsKey(1), isFalse);
+      expect(find.text('Đã lưu câu trả lời'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      await tester.pumpAndSettle(const Duration(seconds: 5));
     },
   );
 
@@ -180,6 +182,7 @@ void main() {
       expect(p.detail(1).comment, original.comment);
       expect(p.detail(1).rating, original.rating);
       expect(tester.takeException(), isNull);
+      await tester.pumpAndSettle(const Duration(seconds: 5));
     },
   );
 }

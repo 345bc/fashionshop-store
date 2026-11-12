@@ -12,6 +12,7 @@ import '../providers/products_provider.dart';
 import '../../../categories/presentation/providers/categories_provider.dart';
 import '../../../suppliers/presentation/providers/suppliers_provider.dart';
 import '../../../sizeguides/presentation/providers/size_guides_provider.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class ProductFormScreen extends StatefulWidget {
   final Map<String, dynamic>? product;
@@ -133,10 +134,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       if (result.files.any(
         (file) => file.bytes == null || file.size == 0 || file.size > 10485760,
       )) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Mỗi ảnh cần có dung lượng từ 1 byte đến 10 MB.'),
-          ),
+        ZellaToast.show(
+          context,
+          message: 'Mỗi ảnh cần có dung lượng từ 1 byte đến 10 MB.',
+          type: ToastType.warning,
         );
         return;
       }
@@ -155,9 +156,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        ZellaToast.show(
           context,
-        ).showSnackBar(SnackBar(content: Text('Không thể chọn ảnh: $error')));
+          message: 'Không thể chọn ảnh: $error',
+          type: ToastType.error,
+        );
       }
     }
   }
@@ -228,18 +231,20 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   Future<void> _submit({required bool active}) async {
     if (_isLoading) return;
     if (_imagesLoading || _imagesError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Chưa tải được ảnh sản phẩm. Vui lòng thử lại.'),
-        ),
+      ZellaToast.show(
+        context,
+        message: 'Chưa tải được ảnh sản phẩm. Vui lòng thử lại.',
+        type: ToastType.warning,
       );
       return;
     }
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(
+      ZellaToast.show(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Vui lòng chọn danh mục')));
+        message: 'Vui lòng chọn danh mục',
+        type: ToastType.warning,
+      );
       return;
     }
 
@@ -272,30 +277,25 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       await _saveImages(productsProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isEditing
-                  ? 'Cập nhật sản phẩm thành công'
-                  : active
-                  ? 'Đăng sản phẩm thành công'
-                  : 'Đã lưu bản nháp sản phẩm',
-            ),
-          ),
+        ZellaToast.show(
+          context,
+          message: _isEditing
+              ? 'Cập nhật sản phẩm thành công'
+              : active
+              ? 'Đăng sản phẩm thành công'
+              : 'Đã lưu bản nháp sản phẩm',
+          type: ToastType.success,
         );
         _close();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              productUpdated
-                  ? 'Thông tin sản phẩm đã lưu, nhưng ảnh chưa lưu xong: $e'
-                  : 'Không thể lưu sản phẩm: $e',
-            ),
-            backgroundColor: AppTheme.error,
-          ),
+        ZellaToast.show(
+          context,
+          message: productUpdated
+              ? 'Thông tin sản phẩm đã lưu, nhưng ảnh chưa lưu xong: $e'
+              : 'Không thể lưu sản phẩm: $e',
+          type: ToastType.error,
         );
       }
     } finally {

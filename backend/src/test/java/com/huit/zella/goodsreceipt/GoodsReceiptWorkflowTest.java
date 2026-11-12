@@ -49,6 +49,16 @@ class GoodsReceiptWorkflowTest extends com.huit.zella.inventory.WarehouseFixture
             assertThrows(BusinessException.class, () -> receipts.post(receipt.id(), actor.getId())).getCode());
     }
     @Test
+    void canReceiveInactiveVariantWithoutReactivatingIt() {
+        variant.setActive(false);
+        var receipt = draft();
+        assertEquals("POSTED", receipts.post(receipt.id(), actor.getId()).status());
+        em.flush(); em.clear();
+        var stored = em.find(ProductVariant.class, variant.getId());
+        assertEquals(15, stored.getStockQuantity());
+        assertFalse(stored.isActive());
+    }
+    @Test
     void reversingReceiptRestoresStockAndCostAndKeepsHistory() {
         var receipt = draft();
         receipts.post(receipt.id(), actor.getId());

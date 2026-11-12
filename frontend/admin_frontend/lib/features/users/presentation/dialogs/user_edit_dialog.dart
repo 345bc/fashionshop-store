@@ -7,6 +7,7 @@ import '../../../../theme/app_theme.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../../../auth/presentation/provider/auth_provider.dart';
 import '../providers/users_provider.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class UserEditDialog extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -58,9 +59,11 @@ class _UserEditDialogState extends State<UserEditDialog> {
   Future<void> _saveUser() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedRoles.isEmpty) {
-      ScaffoldMessenger.of(
+      ZellaToast.show(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Chọn ít nhất một vai trò')));
+        message: 'Chọn ít nhất một vai trò',
+        type: ToastType.warning,
+      );
       return;
     }
 
@@ -84,15 +87,19 @@ class _UserEditDialogState extends State<UserEditDialog> {
         data['isActive'] = _isActive;
         await provider.updateItem(widget.user!['id'], data);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cập nhật tài khoản thành công')),
+          ZellaToast.show(
+            context,
+            message: 'Cập nhật tài khoản thành công',
+            type: ToastType.success,
           );
         }
       } else {
         await provider.createItem(data);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tạo tài khoản thành công')),
+          ZellaToast.show(
+            context,
+            message: 'Tạo tài khoản thành công',
+            type: ToastType.success,
           );
         }
       }
@@ -101,11 +108,10 @@ class _UserEditDialogState extends State<UserEditDialog> {
     } catch (e) {
       if (mounted) {
         final errorMsg = e.toString().replaceAll('Exception: ', '');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $errorMsg'),
-            backgroundColor: AppTheme.error,
-          ),
+        ZellaToast.show(
+          context,
+          message: 'Lỗi: $errorMsg',
+          type: ToastType.error,
         );
       }
     } finally {

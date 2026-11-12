@@ -13,6 +13,7 @@ import '../widgets/analytics_cards.dart';
 import '../widgets/analytics_panels.dart';
 import '../widgets/analytics_table.dart';
 import '../widgets/revenue_chart.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class AnalyticsReportScreen extends StatefulWidget {
   final AnalyticsSection? initialSection;
@@ -82,22 +83,19 @@ class _AnalyticsReportScreenState extends State<AnalyticsReportScreen> {
                             if (!mounted) return;
                             final saved = await saveCsvFile(csv, name);
                             if (saved && context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Đã xuất CSV của toàn bộ dòng trong bộ lọc hiện tại',
-                                  ),
-                                ),
+                              ZellaToast.show(
+                                context,
+                                message: 'Đã xuất CSV của toàn bộ dòng trong bộ lọc hiện tại',
+                                type: ToastType.success,
                               );
                             }
                           } catch (_) {
                             if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
+                            ZellaToast.show(
+                              context,
+                              message:
                                   'Không thể xuất báo cáo. Vui lòng thử lại.',
-                                ),
-                              ),
+                              type: ToastType.error,
                             );
                           } finally {
                             if (mounted) setState(() => _savingCsv = false);

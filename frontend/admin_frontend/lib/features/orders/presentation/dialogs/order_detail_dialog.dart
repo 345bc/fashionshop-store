@@ -16,6 +16,7 @@ import 'receive_return_dialog.dart';
 import 'vnpay_refund_dialog.dart';
 import '../widgets/payment_reservation_status.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class OrderDetailDialog extends StatefulWidget {
   final int orderId;
@@ -78,8 +79,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       _refresh();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ZellaToast.show(context, message: e.toString(), type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _busy = false);

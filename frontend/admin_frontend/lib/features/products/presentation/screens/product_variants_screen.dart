@@ -226,15 +226,7 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
                             child: Text('Chưa có biến thể nào'),
                           )
                         else
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: provider.items.length,
-                            separatorBuilder: (_, _) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) =>
-                                _row(provider.items[index]),
-                          ),
+                          ..._groupedRows(provider.items),
                         const Divider(height: 1),
                         PaginationFooter(
                           currentPage: provider.currentPage,
@@ -313,6 +305,31 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
     ),
   );
 
+  List<Widget> _groupedRows(List<Map<String, dynamic>> variants) {
+    final groups = <Object?, List<Map<String, dynamic>>>{};
+    for (final variant in variants) {
+      final color = variant['colorId'] ?? variant['colorName'];
+      groups.putIfAbsent(color, () => []).add(variant);
+    }
+    return [
+      for (final group in groups.values) ...[
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+          color: AppTheme.surface,
+          child: Text(
+            group.first['colorName']?.toString() ?? 'Chưa có màu',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+        for (final variant in group) ...[
+          const Divider(height: 1),
+          _row(variant),
+        ],
+      ],
+    ];
+  }
+
   Widget _row(Map<String, dynamic> variant) {
     final isActive = variant['isActive'] == true;
     final stock = (variant['stockQuantity'] as num?)?.toInt() ?? 0;
@@ -350,7 +367,7 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${variant['sizeName'] ?? '—'} · ${variant['colorName'] ?? '—'}',
+                    '${variant['sizeName'] ?? '—'}',
                     style: const TextStyle(color: AppTheme.textSecondary),
                   ),
                 ],

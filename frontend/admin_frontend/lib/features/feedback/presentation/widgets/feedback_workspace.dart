@@ -9,6 +9,7 @@ import '../../data/models/product_review_model.dart';
 import '../providers/feedback_provider.dart';
 import '../dialogs/feedback_detail_dialog.dart';
 import 'review_status_badge.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class FeedbackWorkspace extends StatelessWidget {
   final FeedbackProvider provider;
@@ -282,20 +283,22 @@ class _InlineReplyState extends State<_InlineReply> {
                   ? null
                   : () async {
                       if (!_form.currentState!.validate()) return;
-                      final messenger = ScaffoldMessenger.of(context);
                       try {
                         await widget.provider.replyAndNext(r.id, _reply.text);
-                        messenger.showSnackBar(
-                          const SnackBar(content: Text('Đã lưu câu trả lời')),
+                        if (!context.mounted) return;
+                        ZellaToast.show(
+                          context,
+                          message: 'Đã lưu câu trả lời',
+                          type: ToastType.success,
                         );
                       } catch (_) {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
+                        if (!context.mounted) return;
+                        ZellaToast.show(
+                          context,
+                          message:
                               widget.provider.error ??
-                                  'Không thể lưu câu trả lời',
-                            ),
-                          ),
+                              'Không thể lưu câu trả lời',
+                          type: ToastType.error,
                         );
                       }
                     },

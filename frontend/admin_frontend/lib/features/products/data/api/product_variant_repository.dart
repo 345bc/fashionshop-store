@@ -11,6 +11,7 @@ class ProductVariantRepository {
     int page = 0,
     int size = 15,
     String? query,
+    bool groupByColor = false,
   }) async {
     try {
       final response = await _apiClient.get(
@@ -19,6 +20,7 @@ class ProductVariantRepository {
           'productId': productId,
           'page': page,
           'size': size,
+          if (groupByColor) 'groupByColor': true,
           if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
         },
       );

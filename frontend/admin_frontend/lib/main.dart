@@ -7,6 +7,7 @@ import 'features/home_appearance/home_appearance_screen.dart';
 import 'features/bought_together/bought_together_screen.dart';
 
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'features/posts/post_category_form_screen.dart';
@@ -39,6 +40,8 @@ import 'features/orders/presentation/providers/orders_provider.dart';
 import 'features/customers/presentation/screens/customers_screen.dart';
 import 'features/customers/presentation/providers/customers_provider.dart';
 import 'features/purchases/presentation/screens/goods_receipt_detail_screen.dart';
+import 'features/purchases/presentation/screens/goods_receipt_form_screen.dart';
+import 'features/purchases/data/models/goods_receipt_response_model.dart';
 import 'features/purchases/presentation/screens/purchases_screen.dart';
 import 'features/purchases/presentation/providers/purchases_provider.dart';
 import 'features/inventory/presentation/providers/inventory_provider.dart';
@@ -60,8 +63,8 @@ import 'features/categories/presentation/screens/categories_screen.dart';
 import 'features/product_attributes/data/attribute_kind.dart';
 import 'features/product_attributes/presentation/screens/attribute_management_screen.dart';
 import 'screens/unauthorized_screen.dart';
+import 'widgets/common/zella_toast.dart';
 
-final adminScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 final adminNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
@@ -99,12 +102,12 @@ class ZellaAdminApp extends StatelessWidget {
         builder: (context, authProvider, _) {
           authProvider.onSessionExpired = () {
             adminNavigatorKey.currentState?.popUntil((route) => route.isFirst);
-            adminScaffoldMessengerKey.currentState?.showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
-                ),
-              ),
+            final toastContext = adminNavigatorKey.currentContext;
+            if (toastContext == null) return;
+            ZellaToast.show(
+              toastContext,
+              message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+              type: ToastType.warning,
             );
           };
           ApiClient().onSessionExpired = authProvider.expireSession;
@@ -119,7 +122,7 @@ class ZellaAdminApp extends StatelessWidget {
             supportedLocales: const [Locale('vi'), Locale('en')],
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
-            scaffoldMessengerKey: adminScaffoldMessengerKey,
+            builder: FToastBuilder(),
             navigatorKey: adminNavigatorKey,
             home: const AdminAuthGate(),
           );
@@ -270,6 +273,15 @@ class MainScreenState extends State<MainScreen> {
         return const OrdersScreen();
       case '/customers':
         return const CustomersScreen();
+      case '/purchases/form':
+        final draft = _currentArgs?['receipt'] as GoodsReceiptResponseModel?;
+        return GoodsReceiptFormScreen(
+          key: ValueKey(draft?.id),
+          receipt: draft,
+          onClose: () => draft == null
+              ? navigate('/purchases')
+              : navigate('/purchases/detail', {'receiptId': draft.id}),
+        );
       case '/purchases/detail':
         final receiptId = _currentArgs?['receiptId'] as int?;
         if (receiptId == null) return const PurchasesScreen();
@@ -277,6 +289,7 @@ class MainScreenState extends State<MainScreen> {
           key: ValueKey(receiptId),
           receiptId: receiptId,
           onClose: () => navigate('/purchases'),
+          onEdit: (receipt) => navigate('/purchases/form', {'receipt': receipt}),
         );
       case '/purchases':
         return const PurchasesScreen();

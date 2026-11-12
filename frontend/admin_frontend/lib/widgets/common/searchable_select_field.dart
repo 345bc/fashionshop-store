@@ -11,6 +11,7 @@ class SearchableSelectField<T> extends StatelessWidget {
     required this.items,
     required this.onChanged,
     this.validator,
+    this.enabled = true,
   });
 
   final T? initialValue;
@@ -18,34 +19,42 @@ class SearchableSelectField<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
   final FormFieldValidator<T>? validator;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) => FormField<T>(
     initialValue: initialValue,
+    enabled: enabled,
     validator: validator,
     builder: (field) {
       final selected = items.where((item) => item.value == field.value);
       return InkWell(
         borderRadius: BorderRadius.circular(9),
-        onTap: () async {
-          final value = await showDialog<T>(
-            context: context,
-            barrierColor: Colors.black.withValues(alpha: 0.24),
-            builder: (_) => _OptionsDialog<T>(
-              items: items,
-              selectedValue: field.value,
-              title: (decoration.labelText ?? decoration.hintText ?? 'Chọn mục')
-                  .replaceAll('*', '')
-                  .trim(),
-            ),
-          );
-          if (value == null || !field.mounted) return;
-          field.didChange(value);
-          onChanged(value);
-        },
+        onTap: !enabled
+            ? null
+            : () async {
+                final value = await showDialog<T>(
+                  context: context,
+                  barrierColor: Colors.black.withValues(alpha: 0.24),
+                  builder: (_) => _OptionsDialog<T>(
+                    items: items,
+                    selectedValue: field.value,
+                    title:
+                        (decoration.labelText ??
+                                decoration.hintText ??
+                                'Chọn mục')
+                            .replaceAll('*', '')
+                            .trim(),
+                  ),
+                );
+                if (value == null || !field.mounted) return;
+                field.didChange(value);
+                onChanged(value);
+              },
         child: InputDecorator(
           isEmpty: selected.isEmpty,
           decoration: decoration.copyWith(
+            enabled: enabled,
             errorText: decoration.errorText ?? field.errorText,
             suffixIcon: const Icon(Icons.expand_more),
           ),

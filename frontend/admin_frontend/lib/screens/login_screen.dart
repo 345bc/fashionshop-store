@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../features/auth/presentation/provider/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
+import '../widgets/common/zella_toast.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,18 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
           ? 'Đăng nhập thành công'
           : authProvider.errorMessage ?? 'Đăng nhập thất bại';
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final messenger = adminScaffoldMessengerKey.currentState;
-        messenger?.clearSnackBars();
-        messenger?.showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: success ? AppTheme.success : AppTheme.danger,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
+        final toastContext = adminNavigatorKey.currentContext;
+        if (toastContext == null) return;
+        ZellaToast.show(
+          toastContext,
+          message: message,
+          type: success ? ToastType.success : ToastType.error,
         );
       });
     }

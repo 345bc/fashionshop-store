@@ -12,6 +12,7 @@ import '../../../../widgets/common/filter_dropdown.dart';
 import '../../../../widgets/common/pagination_footer.dart';
 import '../../../../widgets/common/status_badge.dart';
 import '../../../../widgets/common/zella_checkbox.dart';
+import '../../../../widgets/common/zella_toast.dart';
 import '../../data/models/category_response_model.dart';
 import '../dialogs/category_create_dialog.dart';
 import '../dialogs/category_delete_dialog.dart';
@@ -66,18 +67,20 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       selectedIds.removeAll(succeeded);
       _bulkBusy = false;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          errors.isEmpty
-              ? 'Đã ${active == null
-                    ? 'xóa'
-                    : active
-                    ? 'hiện'
-                    : 'ẩn'} ${succeeded.length} danh mục'
-              : 'Đã xử lý ${succeeded.length}/${ids.length} danh mục. ${errors.first}',
-        ),
-      ),
+    ZellaToast.show(
+      context,
+      message: errors.isEmpty
+          ? 'Đã ${active == null
+                ? 'xóa'
+                : active
+                ? 'hiện'
+                : 'ẩn'} ${succeeded.length} danh mục'
+          : 'Đã xử lý ${succeeded.length}/${ids.length} danh mục. ${errors.first}',
+      type: errors.isEmpty
+          ? ToastType.success
+          : succeeded.isEmpty
+          ? ToastType.error
+          : ToastType.warning,
     );
   }
 

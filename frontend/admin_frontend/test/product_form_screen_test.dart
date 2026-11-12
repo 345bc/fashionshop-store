@@ -159,7 +159,9 @@ void main() {
     expect(products.saved?['isActive'], false);
     expect(products.saved?['categoryId'], 1);
     expect(find.text('Chỉnh sửa sản phẩm'), findsNothing);
+    expect(find.text('Cập nhật sản phẩm thành công'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await tester.pumpAndSettle(const Duration(seconds: 5));
   });
   testWidgets('publish activates an inactive product', (tester) async {
     final products = FormProducts();
@@ -185,6 +187,7 @@ void main() {
     expect(products.updates, 1);
     expect(products.creates, 0);
     expect(tester.takeException(), isNull);
+    await tester.pumpAndSettle(const Duration(seconds: 5));
   });
   testWidgets('product page fits a narrow screen without a dialog', (
     tester,
