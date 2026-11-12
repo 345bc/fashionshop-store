@@ -10,11 +10,16 @@ import com.huit.zella.size.SizeRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -39,12 +44,15 @@ public class ProductVariantService {
         } else {
             variants = productVariantRepository.findAll(pageable);
         }
-        return variants.map(ProductVariantResponse::from);
+        var ids = variants.getContent().stream().map(ProductVariant::getId).toList();
+        Set<Long> orderedIds = ids.isEmpty() ? Set.of()
+                : new HashSet<>(productVariantRepository.findVariantIdsWithOrders(ids));
+        return variants.map(variant -> ProductVariantResponse.from(variant, orderedIds.contains(variant.getId())));
     }
 
     @Transactional(readOnly = true)
     public ProductVariantResponse get(Long id) {
-        return ProductVariantResponse.from(requireVariant(id));
+        return ProductVariantResponse.from(requireVariant(id), hasOrders(id));
     }
 
     @Transactional
@@ -58,6 +66,23 @@ public class ProductVariantService {
         ProductVariant variant = productVariantRepository.findByIdForInventoryUpdate(id).orElseThrow(() ->
                 new BusinessException(HttpStatus.NOT_FOUND, "PRODUCT_VARIANT_NOT_FOUND", "Product variant not found"));
         return save(variant, request, id);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        try {
+            if (productVariantRepository.deleteWithoutOrders(id) > 0) return;
+        } catch (DataIntegrityViolationException ex) {
+            throw new BusinessException(HttpStatus.CONFLICT, "VARIANT_IN_USE",
+                    "Biến thể còn liên kết với dữ liệu khác, không thể xóa. Bạn có thể ẩn biến thể.");
+        }
+        requireVariant(id);
+        throw new BusinessException(HttpStatus.CONFLICT, "VARIANT_HAS_ORDERS",
+                "Biến thể đã có đơn hàng, không thể xóa.");
+    }
+
+    private boolean hasOrders(Long id) {
+        return !productVariantRepository.findVariantIdsWithOrders(List.of(id)).isEmpty();
     }
 
     private ProductVariantResponse save(ProductVariant variant, CreateProductVariantRequest request, Long excludedId) {
@@ -92,7 +117,8 @@ public class ProductVariantService {
         variant.setStockQuantity(request.stockQuantity());
         variant.setReservedQuantity(request.reservedQuantity());
         variant.setActive(request.isActive() == null || request.isActive());
-        return ProductVariantResponse.from(productVariantRepository.save(variant));
+        return ProductVariantResponse.from(productVariantRepository.save(variant),
+                excludedId != null && hasOrders(excludedId));
     }
 
     private void ensureUnique(String sku, Long productId, Integer sizeId, Integer colorId, Long excludedId) {

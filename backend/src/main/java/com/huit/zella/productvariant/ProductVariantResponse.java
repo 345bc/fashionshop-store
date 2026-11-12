@@ -18,9 +18,10 @@ public record ProductVariantResponse(
         Integer stockQuantity,
         Integer reservedQuantity,
         Integer availableQuantity,
-        boolean isActive
+        boolean isActive,
+        boolean hasOrders
 ) {
-    public static ProductVariantResponse from(ProductVariant variant) {
+    public static ProductVariantResponse from(ProductVariant variant, boolean hasOrders) {
         return new ProductVariantResponse(
                 variant.getId(),
                 variant.getProduct() != null ? variant.getProduct().getId() : null,
@@ -37,7 +38,8 @@ public record ProductVariantResponse(
                 variant.getStockQuantity(),
                 variant.getReservedQuantity(),
                 variant.getStockQuantity() - variant.getReservedQuantity(),
-                variant.isActive()
+                variant.isActive(),
+                hasOrders
         );
     }
 }

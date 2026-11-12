@@ -14,11 +14,11 @@ import '../../../inventory/data/models/inventory_response_model.dart';
 import '../../data/models/order_response_model.dart';
 import '../providers/orders_provider.dart';
 import '../dialogs/return_management_dialog.dart';
-import '../dialogs/order_detail_dialog.dart';
 import '../../../../theme/app_theme.dart';
 
 class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
+  final ValueChanged<int> onOpenOrder;
+  const OrdersScreen({super.key, required this.onOpenOrder});
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
 }
@@ -49,10 +49,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
             subtitle: 'Quản lý đơn bán, giữ hàng, xuất kho và trả hàng',
             actionLabel: 'Quản lý hoàn hàng',
             actionIcon: Symbols.assignment_return,
-            onActionPressed: () => showDialog(
-              context: context,
-              builder: (_) => const ReturnManagementDialog(),
-            ),
+            onActionPressed: () async {
+              final orderId = await showDialog<int>(
+                context: context,
+                builder: (_) => const ReturnManagementDialog(),
+              );
+              if (mounted && orderId != null) widget.onOpenOrder(orderId);
+            },
           ),
           const SizedBox(height: 24),
           FeatureToolbar(
@@ -101,10 +104,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Widget _row(OrderResponseModel order) => Material(
     color: Colors.transparent,
     child: InkWell(
-      onTap: () => showDialog(
-        context: context,
-        builder: (_) => OrderDetailDialog(orderId: order.id),
-      ),
+      onTap: () => widget.onOpenOrder(order.id),
       hoverColor: AppTheme.surface,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

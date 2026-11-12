@@ -11,7 +11,6 @@ import '../../../inventory/data/models/inventory_response_model.dart';
 import '../../data/models/order_response_model.dart';
 import '../../data/models/return_order_summary.dart';
 import '../providers/orders_provider.dart';
-import 'order_detail_dialog.dart';
 
 class ReturnManagementDialog extends StatefulWidget {
   const ReturnManagementDialog({super.key});
@@ -85,16 +84,8 @@ class _ReturnManagementDialogState extends State<ReturnManagementDialog> {
     _searchTimer = Timer(const Duration(milliseconds: 300), _load);
   }
 
-  Future<void> _openOrder(ReturnOrderSummary order) async {
-    final provider = context.read<OrdersProvider>();
-    await showDialog(
-      context: context,
-      builder: (_) => ChangeNotifierProvider.value(
-        value: provider,
-        child: OrderDetailDialog(orderId: order.orderId),
-      ),
-    );
-    if (mounted) await _load();
+  void _openOrder(ReturnOrderSummary order) {
+    Navigator.pop(context, order.orderId);
   }
 
   @override

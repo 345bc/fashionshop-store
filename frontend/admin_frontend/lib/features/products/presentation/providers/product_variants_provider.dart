@@ -120,6 +120,35 @@ class ProductVariantsProvider extends ChangeNotifier {
     }
   }
 
+  Future<({Set<int> deleted, Map<int, String> errors})> deleteItems(
+    int productId,
+    Set<int> ids,
+  ) async {
+    final deleted = <int>{};
+    final errors = <int, String>{};
+    for (final id in ids) {
+      try {
+        await _repository.delete(id);
+        deleted.add(id);
+      } catch (error) {
+        errors[id] = error.toString().replaceFirst('Exception: ', '');
+      }
+    }
+    if (_productId == productId) {
+      await loadItems(productId: productId, page: _currentPage);
+      if (_productId == productId &&
+          _error == null &&
+          _items.isEmpty &&
+          _currentPage > 0) {
+        final lastPage = _totalElements == 0
+            ? 0
+            : (_totalElements - 1) ~/ _pageSize;
+        await loadItems(productId: productId, page: lastPage);
+      }
+    }
+    return (deleted: deleted, errors: errors);
+  }
+
   Future<
     ({List<Map<String, dynamic>> sizes, List<Map<String, dynamic>> colors})
   >

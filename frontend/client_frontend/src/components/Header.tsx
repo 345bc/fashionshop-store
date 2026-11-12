@@ -2,6 +2,7 @@
 import GoogleSymbol from "@/components/ui/GoogleSymbol";
 import mobileStyles from "./HeaderMobile.module.css";
 import catalogStyles from "./HeaderCatalog.module.css";
+import announcementStyles from "./HeaderAnnouncement.module.css";
 
 
 import { FormEvent, useEffect, useRef, useState } from "react";
@@ -19,6 +20,32 @@ interface category {
   name: string,
   slug: string,
   imageUrl: string
+}
+
+function HeaderAnnouncement() {
+  const [paused, setPaused] = useState(false);
+
+  return (
+    <div className={`${announcementStyles.bar} bg-black text-[10px] font-bold tracking-[0.2em] text-white uppercase sm:text-[11px]`}>
+      <div className={announcementStyles.track} data-paused={paused}>
+        {[false, true].map(duplicate => (
+          <div key={String(duplicate)} className={announcementStyles.message} aria-hidden={duplicate || undefined}>
+            <span>Miễn phí giao hàng từ 600.000 VND</span>
+            <span aria-hidden="true" className="text-white/30">•</span>
+            <span>Đổi trả trong 14 ngày</span>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        className={announcementStyles.toggle}
+        onClick={() => setPaused(value => !value)}
+        aria-label={paused ? "Chạy tiếp thông báo" : "Tạm dừng thông báo"}
+      >
+        <GoogleSymbol name={paused ? "play_arrow" : "pause"} size={16} />
+      </button>
+    </div>
+  );
 }
 
 function MobileCategoryGroup({ parent, onNavigate }: { parent: category; onNavigate: () => void }) {
@@ -217,11 +244,7 @@ export default function Header() {
 
   return (
     <>
-      <div className="flex h-9 items-center justify-center gap-4 bg-black px-4 text-[10px] font-bold tracking-[0.2em] text-white uppercase sm:text-[11px]">
-        <span>Miễn phí giao hàng từ 600.000 VND</span>
-        <span aria-hidden="true" className="text-white/30">•</span>
-        <span className="hidden sm:inline">Đổi trả trong 14 ngày</span>
-      </div>
+      <HeaderAnnouncement />
 
       <header className="sticky top-0 z-50 border-b border-black/10 bg-white shadow-lg">
         <div className="container mx-auto grid h-16 grid-cols-[44px_1fr_auto] items-center gap-2 px-3.5 lg:h-18 lg:grid-cols-[180px_1fr_180px] lg:gap-6 lg:px-8">

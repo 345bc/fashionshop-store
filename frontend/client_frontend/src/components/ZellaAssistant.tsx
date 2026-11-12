@@ -131,7 +131,7 @@ export default function ZellaAssistant() {
   const { status, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [hintVisible, setHintVisible] = useState(false);
-  const hidden = /^\/(login|register|checkout|order-success|connection-error|support-chat)(\/|$)/.test(pathname);
+  const hidden = /^\/(login|register|checkout|order-success|support-chat)(\/|$)/.test(pathname);
   const widget = useRef<HTMLDivElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const close = useRef<HTMLButtonElement>(null);

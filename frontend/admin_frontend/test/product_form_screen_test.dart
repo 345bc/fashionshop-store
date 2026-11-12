@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
+import 'package:zella_admin_flutter/features/auth/presentation/provider/auth_provider.dart';
 import 'package:zella_admin_flutter/features/categories/data/models/category_response_model.dart';
 import 'package:zella_admin_flutter/features/categories/presentation/providers/categories_provider.dart';
 import 'package:zella_admin_flutter/features/suppliers/data/models/supplier_response_model.dart';
@@ -9,7 +11,12 @@ import 'package:zella_admin_flutter/features/suppliers/presentation/providers/su
 import 'package:zella_admin_flutter/features/sizeguides/data/models/size_guide_response_model.dart';
 import 'package:zella_admin_flutter/features/sizeguides/presentation/providers/size_guides_provider.dart';
 import 'package:zella_admin_flutter/features/products/presentation/providers/products_provider.dart';
+import 'package:zella_admin_flutter/features/products/data/models/product_response_model.dart';
 import 'package:zella_admin_flutter/features/products/presentation/screens/product_form_screen.dart';
+import 'package:zella_admin_flutter/features/products/presentation/screens/products_screen.dart';
+import 'package:zella_admin_flutter/widgets/common/zella_checkbox.dart';
+
+import 'support/fake_auth.dart';
 
 class FormCategories extends CategoriesProvider {
   @override
@@ -61,6 +68,35 @@ class FormProducts extends ProductsProvider {
   Future<List<Map<String, dynamic>>> loadImages(int id) async {
     imageLoads++;
     return [];
+  }
+}
+
+class DeleteProducts extends ProductsProvider {
+  Set<int>? requested;
+  @override
+  final items = [
+    ProductResponseModel.fromJson({'id': 1, 'name': 'Áo mới'}),
+    ProductResponseModel.fromJson({
+      'id': 2,
+      'name': 'Áo đã bán',
+      'hasOrders': true,
+    }),
+  ];
+
+  @override
+  Future<void> loadItems({int page = 0, String? query}) async {}
+
+  @override
+  Future<({Set<int> deleted, Map<int, String> errors})> deleteItems(
+    Set<int> ids,
+  ) async {
+    requested = ids;
+    items.removeWhere((item) => item.id == 1);
+    notifyListeners();
+    return (
+      deleted: {1},
+      errors: {2: 'Sản phẩm đã có đơn hàng, không thể xóa.'},
+    );
   }
 }
 
@@ -163,6 +199,69 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpAndSettle(const Duration(seconds: 5));
   });
+  testWidgets('ordered product name is read only', (tester) async {
+    await openForm(
+      tester,
+      const ProductFormScreen(
+        product: {
+          'id': 10,
+          'name': 'Áo đã có đơn',
+          'basePrice': 150000,
+          'categoryId': 1,
+          'supplierId': 2,
+          'sizeGuideId': 3,
+          'hasOrders': true,
+        },
+      ),
+      FormProducts(),
+    );
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).readOnly,
+      isTrue,
+    );
+    expect(
+      find.text('Sản phẩm đã có đơn hàng, không thể đổi tên.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'bulk delete requires confirmation and reports skipped products',
+    (tester) async {
+      tester.view.physicalSize = const Size(1400, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final products = DeleteProducts();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuth()),
+            ChangeNotifierProvider<CategoriesProvider>(
+              create: (_) => FormCategories(),
+            ),
+            ChangeNotifierProvider<ProductsProvider>(create: (_) => products),
+          ],
+          child: const MaterialApp(home: ProductsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(ZellaCheckbox).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Xóa sản phẩm đã chọn'));
+      await tester.pumpAndSettle();
+      expect(products.requested, isNull);
+      await tester.tap(find.text('Xóa'));
+      await tester.pumpAndSettle();
+      expect(products.requested, {1, 2});
+      expect(find.text('Áo mới'), findsNothing);
+      expect(find.text('Áo đã bán'), findsOneWidget);
+      expect(find.textContaining('Đã xóa 1/2 sản phẩm'), findsOneWidget);
+      FToast().removeQueuedCustomToasts();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
   testWidgets('publish activates an inactive product', (tester) async {
     final products = FormProducts();
     await openForm(

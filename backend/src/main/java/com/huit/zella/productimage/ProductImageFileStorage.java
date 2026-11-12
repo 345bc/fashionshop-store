@@ -12,10 +12,15 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
 public class ProductImageFileStorage {
+    private static final Set<String> MP4_BRANDS = Set.of(
+            "isom", "iso2", "iso4", "iso5", "iso6", "mp41", "mp42", "avc1", "dash", "M4V ");
     private final S3Client s3Client;
     private final String bucket;
     private final long maxBytes;
@@ -48,7 +53,7 @@ public class ProductImageFileStorage {
         return store(file, "post-images");
     }
     public StoredImage storeCampaign(MultipartFile file) {
-        return store(file, "campaign-images");
+        return store(file, "campaign-images", true);
     }
 
     public StoredImage storeCategory(MultipartFile file) {
@@ -62,6 +67,10 @@ public class ProductImageFileStorage {
     }
 
     private StoredImage store(MultipartFile file, String folder) {
+        return store(file, folder, false);
+    }
+
+    private StoredImage store(MultipartFile file, String folder, boolean allowVideo) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "IMAGE_REQUIRED", "Vui lòng chọn ảnh");
         }
@@ -72,10 +81,19 @@ public class ProductImageFileStorage {
         try {
             String extension;
             try (InputStream input = file.getInputStream()) {
-                extension = detectExtension(input.readNBytes(12));
+                byte[] header = input.readNBytes(12);
+                extension = detectExtension(header);
+                String name = file.getOriginalFilename();
+                if (extension == null && allowVideo && name != null
+                        && name.toLowerCase(Locale.ROOT).endsWith(".mp4")
+                        && isMp4(header)) {
+                    extension = "mp4";
+                }
             }
             if (extension == null) {
-                throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_IMAGE", "Chỉ hỗ trợ ảnh JPG, PNG, GIF hoặc WebP");
+                throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_IMAGE", allowVideo
+                        ? "Chỉ hỗ trợ JPG, PNG, GIF, WebP hoặc MP4"
+                        : "Chỉ hỗ trợ ảnh JPG, PNG, GIF hoặc WebP");
             }
 
             String fileName = UUID.randomUUID() + "." + extension;
@@ -133,6 +151,7 @@ public class ProductImageFileStorage {
             case "jpg" -> "image/jpeg";
             case "png" -> "image/png";
             case "gif" -> "image/gif";
+            case "mp4" -> "video/mp4";
             default -> "image/webp";
         };
     }
@@ -146,6 +165,12 @@ public class ProductImageFileStorage {
         if (header.length >= 12 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
                 && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') return "webp";
         return null;
+    }
+
+    private boolean isMp4(byte[] header) {
+        return header.length == 12
+                && "ftyp".equals(new String(header, 4, 4, StandardCharsets.US_ASCII))
+                && MP4_BRANDS.contains(new String(header, 8, 4, StandardCharsets.US_ASCII));
     }
 
     public record StoredImage(String fileName, String url) {}

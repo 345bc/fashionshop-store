@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./skeleton-ui/ProductCardSkeleton";
+import { useHomeSectionReady } from "./HomeScrollReveal";
 import { featuredProducts } from "@/service/featuredProductService";
 import type { ProductCardData } from "@/type/product";
 import styles from "./FeaturedProducts.module.css";
@@ -10,6 +11,7 @@ import styles from "./FeaturedProducts.module.css";
 const price = (value: number) => `${value.toLocaleString("vi-VN")} VND`;
 
 export default function FeaturedProducts() {
+  const ready = useHomeSectionReady();
   const [products, setProducts] = useState<ProductCardData[]>([]);
   const [title, setTitle] = useState("Sản phẩm nổi bật");
   const [description, setDescription] = useState<string | null>(null);
@@ -21,13 +23,14 @@ export default function FeaturedProducts() {
   const track = useRef<HTMLUListElement>(null);
   const titleId = useId();
   useEffect(() => {
+    if (!ready) return;
     const controller = new AbortController();
     featuredProducts(controller.signal)
       .then(data => { if (!controller.signal.aborted) { setProducts(data.products); setTitle(data.title); setDescription(data.description); } })
       .catch(() => { if (!controller.signal.aborted) setError(true); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [retry]);
+  }, [retry, ready]);
   useEffect(() => {
     const element = track.current;
     if (!element) return;
@@ -65,7 +68,7 @@ export default function FeaturedProducts() {
       </div> : <ul ref={track} className={styles.track} tabIndex={0} aria-label="Danh sách sản phẩm nổi bật">
         {products.map(product => <li key={product.id} className={styles.item}>
           <ProductCard id={String(product.id)} slug={product.slug} name={product.name}
-            image={product.imageUrl ?? ""} colors={product.colors} badge="Nổi bật"
+            image={product.imageUrl ?? ""} colors={product.colors} badge={product.badge ?? undefined}
             price={price(product.salePrice ?? product.basePrice)}
             originalPrice={product.salePrice != null && product.salePrice < product.basePrice ? price(product.basePrice) : undefined}
             discountPercent={product.discountPercent} rating={product.averageRating} reviewsCount={product.reviewsCount} />

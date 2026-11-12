@@ -12,7 +12,8 @@ public record OrderResponse(Long id, String code, Long customerUserId, String cu
                             OffsetDateTime createdAt,
                             List<Item> items, List<History> histories, OffsetDateTime paymentExpiresAt) {
     public record Item(Long id, Long variantId, String productName, String sku, int quantity,
-                       BigDecimal unitPrice, BigDecimal subtotal, int returnedQuantity) {
+                       BigDecimal unitPrice, BigDecimal subtotal, int returnedQuantity,
+                       String colorName, String sizeName) {
     }
 
     public record History(String oldStatus, String newStatus, String note, String createdBy, OffsetDateTime createdAt) {

@@ -379,7 +379,9 @@ class _CampaignDetailDialogState extends State<CampaignDetailDialog> {
               Expanded(
                 child: _dataField(
                   'ĐƠN TỐI THIỂU',
-                  item.minOrderAmount > 0 ? money(item.minOrderAmount) : '0 VND',
+                  item.minOrderAmount > 0
+                      ? money(item.minOrderAmount)
+                      : '0 VND',
                 ),
               ),
               const SizedBox(width: 12),
@@ -889,32 +891,39 @@ class _CampaignDetailDialogState extends State<CampaignDetailDialog> {
   }
 
   Widget _buildBannerCard(CampaignModel item) {
+    final isVideo = isCampaignBannerVideo(item.imageUrl);
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardTitle('Ảnh biểu ngữ'),
+          _cardTitle('Banner'),
           const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Image.network(
-              _imageUrl(item.imageUrl!),
-              height: 110,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
-                height: 90,
-                color: AppTheme.surface,
-                child: const Center(
-                  child: Icon(
-                    Symbols.broken_image,
-                    size: 24,
-                    color: AppTheme.textMuted,
+          if (isVideo)
+            const ListTile(
+              leading: Icon(Symbols.play_circle),
+              title: Text('Video banner MP4'),
+            )
+          else
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.network(
+                _imageUrl(item.imageUrl!),
+                height: 110,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  height: 90,
+                  color: AppTheme.surface,
+                  child: const Center(
+                    child: Icon(
+                      Symbols.broken_image,
+                      size: 24,
+                      color: AppTheme.textMuted,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -1121,9 +1130,7 @@ class _CampaignDetailDialogState extends State<CampaignDetailDialog> {
           ),
           const SizedBox(width: 12),
           ElevatedButton.icon(
-            onPressed: _toggling
-                ? null
-                : () => Navigator.of(context).pop(item),
+            onPressed: _toggling ? null : () => Navigator.of(context).pop(item),
             icon: const Icon(Symbols.edit, size: 16),
             label: const Text('Chỉnh sửa'),
           ),

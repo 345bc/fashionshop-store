@@ -16,6 +16,7 @@ import '../../../../widgets/common/filter_dropdown.dart';
 import '../../../../widgets/common/zella_checkbox.dart';
 import '../../../../widgets/common/bulk_action_bar.dart';
 import '../../../../widgets/common/zella_toast.dart';
+import '../../../../widgets/dialogs/zella_confirm_dialog.dart';
 
 import '../providers/products_provider.dart';
 import '../../data/models/product_response_model.dart';
@@ -31,6 +32,50 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   Set<int> selectedIds = {};
+  bool _deleting = false;
+
+  Future<void> _confirmDelete(Set<int> ids, {String? name}) async {
+    if (_deleting || ids.isEmpty) return;
+    final provider = context.read<ProductsProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => ZellaConfirmDialog(
+        title: name == null ? 'Xóa ${ids.length} sản phẩm?' : 'Xóa sản phẩm?',
+        content: Text(
+          name == null
+              ? 'Chỉ những sản phẩm đủ điều kiện mới bị xóa. Thao tác này không thể hoàn tác.'
+              : 'Xóa “$name” khỏi danh mục? Thao tác này không thể hoàn tác.',
+        ),
+        confirmText: 'Xóa',
+        onCancel: () => Navigator.pop(dialogContext, false),
+        onConfirm: () => Navigator.pop(dialogContext, true),
+      ),
+    );
+    if (confirmed != true || !mounted || _deleting) return;
+    setState(() => _deleting = true);
+    try {
+      final result = await provider.deleteItems(ids);
+      if (!mounted) return;
+      setState(() => selectedIds.removeAll(result.deleted));
+      final count = result.deleted.length;
+      final message = result.errors.isEmpty
+          ? 'Đã xóa $count sản phẩm.'
+          : count == 0 && ids.length == 1
+          ? result.errors.values.first
+          : 'Đã xóa $count/${ids.length} sản phẩm. ${result.errors.values.first}';
+      ZellaToast.show(
+        context,
+        message: message,
+        type: result.errors.isEmpty
+            ? ToastType.success
+            : count == 0
+            ? ToastType.error
+            : ToastType.warning,
+      );
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
 
   PopupMenuItem<String> _attributeOption(
     String route,
@@ -289,6 +334,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     setState(() => selectedIds.clear());
                   },
                 ),
+                BulkActionButton(
+                  icon: Symbols.delete,
+                  isDanger: true,
+                  tooltip: 'Xóa sản phẩm đã chọn',
+                  onPressed: () => _confirmDelete(Set.of(selectedIds)),
+                ),
               ],
             ),
         ],
@@ -541,13 +592,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       label: 'Quản lý biến thể',
                       icon: Symbols.inventory_2,
                     ),
-                  // ActionMenuItem.divider(),
-                  // const ActionMenuItem(
-                  //   value: 'delete',
-                  //   label: 'Xóa sản phẩm',
-                  //   icon: Symbols.delete,
-                  //   color: AppTheme.danger,
-                  // ),
+                  if (context.watch<AuthProvider>().hasRole('ADMIN') &&
+                      !product.hasOrders) ...[
+                    ActionMenuItem.divider(),
+                    const ActionMenuItem(
+                      value: 'delete',
+                      label: 'Xóa sản phẩm',
+                      icon: Symbols.delete,
+                      color: AppTheme.danger,
+                    ),
+                  ],
                 ],
                 onSelected: (value) {
                   if (value == 'content') {
@@ -562,6 +616,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   } else if (value == 'variants') {
                     MainScreen.of(context)
                         .navigate('/product-variants', product.toJson());
+                  } else if (value == 'delete') {
+                    _confirmDelete({product.id}, name: product.name);
                   }
                 },
               ),

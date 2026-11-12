@@ -7,6 +7,7 @@ class ProductResponseModel {
   final String occasion;
   final double basePrice;
   final bool isActive;
+  final bool hasOrders;
   final int categoryId;
   final String categoryName;
   final int supplierId;
@@ -26,6 +27,7 @@ class ProductResponseModel {
     required this.occasion,
     required this.basePrice,
     required this.isActive,
+    this.hasOrders = false,
     required this.categoryId,
     required this.categoryName,
     required this.sizeGuideId,
@@ -47,6 +49,7 @@ class ProductResponseModel {
       occasion: json['occasion'] as String? ?? '',
       basePrice: (json['basePrice'] as num?)?.toDouble() ?? 0.0,
       isActive: json['isActive'] as bool? ?? false,
+      hasOrders: json['hasOrders'] == true,
       categoryId: json['categoryId'] as int? ?? 0,
       categoryName: json['categoryName'] as String? ?? '',
       supplierId: json['supplierId'] as int? ?? 0,
@@ -70,6 +73,7 @@ class ProductResponseModel {
       'occasion': occasion,
       'basePrice': basePrice,
       'isActive': isActive,
+      'hasOrders': hasOrders,
       'categoryId': categoryId,
       'categoryName': categoryName,
       'supplierId': supplierId,

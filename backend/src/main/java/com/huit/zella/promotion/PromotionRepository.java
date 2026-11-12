@@ -7,6 +7,15 @@ import jakarta.persistence.LockModeType;
 public interface PromotionRepository extends JpaRepository<Promotion,Long> {
     @Query("select distinct p from Promotion p left join fetch p.products where p.active=true and p.startsAt<=:now and p.endsAt>:now order by p.id")
     List<Promotion> effective(@Param("now") Instant now);
+    @Query("""
+        select distinct p from Promotion p join p.products item
+        where p.active = true and p.targetMode = 'SELECTED'
+          and p.startsAt <= :now and p.endsAt > :now
+          and item.isActive = true and item.category.isActive = true
+        order by p.name, p.id
+        """)
+    List<Promotion> catalogCampaigns(@Param("now") Instant now);
+
     @EntityGraph(attributePaths="products") List<Promotion> findAllByOrderByIdDesc();
     @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select p from Promotion p where p.id=:id") Optional<Promotion> lock(@Param("id") Long id);
 }

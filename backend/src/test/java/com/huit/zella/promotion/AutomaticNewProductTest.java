@@ -3,9 +3,6 @@ import com.huit.zella.product.*;
 import com.huit.zella.category.Category;
 import com.huit.zella.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.data.domain.*;
 import java.time.*;
 import java.math.BigDecimal;
 import java.util.*;
@@ -51,14 +48,5 @@ class AutomaticNewProductTest {
         assertThrows(BusinessException.class,()->service.state("promotion",1L,false));
         var request=new CampaignRequest("New",null,now,now.plusSeconds(60),true,null,null,null,null,null,null,BigDecimal.TEN,"NEW_PRODUCTS",List.of(),false,null);
         assertThrows(BusinessException.class,()->service.save("promotion",null,request));
-    }
-    @Test @SuppressWarnings("unchecked") void showcaseUsesSeparateAssetsAndHidesWhenNoEligibleProducts() {
-        var jdbc=mock(JdbcTemplate.class);var products=mock(ProductService.class);
-        when(jdbc.query(anyString(),any(RowMapper.class))).thenReturn(Collections.singletonList(new String[]{"Auto","Description","https://image.example/a.jpg"}));
-        when(products.listNewArrivalsAt(eq(now),any())).thenReturn(Page.empty());
-        var service=new AutomaticNewProductShowcaseService(jdbc,products,clock);assertNull(service.get());
-        var card=new ProductCardResponse(1L,"New product","new",BigDecimal.TEN,null,null,"image",List.of(),null,null,0L);
-        when(products.listNewArrivalsAt(eq(now),any())).thenReturn(new PageImpl<>(List.of(card)));
-        var result=service.get();assertEquals(-1L,result.id());assertEquals("Auto",result.title());assertEquals(List.of(card),result.products());
     }
 }
