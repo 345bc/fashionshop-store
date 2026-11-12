@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import 'package:zella_admin_flutter/features/auth/presentation/provider/auth_provider.dart';
 import 'package:zella_admin_flutter/main.dart';
@@ -32,7 +33,8 @@ void main() {
         ChangeNotifierProvider<AuthProvider>.value(
           value: provider,
           child: MaterialApp(
-            scaffoldMessengerKey: adminScaffoldMessengerKey,
+            builder: FToastBuilder(),
+            navigatorKey: adminNavigatorKey,
             home: const LoginScreen(),
           ),
         ),
@@ -53,6 +55,7 @@ void main() {
         ),
         findsOneWidget,
       );
+      FToast().removeQueuedCustomToasts();
       await tester.pumpWidget(const SizedBox.shrink());
       provider.dispose();
     });

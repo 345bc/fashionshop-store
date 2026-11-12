@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/common/searchable_select_field.dart';
+import '../../../../widgets/common/zella_toast.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../../data/models/category_response_model.dart';
 import '../providers/categories_provider.dart';
@@ -50,8 +51,10 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_parentId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn danh mục cha')),
+      ZellaToast.show(
+        context,
+        message: 'Vui lòng chọn danh mục cha',
+        type: ToastType.warning,
       );
       return;
     }
@@ -80,25 +83,21 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
         _imageBytes = null;
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.category == null
-                ? 'Thêm danh mục thành công'
-                : 'Cập nhật danh mục thành công',
-          ),
-        ),
+      ZellaToast.show(
+        context,
+        message: widget.category == null
+            ? 'Thêm danh mục thành công'
+            : 'Cập nhật danh mục thành công',
+        type: ToastType.success,
       );
       Navigator.of(context).pop(true);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
+        ZellaToast.show(
+          context,
+          message:
               'Không thể hoàn tất lưu danh mục: $error. Bạn có thể thử lưu lại.',
-            ),
-            backgroundColor: AppTheme.error,
-          ),
+          type: ToastType.error,
         );
       }
     } finally {
@@ -124,9 +123,11 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        ZellaToast.show(
           context,
-        ).showSnackBar(SnackBar(content: Text('Không thể chọn ảnh: $error')));
+          message: 'Không thể chọn ảnh: $error',
+          type: ToastType.error,
+        );
       }
     }
   }

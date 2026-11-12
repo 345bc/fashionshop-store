@@ -5,6 +5,7 @@ import '../../../../theme/app_theme.dart';
 import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../../data/models/customer_response_model.dart';
 import '../providers/customers_provider.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class CustomerFormDialog extends StatefulWidget {
   final CustomerResponseModel? customer;
@@ -69,16 +70,18 @@ class _CustomerFormDialogState extends State<CustomerFormDialog> {
         'isActive': _active,
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Đã lưu khách hàng')));
+      ZellaToast.show(
+        context,
+        message: 'Đã lưu khách hàng',
+        type: ToastType.success,
+      );
       Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Không thể lưu khách hàng: $e'),
-            backgroundColor: AppTheme.error,
-          ),
+        ZellaToast.show(
+          context,
+          message: 'Không thể lưu khách hàng: $e',
+          type: ToastType.error,
         );
       }
     } finally {

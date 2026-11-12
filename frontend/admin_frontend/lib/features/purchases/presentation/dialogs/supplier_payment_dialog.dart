@@ -5,6 +5,7 @@ import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../../../inventory/data/models/inventory_response_model.dart';
 import '../../data/models/goods_receipt_response_model.dart';
 import '../providers/purchases_provider.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class SupplierPaymentDialog extends StatefulWidget {
   final GoodsReceiptResponseModel receipt;
@@ -49,8 +50,7 @@ class _SupplierPaymentDialogState extends State<SupplierPaymentDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ZellaToast.show(context, message: e.toString(), type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _saving = false);

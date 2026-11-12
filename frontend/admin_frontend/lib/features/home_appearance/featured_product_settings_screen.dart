@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/network/api_client.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/common/zella_toast.dart';
 
 class FeaturedProductSettingsScreen extends StatefulWidget {
   const FeaturedProductSettingsScreen({super.key});
@@ -86,8 +87,10 @@ class _FeaturedProductSettingsScreenState
         },
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã lưu cấu hình sản phẩm nổi bật')),
+        ZellaToast.show(
+          context,
+          message: 'Đã lưu cấu hình sản phẩm nổi bật',
+          type: ToastType.success,
         );
       }
     } catch (e) {

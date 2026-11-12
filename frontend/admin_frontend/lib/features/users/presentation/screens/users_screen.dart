@@ -63,8 +63,10 @@ class _UsersScreenState extends State<UsersScreen> {
                         builder: (_) => const RoleCreateDialog(),
                       );
                       if (created == true && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Đã thêm role')),
+                        ZellaToast.show(
+                          context,
+                          message: 'Đã thêm role',
+                          type: ToastType.success,
                         );
                       }
                     },

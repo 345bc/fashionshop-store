@@ -10,6 +10,7 @@ import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../../../sizeguides/presentation/providers/size_guides_provider.dart';
 import '../../data/attribute_kind.dart';
 import '../providers/attribute_provider.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class AttributeFormDialog extends StatefulWidget {
   final AttributeKind kind;
@@ -123,25 +124,22 @@ class _AttributeFormDialogState extends State<AttributeFormDialog> {
       if (widget.kind == AttributeKind.sizeGuide) {
         context.read<SizeGuidesProvider>().loadItems();
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.item == null ? 'Thêm thành công' : 'Cập nhật thành công',
-          ),
-        ),
+      ZellaToast.show(
+        context,
+        message: widget.item == null
+            ? 'Thêm thành công'
+            : 'Cập nhật thành công',
+        type: ToastType.success,
       );
       Navigator.of(context).pop(true);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              detailsSaved && widget.kind == AttributeKind.sizeGuide
-                  ? 'Thông tin Size Guide đã lưu, nhưng ảnh chưa lưu xong: $error'
-                  : 'Không thể lưu ${widget.kind.singular}: $error',
-            ),
-            backgroundColor: AppTheme.error,
-          ),
+        ZellaToast.show(
+          context,
+          message: detailsSaved && widget.kind == AttributeKind.sizeGuide
+              ? 'Thông tin Size Guide đã lưu, nhưng ảnh chưa lưu xong: $error'
+              : 'Không thể lưu ${widget.kind.singular}: $error',
+          type: ToastType.error,
         );
       }
     } finally {
@@ -159,10 +157,10 @@ class _AttributeFormDialogState extends State<AttributeFormDialog> {
       if (!mounted || result == null || result.files.isEmpty) return;
       final file = result.files.first;
       if (file.bytes == null || file.size == 0 || file.size > 10485760) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ảnh cần có dung lượng từ 1 byte đến 10 MB.'),
-          ),
+        ZellaToast.show(
+          context,
+          message: 'Ảnh cần có dung lượng từ 1 byte đến 10 MB.',
+          type: ToastType.warning,
         );
         return;
       }
@@ -172,9 +170,11 @@ class _AttributeFormDialogState extends State<AttributeFormDialog> {
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        ZellaToast.show(
           context,
-        ).showSnackBar(SnackBar(content: Text('Không thể chọn ảnh: $error')));
+          message: 'Không thể chọn ảnh: $error',
+          type: ToastType.error,
+        );
       }
     }
   }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/network/api_client.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/common/zella_toast.dart';
 
 class BoughtTogetherScreen extends StatefulWidget {
   const BoughtTogetherScreen({super.key});
@@ -110,8 +111,10 @@ class _BoughtTogetherScreenState extends State<BoughtTogetherScreen> {
       );
       if (!mounted) return;
       setState(() => _preview = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã lưu cấu hình vào database')),
+      ZellaToast.show(
+        context,
+        message: 'Đã lưu cấu hình vào database',
+        type: ToastType.success,
       );
       final response = await _api.get('/admin/bought-together/status');
       if (mounted) {
@@ -133,10 +136,10 @@ class _BoughtTogetherScreenState extends State<BoughtTogetherScreen> {
         _setStatus(Map<String, dynamic>.from(response.data['data']));
         _preview = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã tính lại mô hình theo cấu hình đã lưu'),
-        ),
+      ZellaToast.show(
+        context,
+        message: 'Đã tính lại mô hình theo cấu hình đã lưu',
+        type: ToastType.success,
       );
     }
     await _loadMining();

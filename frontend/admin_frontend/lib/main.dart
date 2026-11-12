@@ -7,6 +7,7 @@ import 'features/home_appearance/home_appearance_screen.dart';
 import 'features/bought_together/bought_together_screen.dart';
 
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'features/posts/post_category_form_screen.dart';
@@ -62,8 +63,8 @@ import 'features/categories/presentation/screens/categories_screen.dart';
 import 'features/product_attributes/data/attribute_kind.dart';
 import 'features/product_attributes/presentation/screens/attribute_management_screen.dart';
 import 'screens/unauthorized_screen.dart';
+import 'widgets/common/zella_toast.dart';
 
-final adminScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 final adminNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
@@ -101,12 +102,12 @@ class ZellaAdminApp extends StatelessWidget {
         builder: (context, authProvider, _) {
           authProvider.onSessionExpired = () {
             adminNavigatorKey.currentState?.popUntil((route) => route.isFirst);
-            adminScaffoldMessengerKey.currentState?.showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
-                ),
-              ),
+            final toastContext = adminNavigatorKey.currentContext;
+            if (toastContext == null) return;
+            ZellaToast.show(
+              toastContext,
+              message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+              type: ToastType.warning,
             );
           };
           ApiClient().onSessionExpired = authProvider.expireSession;
@@ -121,7 +122,7 @@ class ZellaAdminApp extends StatelessWidget {
             supportedLocales: const [Locale('vi'), Locale('en')],
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
-            scaffoldMessengerKey: adminScaffoldMessengerKey,
+            builder: FToastBuilder(),
             navigatorKey: adminNavigatorKey,
             home: const AdminAuthGate(),
           );

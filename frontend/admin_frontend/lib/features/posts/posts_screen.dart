@@ -14,6 +14,7 @@ import '../../widgets/common/filter_dropdown.dart';
 import '../../widgets/common/pagination_footer.dart';
 import '../../widgets/common/status_badge.dart';
 import '../../widgets/common/zella_checkbox.dart';
+import '../../widgets/common/zella_toast.dart';
 
 class PostsScreen extends StatefulWidget {
   const PostsScreen({super.key});
@@ -85,8 +86,7 @@ class _PostsScreenState extends State<PostsScreen> {
 
   void _message(Object e) {
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ZellaToast.show(context, message: e.toString(), type: ToastType.error);
     }
   }
 

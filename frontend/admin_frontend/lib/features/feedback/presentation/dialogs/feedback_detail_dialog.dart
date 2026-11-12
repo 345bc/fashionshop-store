@@ -8,6 +8,7 @@ import '../../../../widgets/dialogs/zella_dialog.dart';
 import '../../data/models/product_review_model.dart';
 import '../providers/feedback_provider.dart';
 import '../widgets/review_status_badge.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class FeedbackDetailDialog extends StatefulWidget {
   final int reviewId;
@@ -141,22 +142,22 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
                           ? null
                           : () async {
                               if (!_form.currentState!.validate()) return;
-                              final messenger = ScaffoldMessenger.of(context);
                               try {
                                 await provider.reply(r.id, _reply.text, 'CSKH');
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Đã lưu câu trả lời'),
-                                  ),
+                                if (!context.mounted) return;
+                                ZellaToast.show(
+                                  context,
+                                  message: 'Đã lưu câu trả lời',
+                                  type: ToastType.success,
                                 );
                               } catch (_) {
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
+                                if (!context.mounted) return;
+                                ZellaToast.show(
+                                  context,
+                                  message:
                                       provider.error ??
-                                          'Không thể lưu câu trả lời',
-                                    ),
-                                  ),
+                                      'Không thể lưu câu trả lời',
+                                  type: ToastType.error,
                                 );
                               }
                             },
@@ -241,22 +242,20 @@ class _FeedbackDetailDialogState extends State<FeedbackDetailDialog> {
       await provider.moderate(review.id, value, reason, 'CSKH');
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.error ?? 'Không thể cập nhật đánh giá'),
-        ),
+      ZellaToast.show(
+        context,
+        message: provider.error ?? 'Không thể cập nhật đánh giá',
+        type: ToastType.error,
       );
       return;
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          value == ReviewVisibility.hidden
-              ? 'Đã ẩn đánh giá'
-              : 'Đã hiển thị lại đánh giá',
-        ),
-      ),
+    ZellaToast.show(
+      context,
+      message: value == ReviewVisibility.hidden
+          ? 'Đã ẩn đánh giá'
+          : 'Đã hiển thị lại đánh giá',
+      type: ToastType.success,
     );
   }
 

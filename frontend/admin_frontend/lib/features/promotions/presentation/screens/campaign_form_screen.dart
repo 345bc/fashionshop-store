@@ -9,6 +9,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../theme/app_theme.dart';
 import '../../data/models/campaign_model.dart';
 import '../providers/campaigns_provider.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class CampaignFormScreen extends StatefulWidget {
   final CampaignKind kind;
@@ -183,15 +184,12 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
 
       await p.save(value, creating: item == null);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            item == null
-                ? 'Đã tạo ${_voucher ? 'voucher' : 'chương trình khuyến mãi'}'
-                : 'Đã lưu thay đổi',
-          ),
-          backgroundColor: AppTheme.success,
-        ),
+      ZellaToast.show(
+        context,
+        message: item == null
+            ? 'Đã tạo ${_voucher ? 'voucher' : 'chương trình khuyến mãi'}'
+            : 'Đã lưu thay đổi',
+        type: ToastType.success,
       );
       widget.onClose();
     } on ArgumentError catch (e) {

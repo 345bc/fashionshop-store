@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'zella_form_dialog.dart';
+import '../common/zella_toast.dart';
 
 class QuantityChoice {
   final int id, maximum;
@@ -62,8 +63,10 @@ class _QuantitySelectionDialogState extends State<QuantitySelectionDialog> {
         if (int.parse(e.value.text) > 0) e.key: int.parse(e.value.text),
     };
     if (selected.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chọn ít nhất một sản phẩm')),
+      ZellaToast.show(
+        context,
+        message: 'Chọn ít nhất một sản phẩm',
+        type: ToastType.warning,
       );
       return;
     }
@@ -73,8 +76,7 @@ class _QuantitySelectionDialogState extends State<QuantitySelectionDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ZellaToast.show(context, message: e.toString(), type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _saving = false);

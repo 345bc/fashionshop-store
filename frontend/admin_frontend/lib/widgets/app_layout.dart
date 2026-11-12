@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../theme/app_theme.dart';
 import '../features/auth/presentation/provider/auth_provider.dart';
+import 'common/zella_toast.dart';
 
 class NavItem {
   final String title;
@@ -374,10 +375,11 @@ class _AppLayoutState extends State<AppLayout> {
                                       widget.onNavigate(RoleAccess.home(role));
                                     } catch (error) {
                                       if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                              SnackBar(content: Text('$error')),
-                                            );
+                                        ZellaToast.show(
+                                          context,
+                                          message: '$error',
+                                          type: ToastType.error,
+                                        );
                                       }
                                     }
                                   },

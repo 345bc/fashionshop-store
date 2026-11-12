@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'zella_form_dialog.dart';
+import '../common/zella_toast.dart';
 
 class OperationNoteDialog extends StatefulWidget {
   final String title, description;
@@ -42,8 +43,7 @@ class _OperationNoteDialogState extends State<OperationNoteDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ZellaToast.show(context, message: e.toString(), type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _saving = false);

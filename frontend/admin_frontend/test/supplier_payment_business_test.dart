@@ -149,5 +149,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(provider.calls, hasLength(2));
     expect(find.byType(SupplierPaymentDialog), findsNothing);
+    await tester.pumpAndSettle(const Duration(seconds: 5));
   });
 }
