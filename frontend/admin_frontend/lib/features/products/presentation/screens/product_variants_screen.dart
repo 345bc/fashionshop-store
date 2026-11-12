@@ -46,8 +46,9 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
         onConfirm: () => Navigator.pop(dialogContext, true),
       ),
     );
-    if (confirmed != true || !mounted || _deleting || _productId != productId)
+    if (confirmed != true || !mounted || _deleting || _productId != productId) {
       return;
+    }
     setState(() => _deleting = true);
     try {
       final result = await provider.deleteItems(productId, ids);
