@@ -45,7 +45,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _refreshAlerts() {
-    setState(() => _alerts = context.read<InventoryProvider>().stockAlerts());
+    final alerts = context.read<InventoryProvider>().stockAlerts();
+    setState(() {
+      _alerts = alerts;
+    });
   }
 
   @override
