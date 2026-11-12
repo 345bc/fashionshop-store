@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, takeLoginReturnTo } from "../../auth/AuthContext";
 import FieldError from "@/utils/FieldError";
 import FieldSuccess from "@/utils/FieldSuccess";
+import AuthNavbar from "@/components/AuthNavbar";
 
 export default function LoginPage() {
   return (
@@ -75,15 +76,7 @@ function LoginContent() {
     <>
       <FieldError error={error} className="mb-4" />
       <FieldSuccess success={success}></FieldSuccess>
-      <header className="sticky top-0 z-50 flex items-center justify-center border-b border-black/10  h-16 lg:h-18">
-        <Link
-          href="/"
-          className="whitespace-nowrap text-[18px] font-bold tracking-[0.2em] text-[#1d211c] lg:text-[22px]"
-          aria-label="Zella  "
-        >
-          ZELLA<span className="ml-1.5 align-middle text-[9px] font-medium tracking-[0.14em] text-[#777a72] lg:inline"></span>
-        </Link>
-      </header>
+      <AuthNavbar />
       <main className="auth-page-modern">
         <section className="auth-card-modern">
           <div className="auth-card-head">

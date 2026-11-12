@@ -55,16 +55,18 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     try {
       await context.read<SuppliersProvider>().deleteItem(supplier.id);
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Đã xóa nhà cung cấp')));
+        ZellaToast.show(
+          context,
+          message: 'Đã xóa nhà cung cấp',
+          type: ToastType.success,
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Không thể xóa nhà cung cấp: $e'),
-            backgroundColor: AppTheme.error,
-          ),
+        ZellaToast.show(
+          context,
+          message: 'Không thể xóa nhà cung cấp: $e',
+          type: ToastType.error,
         );
       }
     }

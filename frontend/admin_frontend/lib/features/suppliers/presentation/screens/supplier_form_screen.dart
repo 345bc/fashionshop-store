@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../theme/app_theme.dart';
 import '../../data/models/supplier_response_model.dart';
 import '../providers/suppliers_provider.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class SupplierFormScreen extends StatefulWidget {
   final SupplierResponseModel? supplier;
@@ -59,16 +60,18 @@ class _SupplierFormScreenState extends State<SupplierFormScreen> {
         await provider.updateItem(widget.supplier!.id, data);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Đã lưu nhà cung cấp')));
+      ZellaToast.show(
+        context,
+        message: 'Đã lưu nhà cung cấp',
+        type: ToastType.success,
+      );
       widget.onClose();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Không thể lưu nhà cung cấp: $e'),
-            backgroundColor: AppTheme.error,
-          ),
+        ZellaToast.show(
+          context,
+          message: 'Không thể lưu nhà cung cấp: $e',
+          type: ToastType.error,
         );
       }
     } finally {

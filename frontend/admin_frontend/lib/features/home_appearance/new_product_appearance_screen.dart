@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/network/api_client.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/common/zella_toast.dart';
 
 class NewProductAppearanceScreen extends StatefulWidget {
   const NewProductAppearanceScreen({super.key});
@@ -125,8 +126,10 @@ class _NewProductAppearanceScreenState
         },
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã lưu giao diện sản phẩm mới')),
+        ZellaToast.show(
+          context,
+          message: 'Đã lưu giao diện sản phẩm mới',
+          type: ToastType.success,
         );
       }
     } catch (e) {

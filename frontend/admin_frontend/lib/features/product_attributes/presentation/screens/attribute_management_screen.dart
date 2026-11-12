@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../../main.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/common/action_menu.dart';
 import '../../../../widgets/common/feature_toolbar.dart';
 import '../../data/attribute_kind.dart';
 import '../dialogs/attribute_form_dialog.dart';
@@ -253,100 +254,95 @@ class _AttributeManagementScreenState extends State<AttributeManagementScreen> {
                                   const Divider(height: 1),
                               itemBuilder: (context, index) {
                                 final item = provider.items[index];
-                                return Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    hoverColor: AppTheme.surface,
-                                    onTap: () => _showEdit(item),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 24,
-                                        vertical: 14,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          if (widget.kind ==
-                                              AttributeKind.sizeGuide) ...[
-                                            ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              child:
-                                                  (item['guideImageUrl']
-                                                              ?.toString() ??
-                                                          '')
-                                                      .isNotEmpty
-                                                  ? Image.network(
-                                                      _imageUrl(
-                                                        item['guideImageUrl']
-                                                            as String,
-                                                      ),
-                                                      width: 48,
-                                                      height: 48,
-                                                      fit: BoxFit.cover,
-                                                      errorBuilder: (_, _, _) =>
-                                                          const SizedBox(
-                                                            width: 48,
-                                                            height: 48,
-                                                            child: Icon(
-                                                              Symbols
-                                                                  .broken_image,
-                                                            ),
-                                                          ),
-                                                    )
-                                                  : const SizedBox(
-                                                      width: 48,
-                                                      height: 48,
-                                                      child: Icon(
-                                                        Symbols.image,
-                                                      ),
-                                                    ),
-                                            ),
-                                            const SizedBox(width: 14),
-                                          ],
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  item['name']?.toString() ??
-                                                      '—',
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 5),
-                                                _secondary(item),
-                                              ],
-                                            ),
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 14,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      if (widget.kind ==
+                                          AttributeKind.sizeGuide) ...[
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
-                                          if (widget.kind ==
-                                              AttributeKind.sizeGuide)
-                                            SizedBox(
-                                              width: 100,
-                                              child: Text(
-                                                item['isActive'] == false
-                                                    ? 'Đã ẩn'
-                                                    : 'Hoạt động',
-                                                style: TextStyle(
-                                                  color:
-                                                      item['isActive'] == false
-                                                      ? AppTheme.danger
-                                                      : AppTheme.success,
+                                          child:
+                                              (item['guideImageUrl']
+                                                          ?.toString() ??
+                                                      '')
+                                                  .isNotEmpty
+                                              ? Image.network(
+                                                  _imageUrl(
+                                                    item['guideImageUrl']
+                                                        as String,
+                                                  ),
+                                                  width: 48,
+                                                  height: 48,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, _, _) =>
+                                                      const SizedBox(
+                                                        width: 48,
+                                                        height: 48,
+                                                        child: Icon(
+                                                          Symbols.broken_image,
+                                                        ),
+                                                      ),
+                                                )
+                                              : const SizedBox(
+                                                  width: 48,
+                                                  height: 48,
+                                                  child: Icon(Symbols.image),
                                                 ),
+                                        ),
+                                        const SizedBox(width: 14),
+                                      ],
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item['name']?.toString() ?? '—',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
                                               ),
                                             ),
-                                          IconButton(
-                                            tooltip: 'Chỉnh sửa',
-                                            icon: const Icon(
-                                              Symbols.edit,
-                                              size: 18,
-                                            ),
-                                            onPressed: () => _showEdit(item),
-                                          ),
-                                        ],
+                                            const SizedBox(height: 5),
+                                            _secondary(item),
+                                          ],
+                                        ),
                                       ),
-                                    ),
+                                      if (widget.kind ==
+                                          AttributeKind.sizeGuide)
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            item['isActive'] == false
+                                                ? 'Đã ẩn'
+                                                : 'Hoạt động',
+                                            style: TextStyle(
+                                              color: item['isActive'] == false
+                                                  ? AppTheme.danger
+                                                  : AppTheme.success,
+                                            ),
+                                          ),
+                                        ),
+                                      SizedBox(
+                                        width: 48,
+                                        child: ActionMenu(
+                                          showIcons: true,
+                                          items: const [
+                                            ActionMenuItem(
+                                              value: 'edit',
+                                              label: 'Chỉnh sửa',
+                                              icon: Symbols.edit,
+                                            ),
+                                          ],
+                                          onSelected: (_) => _showEdit(item),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 );
                               },

@@ -5,6 +5,7 @@ import '../../../../widgets/dialogs/zella_form_dialog.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../data/models/order_response_model.dart';
 import '../providers/orders_provider.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class ReceiveReturnDialog extends StatefulWidget {
   final ReturnResponseModel document;
@@ -41,8 +42,7 @@ class _ReceiveReturnDialogState extends State<ReceiveReturnDialog> {
       Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ZellaToast.show(context, message: e.toString(), type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _saving = false);

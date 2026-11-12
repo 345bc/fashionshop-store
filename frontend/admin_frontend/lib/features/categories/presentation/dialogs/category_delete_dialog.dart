@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../../../widgets/common/zella_toast.dart';
 import '../../../../widgets/dialogs/zella_confirm_dialog.dart';
 import '../../data/models/category_response_model.dart';
 import '../providers/categories_provider.dart';
@@ -25,19 +26,16 @@ class _CategoryDeleteDialogState extends State<CategoryDeleteDialog> {
       await context.read<CategoriesProvider>().deleteItem(widget.category.id);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Xóa danh mục thành công')),
+        ZellaToast.show(
+          context,
+          message: 'Xóa danh mục thành công',
+          type: ToastType.success,
         );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: AppTheme.error,
-          ),
-        );
+        ZellaToast.show(context, message: 'Lỗi: $e', type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

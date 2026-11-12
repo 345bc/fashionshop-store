@@ -176,6 +176,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('{#1, #2, #3}'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      await tester.pumpAndSettle(const Duration(seconds: 5));
     },
   );
 }

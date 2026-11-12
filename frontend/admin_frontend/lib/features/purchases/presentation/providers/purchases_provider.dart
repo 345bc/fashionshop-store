@@ -99,10 +99,7 @@ class PurchasesProvider extends ChangeNotifier {
         .where((s) => s.isActive)
         .toList();
     final variants = await InventoryRepository().getOptions();
-    return (
-      suppliers: suppliers,
-      variants: variants.where((v) => v.isActive).toList(),
-    );
+    return (suppliers: suppliers, variants: variants);
   }
 
   Future<List<SupplierResponseModel>> supplierOptions() async =>
