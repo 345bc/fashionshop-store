@@ -77,6 +77,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
   const [imageDirection, setImageDirection] = useState<"next" | "previous">("next");
+  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
@@ -84,6 +85,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const loading = loadedId !== id;
   const thumbnailTrack = useRef<HTMLDivElement>(null);
+  const zoomDialog = useRef<HTMLDialogElement>(null);
+
+  function openImageZoom(src: string, alt: string) {
+    setZoomImage({ src, alt });
+    zoomDialog.current?.showModal();
+  }
 
   useEffect(() => {
     const track = thumbnailTrack.current;
@@ -208,6 +215,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   };
 
   const activeIndex = galleryImages.findIndex(img => img.id === activeImage?.id);
+  const nextImage = galleryImages.length > 1
+    ? galleryImages[(activeIndex + 1) % galleryImages.length]
+    : null;
   const handlePrevImage = () => {
     if (galleryImages.length <= 1) return;
     setImageDirection("previous");
@@ -232,15 +242,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
           <div data-direction={imageDirection} className={`${galleryStyles.stage} ${galleryImages.length < 2 ? galleryStyles.singleImage : ''}`}>
             {displayImage ? <>
-              <div className={galleryStyles.imagePanel}>
+              <button type="button" className={galleryStyles.imagePanel}
+                onClick={() => openImageZoom(displayImage, product.name)} aria-label="Phóng to ảnh sản phẩm">
                 <Image key={displayImage} src={displayImage} alt={product.name} fill priority
                   sizes="(max-width: 600px) 100vw, (max-width: 900px) 50vw, 36vw" />
-              </div>
-              {galleryImages.length > 1 && <div className={`${galleryStyles.imagePanel} ${galleryStyles.secondImage}`}>
-                <Image key={galleryImages[(activeIndex + 1) % galleryImages.length].id} src={galleryImages[(activeIndex + 1) % galleryImages.length].imageUrl}
+              </button>
+              {nextImage && <button type="button" className={`${galleryStyles.imagePanel} ${galleryStyles.secondImage}`}
+                onClick={() => openImageZoom(nextImage.imageUrl, `${product.name} - góc nhìn tiếp theo`)}
+                aria-label="Phóng to góc nhìn tiếp theo">
+                <Image key={nextImage.id} src={nextImage.imageUrl}
                   alt={`${product.name} - góc nhìn tiếp theo`} fill
                   sizes="(max-width: 900px) 50vw, 36vw" />
-              </div>}
+              </button>}
               {galleryImages.length > 1 && <>
                 <button type="button" className={`${galleryStyles.imageArrow} ${galleryStyles.previousImage}`}
                   onClick={handlePrevImage} aria-label="Ảnh trước"><GoogleSymbol name="chevron_left" size={30} /></button>
@@ -416,6 +429,27 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       {/* ── FREQUENTLY BOUGHT TOGETHER ── */}
       <ProductBoughtTogether key={`bought-${product.id}`} productId={product.id} />
       <Footer />
+
+      <dialog
+        ref={zoomDialog}
+        className={galleryStyles.zoomDialog}
+        aria-label="Ảnh sản phẩm phóng lớn"
+        onClose={() => setZoomImage(null)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) event.currentTarget.close();
+        }}
+      >
+        <div className={galleryStyles.zoomFrame}>
+          {zoomImage && (
+            <Image src={zoomImage.src} alt={zoomImage.alt} fill
+              sizes="(max-width: 1087px) 92vw, 1000px" />
+          )}
+          <button type="button" className={galleryStyles.zoomClose}
+            onClick={() => zoomDialog.current?.close()} aria-label="Đóng ảnh phóng lớn">
+            <GoogleSymbol name="close" size={24} />
+          </button>
+        </div>
+      </dialog>
 
       {/* Size Guide Modal */}
       {showSizeGuide && (
