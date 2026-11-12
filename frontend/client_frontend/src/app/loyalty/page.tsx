@@ -1,7 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useAccountQuery from "@/components/account/useAccountQuery";
 import AccountLayout from "@/components/account/AccountLayout";
+import GoogleSymbol from "@/components/ui/GoogleSymbol";
+import { money } from "@/cart/types";
 import { displayDate, utcDate, type RewardOffer, type RewardSummary } from "@/service/accountService";
 import type { PageResponse } from "@/type/api";
 import RewardExchange from "./RewardExchange";
@@ -13,8 +15,16 @@ export default function LoyaltyPage() {
   const [now, setNow] = useState(() => Date.now());
   const [voucherOpen, setVoucherOpen] = useState(false); const [notice, setNotice] = useState("");
   const [voucherPage, setVoucherPage] = useState(0);
+  const [copiedVoucher, setCopiedVoucher] = useState<{ id: number } | null>(null);
   const wallet = useAccountQuery<PageResponse<RewardOffer>>(voucherOpen && voucherPage > 0 ? `/me/loyalty/vouchers?page=${voucherPage}&size=10` : null, version);
   const voucherData = voucherPage === 0 ? data?.vouchers : wallet.data;
+
+  useEffect(() => {
+    if (!copiedVoucher) return;
+    const timeout = setTimeout(() => setCopiedVoucher(null), 2500);
+    return () => clearTimeout(timeout);
+  }, [copiedVoucher]);
+
   return <AccountLayout active="loyalty" title={
     <div className="flex items-center gap-2">
       <span>Điểm thưởng</span>
@@ -29,6 +39,7 @@ export default function LoyaltyPage() {
   }>
 
     {notice && <p className="text-sm mb-4" role="status">{notice}</p>}
+    <p className="sr-only" role="status">{copiedVoucher && "Đã sao chép mã voucher."}</p>
     {loading ? <div className="h-40 bg-gray-100 animate-pulse rounded-lg mb-8" aria-label="Đang tải điểm thưởng" /> : error ? <p role="alert" className="text-sm mb-6">{error}<button className="underline ml-3" onClick={() => setVersion(value => value + 1)}>Thử lại</button></p> : data && <>
       <div className="border rounded-lg px-5 py-5 mb-7 flex flex-wrap justify-between items-center gap-5"><div><p className="text-xs text-gray-500 mb-1">Số dư hiện tại</p>
         <strong className="text-3xl">{data.balance.toLocaleString("vi-VN")}</strong><span className="text-sm text-gray-500 ml-2">điểm</span></div>
@@ -38,9 +49,44 @@ export default function LoyaltyPage() {
       <section className="mb-8"><button className="w-full flex justify-between items-center text-lg font-bold mb-3" aria-expanded={voucherOpen} onClick={() => { setNow(Date.now()); setVoucherOpen(value => !value); }}>
         <span>Voucher của tôi <small className="text-xs text-gray-500 font-normal ml-2">{data.vouchers.totalElements}</small></span><span aria-hidden="true">{voucherOpen ? "−" : "+"}</span></button>
         {voucherOpen && <div className="space-y-2">{wallet.loading && <div aria-label="Đang tải voucher" className="h-24 bg-gray-100 animate-pulse rounded" />}{wallet.error && <p role="alert" className="text-sm">{wallet.error}<button className="ml-2 underline" onClick={() => setVersion(value => value + 1)}>Thử lại</button></p>}{voucherData?.totalElements === 0 && <p className="text-sm text-gray-500">Chưa có voucher đã đổi.</p>}{voucherData?.content.map(voucher => {
-          const expired = utcDate(voucher.expiresAt).getTime() <= now; const unavailable = voucher.used || expired;
-          return <article key={voucher.id} className="border rounded-lg p-3 flex items-center justify-between gap-3"><div className="min-w-0"><strong className="text-sm">{voucher.name}</strong><p className="text-xs text-gray-500 mt-1">{voucher.used ? "Đã dùng" : expired ? "Đã hết hạn" : `Hạn dùng ${displayDate(voucher.expiresAt)}`}</p><code className="block text-xs text-gray-500 break-all mt-1">{voucher.code}</code></div>
-            <button disabled={unavailable} className="text-xs font-semibold underline shrink-0 disabled:text-gray-400" onClick={async () => { try { await navigator.clipboard.writeText(voucher.code); setNotice("Đã sao chép mã. Nhập mã này khi đặt hàng."); } catch { setNotice("Không sao chép được. Bạn có thể chọn và sao chép mã bên cạnh."); } }}>Sao chép</button></article>;
+          const expired = utcDate(voucher.expiresAt).getTime() <= now;
+          const unavailable = voucher.used || expired;
+          const copied = copiedVoucher?.id === voucher.id;
+          return <article key={voucher.id} className="grid max-w-2xl grid-cols-[4rem_minmax(0,1fr)] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm sm:grid-cols-[7rem_minmax(0,1fr)]">
+            <div
+              className={`relative flex items-center justify-center text-white before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-[radial-gradient(circle_at_left_center,white_3px,transparent_3.5px)] before:bg-size-[6px_12px] before:content-[''] ${unavailable ? "bg-gray-500" : "bg-neutral-800"}`}
+            >
+              <GoogleSymbol name="confirmation_number" size={32} />
+            </div>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 border-l border-dashed border-gray-200 px-3 py-4 sm:px-4">
+              <div className="min-w-0 flex-[1_1_12rem]">
+                <h3 className="break-words text-base font-semibold">{voucher.name}</h3>
+                {voucher.minimum > 0 && <p className="mt-0.5 text-sm text-gray-700">Đơn từ {money(voucher.minimum)}</p>}
+                <code className="mt-2 block break-all text-xs text-gray-600">{voucher.code}</code>
+                <p className="mt-1 text-xs text-gray-600">
+                  {voucher.used ? "Đã dùng" : expired ? "Đã hết hạn" : `Hạn dùng ${displayDate(voucher.expiresAt)}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={unavailable}
+                className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-semibold disabled:cursor-not-allowed disabled:text-gray-500 ${copied ? "bg-green-50 text-green-800" : "bg-gray-100 enabled:hover:bg-gray-200"}`}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(voucher.code);
+                    setNotice("");
+                    setCopiedVoucher({ id: voucher.id });
+                  } catch {
+                    setCopiedVoucher(null);
+                    setNotice("Không sao chép được. Bạn có thể chọn và sao chép mã bên cạnh.");
+                  }
+                }}
+              >
+                <GoogleSymbol name={copied ? "check" : "content_copy"} size={18} />
+                {copied ? "Đã sao chép" : "Sao chép"}
+              </button>
+            </div>
+          </article>;
         })}
           {voucherData && voucherData.totalPages > 1 && <nav aria-label="Phân trang voucher" className="flex justify-end items-center gap-3 text-xs mt-3"><button disabled={voucherPage === 0} className="border rounded px-3 py-2 disabled:opacity-40" onClick={() => setVoucherPage(value => value - 1)}>Trước</button><span>{voucherPage + 1} / {voucherData.totalPages}</span><button disabled={voucherPage + 1 >= voucherData.totalPages} className="border rounded px-3 py-2 disabled:opacity-40" onClick={() => setVoucherPage(value => value + 1)}>Sau</button></nav>}
         </div>}</section>
