@@ -12,7 +12,6 @@ import '../../../inventory/data/models/inventory_response_model.dart';
 import '../../../suppliers/data/models/supplier_response_model.dart';
 import '../../data/models/goods_receipt_response_model.dart';
 import '../providers/purchases_provider.dart';
-import '../dialogs/goods_receipt_form_dialog.dart';
 
 class PurchasesScreen extends StatefulWidget {
   const PurchasesScreen({super.key});
@@ -44,10 +43,8 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
             subtitle: 'Phiếu nhập và thanh toán nhà cung cấp',
             actionLabel: 'Tạo phiếu nhập',
             actionIcon: Symbols.add,
-            onActionPressed: () => showDialog(
-              context: context,
-              builder: (_) => const GoodsReceiptFormDialog(),
-            ),
+            onActionPressed: () =>
+                MainScreen.of(context).navigate('/purchases/form'),
           ),
           const SizedBox(height: 24),
           Text(

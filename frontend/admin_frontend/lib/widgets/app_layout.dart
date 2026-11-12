@@ -84,7 +84,7 @@ class _AppLayoutState extends State<AppLayout> {
       (item.route == '/inventory' &&
           widget.currentRoute == '/inventory/detail') ||
       (item.route == '/purchases' &&
-          widget.currentRoute == '/purchases/detail') ||
+          widget.currentRoute.startsWith('/purchases/')) ||
       (item.route == '/suppliers' &&
           widget.currentRoute == '/suppliers/form') ||
       (item.route == '/posts' && widget.currentRoute == '/posts/form') ||

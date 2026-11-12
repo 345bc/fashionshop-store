@@ -12,17 +12,19 @@ import '../../../inventory/data/models/inventory_response_model.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../data/models/goods_receipt_response_model.dart';
 import '../providers/purchases_provider.dart';
-import '../dialogs/goods_receipt_form_dialog.dart';
 import '../dialogs/supplier_payment_dialog.dart';
+import '../../../../widgets/common/zella_toast.dart';
 
 class GoodsReceiptDetailScreen extends StatefulWidget {
   final int receiptId;
   final VoidCallback onClose;
+  final ValueChanged<GoodsReceiptResponseModel> onEdit;
 
   const GoodsReceiptDetailScreen({
     super.key,
     required this.receiptId,
     required this.onClose,
+    required this.onEdit,
   });
   @override
   State<GoodsReceiptDetailScreen> createState() =>
@@ -106,8 +108,7 @@ class _GoodsReceiptDetailScreenState extends State<GoodsReceiptDetailScreen> {
       setState(_load);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ZellaToast.show(context, message: e.toString(), type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -381,7 +382,7 @@ class _GoodsReceiptDetailScreenState extends State<GoodsReceiptDetailScreen> {
         OutlinedButton(
           onPressed: _busy
               ? null
-              : () => _openForm(GoodsReceiptFormDialog(receipt: receipt)),
+              : () => widget.onEdit(receipt),
           child: const Text('Sửa phiếu nháp'),
         ),
         if (isAdmin)

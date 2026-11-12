@@ -71,10 +71,9 @@ public class GoodsReceiptService {
         var actor = users.getReferenceById(actorId);
         for (var item : orderedItems(receipt)) {
             var variant = inventory.lockVariant(item.getVariant().getId());
-            if (!variant.isActive() || !variant.getProduct().isActive()
-                    || variant.getProduct().getSupplier() == null
+            if (variant.getProduct().getSupplier() == null
                     || !receipt.getSupplier().getId().equals(variant.getProduct().getSupplier().getId()))
-                throw error("INVALID_RECEIPT_VARIANT", "Biến thể đã ngừng hoạt động hoặc đổi nhà cung cấp");
+                throw error("INVALID_RECEIPT_VARIANT", "Biến thể không còn thuộc nhà cung cấp của phiếu nhập");
             int before = variant.getStockQuantity();
             long after = (long) before + item.getQuantity();
             if (after > Integer.MAX_VALUE) throw error("STOCK_OVERFLOW", "Số lượng tồn vượt giới hạn");
@@ -211,10 +210,9 @@ public class GoodsReceiptService {
         Map<Long, GoodsReceiptItem> lines = new LinkedHashMap<>();
         for (var line : request.items()) {
             var variant = variants.findById(line.variantId()).orElseThrow(() -> error("VARIANT_NOT_FOUND", "Không tìm thấy biến thể"));
-            if (!variant.isActive() || !variant.getProduct().isActive()
-                    || variant.getProduct().getSupplier() == null
+            if (variant.getProduct().getSupplier() == null
                     || !supplier.getId().equals(variant.getProduct().getSupplier().getId()))
-                throw error("INVALID_RECEIPT_VARIANT", "Biến thể không thuộc nhà cung cấp hoặc đã ngừng hoạt động");
+                throw error("INVALID_RECEIPT_VARIANT", "Biến thể không thuộc nhà cung cấp");
             var existing = lines.get(line.variantId());
             if (existing != null) {
                 if (existing.getUnitCost().compareTo(line.unitCost()) != 0)

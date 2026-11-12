@@ -13,10 +13,11 @@ class InventoryResponseModel {
       colorName;
   final num costPrice, price;
   final bool isActive;
-  final int? supplierId;
+  final int? supplierId, productId;
   InventoryResponseModel(Map<String, dynamic> json)
     : variantId = json['variantId'] as int,
       supplierId = json['supplierId'] as int?,
+      productId = json['productId'] as int?,
       stockQuantity = json['stockQuantity'] as int,
       reservedQuantity = json['reservedQuantity'] as int,
       availableQuantity = json['availableQuantity'] as int,

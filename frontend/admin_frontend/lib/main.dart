@@ -39,6 +39,8 @@ import 'features/orders/presentation/providers/orders_provider.dart';
 import 'features/customers/presentation/screens/customers_screen.dart';
 import 'features/customers/presentation/providers/customers_provider.dart';
 import 'features/purchases/presentation/screens/goods_receipt_detail_screen.dart';
+import 'features/purchases/presentation/screens/goods_receipt_form_screen.dart';
+import 'features/purchases/data/models/goods_receipt_response_model.dart';
 import 'features/purchases/presentation/screens/purchases_screen.dart';
 import 'features/purchases/presentation/providers/purchases_provider.dart';
 import 'features/inventory/presentation/providers/inventory_provider.dart';
@@ -270,6 +272,15 @@ class MainScreenState extends State<MainScreen> {
         return const OrdersScreen();
       case '/customers':
         return const CustomersScreen();
+      case '/purchases/form':
+        final draft = _currentArgs?['receipt'] as GoodsReceiptResponseModel?;
+        return GoodsReceiptFormScreen(
+          key: ValueKey(draft?.id),
+          receipt: draft,
+          onClose: () => draft == null
+              ? navigate('/purchases')
+              : navigate('/purchases/detail', {'receiptId': draft.id}),
+        );
       case '/purchases/detail':
         final receiptId = _currentArgs?['receiptId'] as int?;
         if (receiptId == null) return const PurchasesScreen();
@@ -277,6 +288,7 @@ class MainScreenState extends State<MainScreen> {
           key: ValueKey(receiptId),
           receiptId: receiptId,
           onClose: () => navigate('/purchases'),
+          onEdit: (receipt) => navigate('/purchases/form', {'receipt': receipt}),
         );
       case '/purchases':
         return const PurchasesScreen();
