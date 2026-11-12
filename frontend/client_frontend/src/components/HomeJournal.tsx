@@ -4,26 +4,27 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { popularPosts, type PopularPost } from "@/service/postService";
 import styles from "./HomeJournal.module.css";
-import ConnectionError from "./ConnectionError";
+import { reportConnectionFailure } from "@/api/apiClient";
+import { useHomeSectionReady } from "./HomeScrollReveal";
 
 export default function HomeJournal() {
+  const ready = useHomeSectionReady();
   const [post, setPost] = useState<PopularPost | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
+    if (!ready) return;
     const controller = new AbortController();
     popularPosts(controller.signal)
       .then(data => {
         if (!controller.signal.aborted) setPost(data[0] ?? null);
       })
-      .catch(reason => {
-        if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Không tải được bài viết.");
+      .catch(() => {
+        if (!controller.signal.aborted) reportConnectionFailure();
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [retry]);
+  }, [ready]);
 
   if (loading) return <section className={styles.section} aria-label="Bài viết nổi bật" aria-busy="true">
     <div className={`${styles.bannerLink} ${styles.skeleton}`} role="status" aria-label="Đang tải bài viết được xem nhiều nhất">
@@ -36,7 +37,6 @@ export default function HomeJournal() {
       </div>
     </div>
   </section>;
-  if (error) return <ConnectionError onRetry={() => { setError(null); setLoading(true); setRetry(n => n + 1); }} />;
   if (!post) return null;
 
   return (

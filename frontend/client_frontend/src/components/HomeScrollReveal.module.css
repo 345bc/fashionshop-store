@@ -1,0 +1,24 @@
+.reveal[data-reveal="pending"] {
+  opacity: 0;
+}
+
+.reveal[data-reveal="visible"] {
+  animation: enter 820ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.reveal[data-reveal]:focus-within {
+  opacity: 1;
+  animation: none;
+}
+
+@keyframes enter {
+  from { opacity: 0; transform: translateY(56px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal[data-reveal] {
+    opacity: 1;
+    animation: none;
+  }
+}
