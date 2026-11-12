@@ -22,9 +22,11 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.math.BigDecimal;
 import java.text.Normalizer;
@@ -359,46 +361,73 @@ public class ProductService {
                 }
             }
         }
-        return page.map(product -> ProductResponse.from(product, images.get(product.getId())));
+        Set<Long> orderedIds = ids.isEmpty() ? Set.of()
+                : new HashSet<>(productRepository.findProductIdsWithOrders(ids));
+        return page.map(product -> ProductResponse.from(product, images.get(product.getId()),
+                orderedIds.contains(product.getId())));
     }
 
     @Transactional(readOnly = true)
     public ProductResponse get(Long id) {
-        return ProductResponse.from(requireProduct(id));
+        return ProductResponse.from(requireProduct(id), null, hasOrders(id));
     }
 
     @Transactional
     public ProductResponse create(CreateProductRequest request) {
         Product product = new Product();
-        apply(product, request);
+        apply(product, request, false);
         return ProductResponse.from(productRepository.save(product));
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public ProductResponse update(Long id, CreateProductRequest request) {
         Product product = requireProduct(id);
-        apply(product, request);
-        return ProductResponse.from(productRepository.save(product));
+        boolean ordered = hasOrders(id);
+        ensureNameAllowed(product, request.name().trim(), ordered);
+        apply(product, request, ordered);
+        return ProductResponse.from(productRepository.save(product), null, ordered);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public ProductResponse updateContent(Long id, ProductContentRequest request) {
         Product product = requireProduct(id);
         String name = request.name().trim();
-        if (productRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
-            throw new BusinessException(HttpStatus.CONFLICT, "NAME_ALREADY_EXISTS", "Product name already exists");
+        boolean ordered = hasOrders(id);
+        ensureNameAllowed(product, name, ordered);
+        if (!ordered) {
+            applyName(product, name, false);
         }
-        String slug = slugFromName(name);
-        if (slug.isEmpty()) throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_PRODUCT_SLUG", "Product name cannot form a slug");
-        if (productRepository.existsBySlugIgnoreCaseAndIdNot(slug, id)) slug += "-" + product.getId();
-        product.setName(name); product.setSlug(slug);
         product.setDescription(normalizeOptional(request.description()));
         product.setStyle(normalizeOptional(request.style()));
         product.setOccasion(normalizeOptional(request.occasion()));
-        return ProductResponse.from(productRepository.save(product));
+        return ProductResponse.from(productRepository.save(product), null, ordered);
     }
 
-    private void apply(Product product, CreateProductRequest request) {
+    @Transactional
+    public void delete(Long id) {
+        try {
+            if (productRepository.deleteWithoutOrders(id) > 0) return;
+        } catch (DataIntegrityViolationException ex) {
+            throw new BusinessException(HttpStatus.CONFLICT, "PRODUCT_IN_USE",
+                    "Sản phẩm còn liên kết với dữ liệu khác, không thể xóa. Bạn có thể ẩn sản phẩm.");
+        }
+        requireProduct(id);
+        throw new BusinessException(HttpStatus.CONFLICT, "PRODUCT_HAS_ORDERS",
+                "Sản phẩm đã có đơn hàng, không thể xóa.");
+    }
+
+    private boolean hasOrders(Long id) {
+        return !productRepository.findProductIdsWithOrders(List.of(id)).isEmpty();
+    }
+
+    private void ensureNameAllowed(Product product, String name, boolean ordered) {
+        if (ordered && !Objects.equals(product.getName(), name)) {
+            throw new BusinessException(HttpStatus.CONFLICT, "PRODUCT_HAS_ORDERS",
+                    "Sản phẩm đã có đơn hàng, không thể đổi tên.");
+        }
+    }
+
+    private void apply(Product product, CreateProductRequest request, boolean ordered) {
         Category category = categoryRepository.findByIdAndIsActiveTrue(request.categoryId())
                 .orElseThrow(() -> new BusinessException(HttpStatus.CONFLICT,
                         "CATEGORY_NOT_FOUND_OR_INACTIVE", "Category not found or inactive"));
@@ -409,7 +438,24 @@ public class ProductService {
                 .orElseThrow(() -> new BusinessException(HttpStatus.CONFLICT,
                         "SIZEGUIDE_NOT_FOUND_OR_INACTIVE", "Size guide not found or inactive"));
 
-        String name = request.name().trim();
+        if (!ordered) applyName(product, request.name().trim(), true);
+
+        if (request.basePrice() == null || request.basePrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST,
+                    "PRICE_MUST_BE_GREATER_THAN_0", "Price must be greater than 0");
+        }
+
+        product.setCategory(category);
+        product.setSupplier(supplier);
+        product.setSizeGuide(sizeGuide);
+        product.setDescription(normalizeOptional(request.description()));
+        product.setStyle(normalizeOptional(request.style()));
+        product.setOccasion(normalizeOptional(request.occasion()));
+        product.setBasePrice(request.basePrice());
+        product.setActive(request.isActive() == null || request.isActive());
+    }
+
+    private void applyName(Product product, String name, boolean useTimeSuffix) {
         boolean duplicateName = product.getId() == null
                 ? productRepository.existsByNameIgnoreCase(name)
                 : productRepository.existsByNameIgnoreCaseAndIdNot(name, product.getId());
@@ -425,24 +471,10 @@ public class ProductService {
                 ? productRepository.existsBySlugIgnoreCase(slug)
                 : productRepository.existsBySlugIgnoreCaseAndIdNot(slug, product.getId());
         if (duplicateSlug) {
-            slug = slug + "-" + System.currentTimeMillis();
+            slug += "-" + (useTimeSuffix ? System.currentTimeMillis() : product.getId());
         }
-
-        if (request.basePrice() == null || request.basePrice().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST,
-                    "PRICE_MUST_BE_GREATER_THAN_0", "Price must be greater than 0");
-        }
-
-        product.setCategory(category);
-        product.setSupplier(supplier);
-        product.setSizeGuide(sizeGuide);
         product.setName(name);
         product.setSlug(slug);
-        product.setDescription(normalizeOptional(request.description()));
-        product.setStyle(normalizeOptional(request.style()));
-        product.setOccasion(normalizeOptional(request.occasion()));
-        product.setBasePrice(request.basePrice());
-        product.setActive(request.isActive() == null || request.isActive());
     }
 
     private String slugFromName(String name) {

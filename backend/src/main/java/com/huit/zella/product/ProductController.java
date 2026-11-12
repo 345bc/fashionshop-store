@@ -160,4 +160,11 @@ public class ProductController {
     ) {
         return ApiResponse.success(productService.update(id, request));
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        productService.delete(id);
+    }
 }

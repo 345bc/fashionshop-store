@@ -2,6 +2,7 @@ package com.huit.zella.product;
 
 import com.huit.zella.category.Category;
 import com.huit.zella.category.CategoryRepository;
+import com.huit.zella.common.exception.BusinessException;
 import com.huit.zella.sizeguide.SizeGuide;
 import com.huit.zella.sizeguide.SizeGuideRepository;
 import com.huit.zella.supplier.Supplier;
@@ -10,11 +11,14 @@ import com.huit.zella.productimage.ProductImageRepository;
 import com.huit.zella.productvariant.ProductVariantRepository;
 import com.huit.zella.variantimage.VariantImageRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -58,5 +62,53 @@ class ProductServiceTest {
         org.junit.jupiter.api.Assertions.assertFalse(result.isActive());
         assertEquals(1L, result.categoryId()); assertEquals(2L, result.supplierId()); assertEquals(3L, result.sizeGuideId());
         assertEquals("Áo mới", result.name());
+    }
+
+    @Test
+    void orderedProductRejectsRenameThroughBothEndpoints() {
+        Product product = new Product();
+        product.setId(7L);
+        product.setName("Áo cũ");
+        when(products.findById(7L)).thenReturn(Optional.of(product));
+        when(products.findProductIdsWithOrders(List.of(7L))).thenReturn(List.of(7L));
+
+        assertEquals("PRODUCT_HAS_ORDERS", assertThrows(BusinessException.class,
+                () -> service.update(7L, new CreateProductRequest(
+                        "Áo mới", null, null, null, BigDecimal.TEN, 1L, 2L, 3L, true))).getCode());
+        assertEquals("PRODUCT_HAS_ORDERS", assertThrows(BusinessException.class,
+                () -> service.updateContent(7L, new ProductContentRequest("Áo mới", "", "", ""))).getCode());
+        verify(products, never()).save(any());
+    }
+
+    @Test
+    void orderedProductKeepsNameAndSlugWhenEditingOtherContent() {
+        Product product = new Product();
+        product.setId(7L);
+        product.setName("Áo cũ");
+        product.setSlug("slug-goc");
+        when(products.findById(7L)).thenReturn(Optional.of(product));
+        when(products.findProductIdsWithOrders(List.of(7L))).thenReturn(List.of(7L));
+        when(products.save(product)).thenReturn(product);
+
+        var result = service.updateContent(7L, new ProductContentRequest(" Áo cũ ", "Mô tả mới", "", ""));
+
+        assertTrue(result.hasOrders());
+        assertEquals("slug-goc", result.slug());
+        assertEquals("mô tả mới", result.description());
+    }
+
+    @Test
+    void deleteOnlySucceedsWhenRepositoryRemovesUnreferencedProduct() {
+        when(products.deleteWithoutOrders(1L)).thenReturn(1);
+        when(products.findById(2L)).thenReturn(Optional.of(new Product()));
+        when(products.deleteWithoutOrders(3L)).thenThrow(new DataIntegrityViolationException("foreign key"));
+
+        service.delete(1L);
+        assertEquals("PRODUCT_HAS_ORDERS",
+                assertThrows(BusinessException.class, () -> service.delete(2L)).getCode());
+        assertEquals("PRODUCT_IN_USE",
+                assertThrows(BusinessException.class, () -> service.delete(3L)).getCode());
+        assertEquals("ID_NOT_FOUND",
+                assertThrows(BusinessException.class, () -> service.delete(4L)).getCode());
     }
 }

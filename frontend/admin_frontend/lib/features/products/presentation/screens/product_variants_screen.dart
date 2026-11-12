@@ -11,6 +11,8 @@ import '../../../../widgets/common/status_badge.dart';
 import '../../../../widgets/common/bulk_action_bar.dart';
 import '../../../../widgets/common/zella_checkbox.dart';
 import '../../../../widgets/common/zella_toast.dart';
+import '../../../../widgets/dialogs/zella_confirm_dialog.dart';
+import '../../../auth/presentation/provider/auth_provider.dart';
 import '../providers/product_variants_provider.dart';
 
 class ProductVariantsScreen extends StatefulWidget {
@@ -23,7 +25,52 @@ class ProductVariantsScreen extends StatefulWidget {
 
 class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
   Set<int> selectedIds = {};
+  bool _deleting = false;
   int? get _productId => (widget.product?['id'] as num?)?.toInt();
+
+  Future<void> _confirmDelete(Set<int> ids, {String? sku}) async {
+    final productId = _productId;
+    if (_deleting || productId == null || ids.isEmpty) return;
+    final provider = context.read<ProductVariantsProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => ZellaConfirmDialog(
+        title: sku == null ? 'Xóa ${ids.length} biến thể?' : 'Xóa biến thể?',
+        content: Text(
+          sku == null
+              ? 'Chỉ những biến thể đủ điều kiện mới bị xóa. Thao tác này không thể hoàn tác.'
+              : 'Xóa biến thể “$sku”? Thao tác này không thể hoàn tác.',
+        ),
+        confirmText: 'Xóa',
+        onCancel: () => Navigator.pop(dialogContext, false),
+        onConfirm: () => Navigator.pop(dialogContext, true),
+      ),
+    );
+    if (confirmed != true || !mounted || _deleting || _productId != productId)
+      return;
+    setState(() => _deleting = true);
+    try {
+      final result = await provider.deleteItems(productId, ids);
+      if (!mounted || _productId != productId) return;
+      setState(() => selectedIds.removeAll(result.deleted));
+      final count = result.deleted.length;
+      ZellaToast.show(
+        context,
+        message: result.errors.isEmpty
+            ? 'Đã xóa $count biến thể.'
+            : count == 0 && ids.length == 1
+            ? result.errors.values.first
+            : 'Đã xóa $count/${ids.length} biến thể. ${result.errors.values.first}',
+        type: result.errors.isEmpty
+            ? ToastType.success
+            : count == 0
+            ? ToastType.error
+            : ToastType.warning,
+      );
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
 
   @override
   void initState() {
@@ -290,6 +337,13 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
                 setState(() => selectedIds.clear());
               },
             ),
+            if (context.watch<AuthProvider>().hasRole('ADMIN'))
+              BulkActionButton(
+                icon: Symbols.delete,
+                isDanger: true,
+                tooltip: 'Xóa biến thể đã chọn',
+                onPressed: () => _confirmDelete(Set.of(selectedIds)),
+              ),
           ],
         ),
       ],
@@ -423,17 +477,35 @@ class _ProductVariantsScreenState extends State<ProductVariantsScreen> {
             SizedBox(
               width: 48,
               child: ActionMenu(
-                items: const [
-                  ActionMenuItem(
+                items: [
+                  const ActionMenuItem(
                     value: 'edit',
                     label: 'Chỉnh sửa',
                     icon: Symbols.edit,
                   ),
+                  if (context.watch<AuthProvider>().hasRole('ADMIN') &&
+                      variant['hasOrders'] != true) ...[
+                    ActionMenuItem.divider(),
+                    const ActionMenuItem(
+                      value: 'delete',
+                      label: 'Xóa biến thể',
+                      icon: Symbols.delete,
+                      color: AppTheme.danger,
+                    ),
+                  ],
                 ],
-                onSelected: (_) => MainScreen.of(context).navigate(
-                  '/products/variants/edit',
-                  {'product': widget.product, 'variant': variant},
-                ),
+                onSelected: (action) {
+                  if (action == 'delete') {
+                    _confirmDelete({
+                      (variant['id'] as num).toInt(),
+                    }, sku: variant['sku']?.toString());
+                    return;
+                  }
+                  MainScreen.of(context).navigate('/products/variants/edit', {
+                    'product': widget.product,
+                    'variant': variant,
+                  });
+                },
               ),
             ),
           ],

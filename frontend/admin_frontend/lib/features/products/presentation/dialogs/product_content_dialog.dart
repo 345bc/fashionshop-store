@@ -75,6 +75,8 @@ class _ProductContentDialogState extends State<ProductContentDialog> {
               child: TextFormField(
                 controller: _fields[entry.key],
                 enabled: !_saving,
+                readOnly:
+                    entry.key == 'name' && widget.product['hasOrders'] == true,
                 maxLines: entry.key == 'description' ? 5 : 1,
                 maxLength: switch (entry.key) {
                   'name' => 200,
@@ -85,6 +87,10 @@ class _ProductContentDialogState extends State<ProductContentDialog> {
                 decoration: InputDecoration(
                   labelText: entry.value,
                   counterText: '',
+                  helperText:
+                      entry.key == 'name' && widget.product['hasOrders'] == true
+                      ? 'Sản phẩm đã có đơn hàng, không thể đổi tên.'
+                      : null,
                 ),
                 validator: (value) =>
                     entry.key == 'name' && (value?.trim().isEmpty ?? true)

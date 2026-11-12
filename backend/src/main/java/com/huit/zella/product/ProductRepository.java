@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,6 +18,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select product from Product product where product.id = :id")
     Optional<Product> findByIdForImageUpdate(@Param("id") Long id);
+
+    @Query("select distinct item.product.id from OrderItem item where item.product.id in :ids")
+    List<Long> findProductIdsWithOrders(@Param("ids") List<Long> ids);
+
+    @Modifying
+    @Query(value = """
+            DELETE FROM products WHERE id = :id
+              AND NOT EXISTS (SELECT 1 FROM order_items WHERE product_id = :id)
+            """, nativeQuery = true)
+    int deleteWithoutOrders(@Param("id") Long id);
 
     boolean existsBySizeGuideId(Long sizeGuideId);
 

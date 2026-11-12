@@ -20,13 +20,14 @@ public record ProductResponse(
         String sizeGuideName,
         Instant createdAt,
         Instant updatedAt,
-        String imageUrl
+        String imageUrl,
+        boolean hasOrders
 ) {
     public static ProductResponse from(Product product) {
-        return from(product, null);
+        return from(product, null, false);
     }
 
-    public static ProductResponse from(Product product, String imageUrl) {
+    public static ProductResponse from(Product product, String imageUrl, boolean hasOrders) {
         return new ProductResponse(
                 product.getId(),
                 product.getName(),
@@ -44,7 +45,8 @@ public record ProductResponse(
                 product.getSizeGuide() != null ? product.getSizeGuide().getName() : null,
                 product.getCreatedAt(),
                 product.getUpdatedAt(),
-                imageUrl
+                imageUrl,
+                hasOrders
         );
     }
 }
