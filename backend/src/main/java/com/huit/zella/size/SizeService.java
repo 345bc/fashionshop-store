@@ -1,7 +1,6 @@
 package com.huit.zella.size;
 
 import com.huit.zella.common.exception.BusinessException;
-import com.huit.zella.enums.SizeEnum;
 import com.huit.zella.productvariant.ProductVariantRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -74,11 +73,11 @@ public class SizeService {
         if (value == null || value.isBlank()) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_SIZE_NAME", "Size name is required");
         }
-        try {
-            return SizeEnum.valueOf(value.trim().toUpperCase(Locale.ROOT)).name();
-        } catch (IllegalArgumentException ex) {
+        String name = value.trim().toUpperCase(Locale.ROOT);
+        if (name.length() > 20) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_SIZE_NAME",
-                    "Size name must be one of XS, S, M, L, XL, XXL");
+                    "Size name must not exceed 20 characters");
         }
+        return name;
     }
 }

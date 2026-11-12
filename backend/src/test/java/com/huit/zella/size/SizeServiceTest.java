@@ -29,7 +29,7 @@ class SizeServiceTest {
     }
 
     @Test
-    void savesCanonicalNameFromEnum() {
+    void trimsAndUppercasesName() {
         when(sizes.save(any(Size.class))).thenAnswer(call -> call.getArgument(0));
 
         SizeResponse result = service.create(new CreateSizeRequest(" xl ", 3));
@@ -39,9 +39,19 @@ class SizeServiceTest {
     }
 
     @Test
-    void rejectsNameOutsideEnumOnCreate() {
+    void createsNumericSize() {
+        when(sizes.save(any(Size.class))).thenAnswer(call -> call.getArgument(0));
+
+        SizeResponse result = service.create(new CreateSizeRequest(" 36 ", 0));
+
+        assertEquals("36", result.name());
+        verify(sizes).existsByNameIgnoreCase("36");
+    }
+
+    @Test
+    void rejectsBlankName() {
         BusinessException error = assertThrows(BusinessException.class,
-                () -> service.create(new CreateSizeRequest("FREE", 0)));
+                () -> service.create(new CreateSizeRequest("  ", 0)));
 
         assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());
         assertEquals("INVALID_SIZE_NAME", error.getCode());
@@ -49,16 +59,16 @@ class SizeServiceTest {
     }
 
     @Test
-    void rejectsNameOutsideEnumOnUpdate() {
+    void updatesToCustomSize() {
         Size size = new Size();
         size.setId(2);
         when(sizes.findById(2)).thenReturn(Optional.of(size));
+        when(sizes.save(size)).thenReturn(size);
 
-        BusinessException error = assertThrows(BusinessException.class,
-                () -> service.update(2, new CreateSizeRequest("4XL", 4)));
+        SizeResponse result = service.update(2, new CreateSizeRequest("4xl", 4));
 
-        assertEquals("INVALID_SIZE_NAME", error.getCode());
-        verify(sizes, never()).save(any());
+        assertEquals("4XL", result.name());
+        verify(sizes).existsByNameIgnoreCaseAndIdNot("4XL", 2);
     }
 
     @Test
