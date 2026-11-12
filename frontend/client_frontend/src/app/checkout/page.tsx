@@ -4,6 +4,7 @@ import styles from "./CheckoutMethods.module.css";
 
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ApiClientError } from "@/api/apiClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -132,7 +133,7 @@ export default function CheckoutPage() {
   const [voucherCode, setVoucherCode] = useState("");
   const [appliedVoucherCode, setAppliedVoucherCode] = useState("");
   const [quoteAttempt, setQuoteAttempt] = useState(0);
-  const [quoteResult, setQuoteResult] = useState<{ key: string; pricing?: CheckoutPrice; error?: string } | null>(null);
+  const [quoteResult, setQuoteResult] = useState<{ key: string; pricing?: CheckoutPrice; error?: string; voucherError?: string } | null>(null);
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -158,7 +159,8 @@ export default function CheckoutPage() {
   const currentQuote = quoteResult?.key === quoteKey ? quoteResult : null;
   const pricing = pending?.order.pricing ?? currentQuote?.pricing;
   const subtotal = pricing?.subtotal ?? pending?.order.subtotal ?? checkoutItems.reduce((sum, item) => sum + item.lineTotal, 0);
-  const estimatedShippingFee = subtotal >= 600000 ? 0 : 30000;
+  const shippingBaseFee = pricing?.shippingBaseFee ?? 30000;
+  const estimatedShippingFee = subtotal >= 600000 ? 0 : shippingBaseFee;
   const shippingFee = pricing?.shippingFee ?? pending?.order.shippingFee ?? estimatedShippingFee;
   const discount = pricing?.discountAmount ?? pending?.order.discountAmount ?? 0;
   const priceError = !pending && !activeDraft ? currentQuote?.error ?? "" : "";
@@ -167,7 +169,8 @@ export default function CheckoutPage() {
   const enteredVoucherCode = voucherCode.trim().toUpperCase();
   const voucherBusy = quoteLoading && !!appliedVoucherCode;
   const voucherNeedsApply = !!enteredVoucherCode && enteredVoucherCode !== appliedVoucherCode;
-  const voucherError = appliedVoucherCode ? priceError : "";
+  const voucherError = !pending && !activeDraft ? currentQuote?.voucherError ?? "" : "";
+  const voucherApplied = !!appliedVoucherCode && quoteReady;
   const canSubmitQuote = quoteReady && !voucherNeedsApply && !voucherBusy && !voucherError;
 
   function applyVoucher() {
@@ -180,7 +183,14 @@ export default function CheckoutPage() {
     if (pending || activeDraft || owner === "waiting" || !JSON.parse(quoteItems).length) return () => controller.abort();
     quoteCheckout(JSON.parse(quoteItems), shipping, appliedVoucherCode, controller.signal)
       .then(pricing => { if (!controller.signal.aborted) setQuoteResult({ key: quoteKey, pricing }); })
-      .catch(cause => { if (!controller.signal.aborted) setQuoteResult({ key: quoteKey, error: cause instanceof Error ? cause.message : "Không tải được số tiền thanh toán." }); });
+      .catch(cause => {
+        if (controller.signal.aborted) return;
+        if (appliedVoucherCode && cause instanceof ApiClientError && cause.code === "INVALID_VOUCHER") {
+          setQuoteResult({ key: quoteKey, voucherError: cause.message });
+        } else {
+          setQuoteResult({ key: quoteKey, error: cause instanceof Error ? cause.message : "Không tải được số tiền thanh toán." });
+        }
+      });
     return () => controller.abort();
   }, [quoteKey, quoteItems, shipping, appliedVoucherCode, owner, pending, activeDraft]);
   const dialogKey = pending ? `${pending.order.code}:${pending.order.status}:${pending.order.paymentStatus}` : "";
@@ -499,7 +509,7 @@ export default function CheckoutPage() {
                       <span className={styles.optionTitle}>Giao hàng tiêu chuẩn</span>
                       <span className={styles.description}>Giao đến địa chỉ nhận hàng của bạn</span>
                     </div>
-                    <span className={styles.price}>{money(shippingFee)}</span>
+                    <span className={styles.price}>{money(shippingBaseFee)}</span>
                   </label>
                 </section>
 
@@ -536,6 +546,7 @@ export default function CheckoutPage() {
             {/* Cột phải: Tổng quan đơn hàng */}
             <CheckoutSummary items={checkoutItems} subtotal={subtotal} shippingFee={shippingFee} total={pricing?.totalAmount ?? subtotal + shippingFee - discount} discount={discount} pricing={pricing} pricesLoading={quoteLoading} priceError={priceError} onRetryPrice={() => setQuoteAttempt(value => value + 1)}
               voucherCode={activeDraft?.request.voucherCode ?? voucherCode} onVoucherChange={value => { if (!deliveryInfoReady || submitting || activeDraft) return; setVoucherCode(value); setAppliedVoucherCode(""); }} onApplyVoucher={() => void applyVoucher()} voucherBusy={voucherBusy} voucherDisabled={!deliveryInfoReady || submitting || !!activeDraft} voucherError={voucherError}
+              voucherApplied={voucherApplied}
               voucherHint={!deliveryInfoReady && !activeDraft ? "Điền đủ họ tên, địa chỉ, tỉnh/thành phố, phường/xã và số điện thoại hợp lệ để nhập mã ưu đãi." : ""}
               loading={(cart.loading || cart.fetchFailed) && !activeDraft} />
           </form>

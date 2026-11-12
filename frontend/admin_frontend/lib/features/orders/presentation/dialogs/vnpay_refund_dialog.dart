@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../inventory/data/models/inventory_response_model.dart';
@@ -24,43 +25,54 @@ class VnPayRefundDialog extends StatefulWidget {
 class _VnPayRefundDialogState extends State<VnPayRefundDialog> {
   final _form = GlobalKey<FormState>();
   final _note = TextEditingController();
-  late Future<({VnPayRefund? refund, Object? error})> _refund;
+  late Future<Object?> _status;
+  List<VnPayRefund> _refunds = [];
   bool _busy = false;
+  String? _copiedDetails;
 
   @override
   void initState() {
     super.initState();
-    _refund = _run(_load);
+    _status = _run();
   }
 
-  Future<VnPayRefund?> _load() async {
-    final refunds = await context.read<OrdersProvider>().vnpayRefunds(
-      widget.orderId,
-    );
-    return refunds
-        .where((refund) => refund.returnId == widget.returnId)
-        .firstOrNull;
-  }
-
-  Future<({VnPayRefund? refund, Object? error})> _run(
-    Future<VnPayRefund?> Function() request,
-  ) async {
+  Future<Object?> _run([Future<VnPayRefund> Function()? request]) async {
+    final provider = context.read<OrdersProvider>();
     try {
-      return (refund: await request(), error: null);
+      if (request == null) {
+        _refunds = await provider.vnpayRefunds(widget.orderId);
+      } else {
+        final updated = await request();
+        _refunds = [
+          updated,
+          ..._refunds.where((refund) => refund.id != updated.id),
+        ];
+      }
+      return null;
     } catch (error) {
-      return (refund: null, error: error);
+      if (request != null) {
+        try {
+          _refunds = await provider.vnpayRefunds(widget.orderId);
+        } catch (_) {
+          // Keep the known attempts and report the original operation error.
+        }
+      }
+      return error;
     } finally {
       if (mounted && _busy) setState(() => _busy = false);
     }
   }
 
-  void _start(Future<VnPayRefund> Function() request) {
+  void _start([Future<VnPayRefund> Function()? request]) {
     if (_busy) return;
     setState(() {
       _busy = true;
-      _refund = _run(request);
+      _status = _run(request);
     });
   }
+
+  bool _needsReconciliation(VnPayRefund refund) =>
+      refund.state != 'SUCCEEDED' && refund.state != 'REJECTED';
 
   @override
   void dispose() {
@@ -72,19 +84,30 @@ class _VnPayRefundDialogState extends State<VnPayRefundDialog> {
   Widget build(BuildContext context) => PopScope(
     canPop: !_busy,
     child: FutureBuilder(
-      future: _refund,
+      future: _status,
       builder: (context, snapshot) {
-        final refund = snapshot.data?.refund;
-        final error = snapshot.data?.error;
+        final refund = _refunds
+            .where((item) => item.returnId == widget.returnId)
+            .firstOrNull;
+        final error = snapshot.data;
         final waiting = snapshot.connectionState != ConnectionState.done;
         final ready = !waiting && error == null;
-        final canSubmit =
-            ready && (refund == null || refund.state == 'REJECTED');
-        final canReconcile =
-            ready &&
-            refund != null &&
-            refund.state != 'SUCCEEDED' &&
-            refund.state != 'REJECTED';
+        final canRequest = refund == null || refund.state == 'REJECTED';
+        final blocker = canRequest
+            ? _refunds.where(_needsReconciliation).firstOrNull
+            : null;
+        final toReconcile = refund != null && _needsReconciliation(refund)
+            ? refund
+            : blocker;
+        final attempt = toReconcile ?? refund;
+        final details = [
+          'Số hóa đơn (vnp_TxnRef): ${widget.orderId}',
+          if (attempt != null) 'Lần hoàn #${attempt.id}',
+          if (attempt?.requestId case final requestId?
+              when requestId.isNotEmpty)
+            'Mã yêu cầu hoàn (requestId): $requestId',
+        ].join('\n');
+        final canSubmit = ready && canRequest && blocker == null;
         final status = switch (refund?.state) {
           'SUCCEEDED' => 'VNPay đã xác nhận hoàn tiền.',
           'REJECTED' => 'VNPay đã từ chối yêu cầu hoàn tiền.',
@@ -107,10 +130,32 @@ class _VnPayRefundDialogState extends State<VnPayRefundDialog> {
                 const SizedBox(height: 12),
                 if (waiting)
                   const LinearProgressIndicator()
-                else if (error != null)
-                  Text(error.toString())
-                else
-                  Text(status),
+                else ...[
+                  if (blocker != null)
+                    const Text(
+                      'Đơn có khoản hoàn chưa rõ kết quả. Hãy đối soát VNPay trước khi gửi yêu cầu này.',
+                    )
+                  else if (error == null)
+                    Text(status),
+                  if (error != null) Text(error.toString()),
+                  const SizedBox(height: 12),
+                  SelectableText(details),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: details));
+                        if (mounted) setState(() => _copiedDetails = details);
+                      },
+                      icon: const Icon(Icons.copy, size: 16),
+                      label: Text(
+                        _copiedDetails == details
+                            ? 'Đã sao chép'
+                            : 'Sao chép thông tin tra soát',
+                      ),
+                    ),
+                  ),
+                ],
                 if (canSubmit) ...[
                   const SizedBox(height: 16),
                   Form(
@@ -137,12 +182,7 @@ class _VnPayRefundDialogState extends State<VnPayRefundDialog> {
             ),
             if (error != null && !waiting)
               OutlinedButton(
-                onPressed: () {
-                  final reload = _run(_load);
-                  setState(() {
-                    _refund = reload;
-                  });
-                },
+                onPressed: () => _start(),
                 child: const Text('Tải lại trạng thái'),
               ),
             if (canSubmit)
@@ -160,11 +200,11 @@ class _VnPayRefundDialogState extends State<VnPayRefundDialog> {
                 },
                 child: const Text('Gửi yêu cầu hoàn tiền'),
               ),
-            if (canReconcile)
+            if (!waiting && toReconcile != null)
               FilledButton(
                 onPressed: () {
                   final provider = context.read<OrdersProvider>();
-                  _start(() => provider.reconcileVnpayRefund(refund.id));
+                  _start(() => provider.reconcileVnpayRefund(toReconcile.id));
                 },
                 child: const Text('Đối soát VNPay'),
               ),

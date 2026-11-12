@@ -1,5 +1,7 @@
 import 'package:zella_admin_flutter/features/auth/presentation/provider/auth_provider.dart';
+
 import 'support/fake_auth.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,15 +27,20 @@ class FakeOrders extends OrdersProvider {
 
   @override
   Future<List<VnPayRefund>> vnpayRefunds(int orderId) async => [
-    (id: 25, returnId: null, state: 'SUCCEEDED'),
-    (id: 24, returnId: 7, state: 'UNKNOWN'),
+    (id: 25, returnId: null, state: 'SUCCEEDED', requestId: 'order-refund'),
+    (id: 24, returnId: 7, state: 'UNKNOWN', requestId: 'return-refund'),
   ];
 
   @override
   Future<VnPayRefund> reconcileVnpayRefund(int refundId) async {
     reconciledRefundId = refundId;
     if (reconcileFails) throw Exception('Chưa đối soát được với VNPay');
-    return (id: refundId, returnId: 7, state: 'SUCCEEDED');
+    return (
+      id: refundId,
+      returnId: 7,
+      state: 'SUCCEEDED',
+      requestId: 'return-refund',
+    );
   }
 
   int requestedPage = 0;
@@ -175,10 +182,41 @@ Future<void> openDialog(
 }
 
 void main() {
+  testWidgets('VNPay dialog reconciles a refund blocking another return', (
+    tester,
+  ) async {
+    final provider = FakeOrders();
+    await openDialog(
+      tester,
+      provider,
+      const VnPayRefundDialog(orderId: 10, returnId: 8, amount: 300000),
+    );
+    expect(
+      find.textContaining('Đơn có khoản hoàn chưa rõ kết quả'),
+      findsOneWidget,
+    );
+    expect(find.text('Gửi yêu cầu hoàn tiền'), findsNothing);
+    expect(
+      find.text(
+        'Số hóa đơn (vnp_TxnRef): 10\nLần hoàn #24\nMã yêu cầu hoàn (requestId): return-refund',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Đối soát VNPay'));
+    await tester.pumpAndSettle();
+
+    expect(provider.reconciledRefundId, 24);
+    expect(find.text('Đối soát VNPay'), findsNothing);
+    expect(find.text('Gửi yêu cầu hoàn tiền'), findsOneWidget);
+  });
+
   testWidgets('VNPay reconciliation can reload after a gateway error', (
     tester,
   ) async {
-    dotenv.loadFromString(envString: 'API_BASE_URL=http://localhost:8080/api/v1');
+    dotenv.loadFromString(
+      envString: 'API_BASE_URL=http://localhost:8080/api/v1',
+    );
     final provider = FakeOrders()..reconcileFails = true;
     await openDialog(
       tester,
