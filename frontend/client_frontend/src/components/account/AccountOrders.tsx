@@ -12,7 +12,7 @@ import CartSkeleton from "@/components/skeleton-ui/CartSkeleton";
 import { useCart } from "@/cart/CartContext";
 import useAccountQuery from "./useAccountQuery";
 import { money } from "@/cart/types";
-import { orderStatuses, orderStatusLabel } from "@/utils/orderStatus";
+import { orderStatuses } from "@/utils/orderStatus";
 import { apiError, cancelOrder, displayDate, paymentLabel, reorder, requestReturn, saveReview, utcDate, type CustomerOrder, type PurchasedItem } from "@/service/accountService";
 import type { PageResponse } from "@/type/api";
 
@@ -87,10 +87,29 @@ export default function AccountOrders() {
       <button className={actionClass} disabled={loading || page === 0} onClick={() => setPage(value => value - 1)}>Trước</button>
       <span>{page + 1} / {response.totalPages}</span><button className={actionClass} disabled={loading || page + 1 >= response.totalPages} onClick={() => setPage(value => value + 1)}>Sau</button></nav>}
     <Notification open={!!cancel} title="Hủy đơn hàng" message={`Hủy đơn ${cancel?.code ?? ""}?`} onClose={() => setCancel(null)} onConfirm={async () => { if (cancel) { await cancelOrder(cancel.id); changed(); } }} />
-    {detail && <AccountDialog title={detail.code} onClose={() => setDetail(null)}><div className="mb-5"><OrderStatusBadge status={detail.status} /></div><OrderStatusTimeline status={detail.status} />
-      <div className="my-6 text-sm space-y-2"><p className="font-semibold">{paymentLabel(detail.paymentStatus)}</p><p>{detail.recipientName} · {detail.recipientPhone}</p><p className="text-gray-500">{detail.address}</p>
-        <p>Tiền hàng: {money(detail.subtotal)} · Phí vận chuyển: {money(detail.shippingFee)}</p><p>Giảm giá: {money(detail.discountAmount)}</p><p className="font-bold">Tổng: {money(detail.totalAmount)}</p></div>
-      <h3 className="text-sm font-bold mb-3">Lịch sử xử lý</h3><ul className="space-y-3 text-xs">{detail.history.map((entry, index) => <li key={index}><strong>{orderStatusLabel(entry.status)}</strong><span className="text-gray-500 ml-3">{displayDate(entry.createdAt)}</span></li>)}</ul>
+    {detail && <AccountDialog title={detail.code} onClose={() => setDetail(null)}>
+      <div className="mb-5"><OrderStatusBadge status={detail.status} /></div>
+      <OrderStatusTimeline status={detail.status} milestones={{
+        ...Object.fromEntries(detail.history.slice().reverse().map(entry => [entry.status, entry.createdAt])),
+        PENDING: detail.createdAt,
+      }} />
+      <div className="mt-6 grid gap-5 border-t border-gray-200 pt-5 text-sm sm:grid-cols-2 sm:gap-x-12">
+        <div className="space-y-1.5">
+          <h3 className="font-semibold">Địa chỉ nhận hàng</h3>
+          <p>{detail.recipientName} · {detail.recipientPhone}</p>
+          <p className="text-gray-600">{detail.address}</p>
+        </div>
+        <div>
+          <h3 className="font-semibold">Thanh toán</h3>
+          <p className="mt-1.5 text-gray-600">{paymentLabel(detail.paymentStatus)}</p>
+          <dl className="mt-3 space-y-2">
+            <div className="flex justify-between gap-3"><dt>Tiền hàng</dt><dd>{money(detail.subtotal)}</dd></div>
+            <div className="flex justify-between gap-3"><dt>Phí vận chuyển</dt><dd>{money(detail.shippingFee)}</dd></div>
+            <div className="flex justify-between gap-3"><dt>Giảm giá</dt><dd>{money(detail.discountAmount)}</dd></div>
+            <div className="flex justify-between gap-3 border-t border-gray-200 pt-2 font-bold"><dt>Tổng</dt><dd>{money(detail.totalAmount)}</dd></div>
+          </dl>
+        </div>
+      </div>
     </AccountDialog>}
     {review && <ReviewForm order={review.order} item={review.item} onClose={() => setReview(null)} onSaved={() => { setReview(null); changed(); }} />}
     {returnOrder && <ReturnForm order={returnOrder} onClose={() => setReturnOrder(null)} onSaved={() => { setReturnOrder(null); setNotice("Đã gửi yêu cầu trả hàng. Cửa hàng sẽ kiểm tra và xử lý."); changed(); }} />}
