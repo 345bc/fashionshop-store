@@ -26,13 +26,18 @@ public class ProductVariantController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) Long productId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "15") int size
+            @RequestParam(defaultValue = "15") int size,
+            @RequestParam(defaultValue = "false") boolean groupByColor
     ) {
         int safeSize = Math.max(1, Math.min(size, 100));
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        if (groupByColor) {
+            sort = Sort.by("color.id", "size.displayOrder").and(sort);
+        }
         return ApiResponse.success(PageResponse.from(productVariantService.list(
                 q,
                 productId,
-                PageRequest.of(Math.max(page, 0), safeSize, Sort.by(Sort.Direction.DESC, "id"))
+                PageRequest.of(Math.max(page, 0), safeSize, sort)
         )));
     }
 
