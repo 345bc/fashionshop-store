@@ -132,4 +132,18 @@ class VnPayRefundServiceTest {
             "vnp_TransactionNo", "12345", "vnp_Amount", "10000000", "vnp_TransactionType", "01"));
         assertEquals("PENDING", service.reconcile(refund.id()).state()); assertEquals("REFUND_PENDING", order.getPaymentStatus());
     }
+
+    @Test void reconciliationFailureReportsHttpStatusWithoutResendingRefund() {
+        doAnswer(call -> response(call.getArgument(0), "00", "05")).when(gateway).refund(any(), any());
+        var refund = service.submit(1L, null, "Hoàn", 9L);
+        when(gateway.query(any(), any())).thenThrow(new VnPayGateway.GatewayFailure("HTTP_403"));
+
+        var error = assertThrows(BusinessException.class, () -> service.reconcile(refund.id()));
+
+        assertEquals("REFUND_QUERY_UNAVAILABLE", error.getCode());
+        assertEquals("Chưa đối soát được với VNPay (lần hoàn #" + refund.id()
+            + "). VNPay trả về lỗi HTTP 403. Hãy thử đối soát lại khi đã xử lý nguyên nhân.", error.getMessage());
+        assertEquals("REFUND_PENDING", order.getPaymentStatus());
+        verify(gateway, times(1)).refund(any(), any());
+    }
 }

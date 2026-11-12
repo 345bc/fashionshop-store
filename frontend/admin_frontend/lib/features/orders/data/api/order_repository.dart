@@ -86,6 +86,7 @@ class OrderRepository {
     id: (json['id'] as num).toInt(),
     returnId: (json['returnId'] as num?)?.toInt(),
     state: json['state'] as String,
+    requestId: json['requestId'] as String?,
   );
 
   Future<List<VnPayRefund>> vnpayRefunds(int orderId) =>

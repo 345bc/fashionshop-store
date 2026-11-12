@@ -64,7 +64,12 @@ class OrderResponseModel {
       histories = (j['histories'] as List).cast<Map<String, dynamic>>();
 }
 
-typedef VnPayRefund = ({int id, int? returnId, String state});
+typedef VnPayRefund = ({
+  int id,
+  int? returnId,
+  String state,
+  String? requestId,
+});
 
 class ReturnResponseModel {
   final int id, orderId;

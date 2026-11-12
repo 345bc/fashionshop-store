@@ -105,6 +105,30 @@ class VnPayGatewayTest {
         sign(fields, true); respond(json.writeValueAsString(fields), 200);
         assertEquals("00", gateway.query(refund, now).get("vnp_ResponseCode"));
     }
+    @Test void queryAcceptsSignedResponseWithoutOptionalCommandButChecksTransaction() throws Exception {
+        var fields = response();
+        fields.remove("vnp_Command");
+        sign(fields, true);
+        respond(json.writeValueAsString(fields), 200);
+        assertEquals("00", gateway.query(refund, now).get("vnp_ResponseCode"));
+
+        fields.put("vnp_TxnRef", "2");
+        sign(fields, true);
+        respond(json.writeValueAsString(fields), 200);
+        var error = assertThrows(VnPayGateway.GatewayFailure.class, () -> gateway.query(refund, now));
+        assertEquals("RESPONSE_TRANSACTION_MISMATCH", error.getMessage());
+    }
+    @Test void unsignedQueryResponseReportsOnlySanitizedCodeAndRemainsUnverified() throws Exception {
+        respond("{\"vnp_ResponseCode\":\"91\"}", 200);
+        var missing = assertThrows(VnPayGateway.GatewayFailure.class, () -> gateway.query(refund, now));
+        assertEquals("MISSING_RESPONSE_SIGNATURE", missing.getMessage());
+        assertEquals("91", missing.responseCode());
+
+        respond("{\"vnp_ResponseCode\":\"unexpected\",\"vnp_SecureHash\":\"bad\"}", 200);
+        var malformed = assertThrows(VnPayGateway.GatewayFailure.class, () -> gateway.query(refund, now));
+        assertEquals("INVALID_RESPONSE_SIGNATURE_FORMAT", malformed.getMessage());
+        assertNull(malformed.responseCode());
+    }
     @Test void rejectsDisabledRefundsForeignHostsMixedEnvironmentsAndRedirectUrls() {
         config.setRefundEnabled(false); assertThrows(BusinessException.class, gateway::ensureConfigured);
         config.setRefundEnabled(true);
