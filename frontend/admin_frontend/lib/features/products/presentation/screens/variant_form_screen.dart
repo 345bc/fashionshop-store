@@ -892,7 +892,7 @@ class _VariantFormScreenState extends State<VariantFormScreen> {
     }
     final selected = _colorId;
     return SearchableMultiSelectField<int>(
-      values: {if (selected != null) selected},
+      values: {?selected},
       decoration: const InputDecoration(hintText: 'Chọn màu sắc'),
       options: _optionNames(colors, showCode: true),
       leadingBuilder: swatch,
