@@ -106,6 +106,26 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    public Page<ProductCardResponse> listCatalogSelection(String query, Long categoryId, List<Long> categoryIds,
+            List<Integer> colorIds, List<Integer> sizeIds, BigDecimal minPrice, BigDecimal maxPrice,
+            Long campaignId, boolean newProducts, Instant now, Pageable pageable) {
+        var ids = categoryIds == null || categoryIds.isEmpty()
+                ? (categoryId == null ? List.<Long>of() : List.of(categoryId))
+                : categoryIds.stream().filter(Objects::nonNull).filter(id -> id > 0).distinct().toList();
+        if (categoryIds != null && !categoryIds.isEmpty() && ids.isEmpty()) return Page.empty(pageable);
+        boolean colors = colorIds != null && !colorIds.isEmpty();
+        boolean sizes = sizeIds != null && !sizeIds.isEmpty();
+        return toCardPage(productRepository.searchCatalogSelection(query == null ? "" : query.trim(),
+                !ids.isEmpty(), ids.isEmpty() ? List.of(-1L) : ids,
+                colors, colors ? colorIds : List.of(-1), sizes, sizes ? sizeIds : List.of(-1),
+                minPrice, maxPrice, campaignId, newProducts ? newArrivalsCutoff(now) : null, now, pageable), null);
+    }
+
+    private Instant newArrivalsCutoff(Instant now) {
+        return now.minus(7, ChronoUnit.DAYS);
+    }
+
+    @Transactional(readOnly = true)
     public Page<ProductCardResponse> listNewArrivals(Pageable pageable) {
         return listNewArrivalsAt(Instant.now(), pageable);
     }
@@ -113,7 +133,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public Page<ProductCardResponse> listNewArrivalsAt(Instant now, Pageable pageable) {
         Page<Product> page = productRepository.findNewArrivals(
-                now.minus(7, ChronoUnit.DAYS).plusNanos(1), now, pageable
+                newArrivalsCutoff(now).plusNanos(1), now, pageable
         );
         return toCardPage(page,null);
     }

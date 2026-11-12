@@ -218,7 +218,6 @@ void main() {
       '/vouchers',
       '/promotion-programs',
       '/bought-together',
-      '/home-appearance',
       '/reports',
     ];
     for (final width in [1600, 1280, 800]) {

@@ -53,7 +53,6 @@ final List<NavGroup> navGroups = [
     NavItem('Danh mục bài viết', Symbols.folder_open, '/post-categories'),
   ]),
   NavGroup('CÀI ĐẶT', [
-    NavItem('Giao diện trang chủ', Symbols.web, '/home-appearance'),
     NavItem('Gợi ý mua kèm', Symbols.shopping_bag, '/bought-together'),
   ]),
 ];

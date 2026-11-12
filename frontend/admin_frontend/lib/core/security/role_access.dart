@@ -45,7 +45,6 @@ class RoleAccess {
       ].contains(route),
       'MARKETING' => [
         '/bought-together',
-        '/home-appearance',
         '/posts',
         '/post-categories',
         '/posts/form',

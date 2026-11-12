@@ -94,11 +94,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             Pageable pageable
     );
 
-    @Query("""
-            select p from Product p
-            where p.isActive = true
-              and p.category.isActive = true
-              and p.category.id in :categoryIds
+    String CARD_FILTERS = """
               and (:q = '' or lower(p.name) like lower(concat('%', :q, '%')))
               and (
                 :filterColors = false
@@ -120,7 +116,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
               )
                           AND (:minPrice IS NULL OR p.basePrice >= :minPrice)
                                 AND (:maxPrice IS NULL OR p.basePrice <= :maxPrice)
-            """)
+            """;
+
+    @Query("""
+            select p from Product p
+            where p.isActive = true
+              and p.category.isActive = true
+              and p.category.id in :categoryIds
+            """ + CARD_FILTERS)
     Page<Product> searchCardsByCategories(
             @Param("q") String q,
             @Param("categoryIds") List<Long> categoryIds,
@@ -130,6 +133,35 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("sizeIds") List<Integer> sizeIds,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice,
+            Pageable pageable
+    );
+
+    @Query("""
+            select p from Product p
+            where p.isActive = true
+              and p.category.isActive = true
+              and (:filterCategories = false or p.category.id in :categoryIds)
+              and (:createdAfter is null or (p.createdAt > :createdAfter and p.createdAt <= :now))
+              and (:campaignId is null or exists (
+                    select c.id from Promotion c join c.products item
+                    where c.id = :campaignId and c.targetMode = 'SELECTED'
+                      and c.active = true and c.startsAt <= :now and c.endsAt > :now
+                      and item = p
+              ))
+            """ + CARD_FILTERS)
+    Page<Product> searchCatalogSelection(
+            @Param("q") String q,
+            @Param("filterCategories") boolean filterCategories,
+            @Param("categoryIds") List<Long> categoryIds,
+            @Param("filterColors") boolean filterColors,
+            @Param("colorIds") List<Integer> colorIds,
+            @Param("filterSizes") boolean filterSizes,
+            @Param("sizeIds") List<Integer> sizeIds,
+            @Param("minPrice") BigDecimal minPrice,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("campaignId") Long campaignId,
+            @Param("createdAfter") Instant createdAfter,
+            @Param("now") Instant now,
             Pageable pageable
     );
 

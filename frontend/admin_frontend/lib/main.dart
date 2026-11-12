@@ -3,7 +3,6 @@ import 'features/suppliers/presentation/screens/supplier_form_screen.dart';
 import 'features/promotions/presentation/screens/campaign_form_screen.dart';
 import 'features/products/presentation/screens/product_form_screen.dart';
 import 'features/products/presentation/screens/variant_form_screen.dart';
-import 'features/home_appearance/home_appearance_screen.dart';
 import 'features/bought_together/bought_together_screen.dart';
 
 import 'package:flutter_quill/flutter_quill.dart';
@@ -229,8 +228,6 @@ class MainScreenState extends State<MainScreen> {
         );
       case '/inventory':
         return const InventoryScreen();
-      case '/home-appearance':
-        return const HomeAppearanceScreen();
       case '/bought-together':
         return const BoughtTogetherScreen();
       case '/posts/form':

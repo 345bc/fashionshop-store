@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiRequest, ApiClientError } from "@/api/apiClient";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./skeleton-ui/ProductCardSkeleton";
-import FilterSidebar from "./FilterSidebar";
+import FilterSidebar, { type FilterState } from "./FilterSidebar";
 import { getProductCards } from "../service/productService";
 import type { ApiResponse, PageResponse } from "../type/api";
 import type { ProductCardData } from "../type/product";
@@ -15,7 +15,7 @@ type ProductCardsResponse =
 
 type CategoryOption = { id: number; name: string; parentId: number | null; parentName: string | null; isActive: boolean };
 
-type FilterState = { types: string[]; sizes: string[]; price: string };
+const defaultFilters: FilterState = { types: [], price: "all" };
 
 const formatPrice = (price: number) => `${Math.round(price).toLocaleString("vi-VN")} VND`;
 
@@ -29,17 +29,21 @@ export default function ProductCatalog({
   initialQuery = "",
   initialCategory = "",
   initialCategoryName = "",
+  initialCampaignId = null,
+  initialNewProducts = false,
 }: {
   initialQuery?: string;
   initialCategory?: string;
   initialCategoryName?: string;
+  initialCampaignId?: number | null;
+  initialNewProducts?: boolean;
 }) {
   const router = useRouter();
   // 1. Trạng thái khởi tạo / Truy vấn
-  const [query, setQuery] = useState(initialQuery.trim());
-  const [categoryId, setCategoryId] = useState<number | null>(
-    /^[1-9]\d*$/.test(initialCategory) ? Number(initialCategory) : null
-  );
+  const query = initialQuery.trim();
+  const categoryId = /^[1-9]\d*$/.test(initialCategory) ? Number(initialCategory) : null;
+  const newProducts = initialNewProducts;
+  const campaignId = initialCampaignId;
 
   // 2. Trạng thái dữ liệu
   const [products, setProducts] = useState<ProductCardData[]>([]);
@@ -54,7 +58,33 @@ export default function ProductCatalog({
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [sort, setSort] = useState("featured");
-  const [filters, setFilters] = useState<FilterState>({ types: /^[1-9]\d*$/.test(initialCategory) ? [initialCategory] : [], sizes: [], price: "all" });
+  const [filters, setFilters] = useState<FilterState>({
+    ...defaultFilters,
+    types: initialCategory ? [initialCategory] : [],
+  });
+  const [campaignName, setCampaignName] = useState<string>();
+
+  useEffect(() => {
+    if (campaignId === null) return;
+    const controller = new AbortController();
+    async function loadCampaignName() {
+      try {
+        const response: ApiResponse<{ id: number; name: string }[]> = await apiRequest("/product/campaign-displays/filters", {
+          signal: controller.signal,
+          cache: "no-store",
+          localErrorHandling: true,
+        });
+        if (!controller.signal.aborted && Array.isArray(response.data)) {
+          setCampaignName(response.data.find(campaign => campaign.id === campaignId)?.name);
+        }
+      } catch {
+        // Keep the default campaign heading if its name is unavailable.
+      }
+    }
+    void loadCampaignName();
+    return () => controller.abort();
+  }, [campaignId]);
+
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
   const [categoryParentName, setCategoryParentName] = useState("");
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -99,8 +129,13 @@ export default function ProductCatalog({
   const selectedFilterCount =
     selectedColorIds.length +
     selectedSizeIds.length +
-    filters.types.length +
+    Math.max(filters.types.length, Number(categoryId !== null)) +
+    Number(Boolean(query)) +
+    Number(campaignId !== null) +
+    Number(newProducts) +
     (filters.price !== "all" ? 1 : 0);
+  const canReset = filters.types.length > 0 || filters.price !== "all" ||
+    selectedColorIds.length > 0 || selectedSizeIds.length > 0;
 
   // 5. Trạng thái tải & lỗi
   const [loading, setLoading] = useState(true);
@@ -160,6 +195,8 @@ export default function ProductCatalog({
             sizeIds: selectedSizeIds,
             minPrice,
             maxPrice,
+            campaignId,
+            newProducts,
             signal: controller.signal,
           });
 
@@ -193,33 +230,29 @@ export default function ProductCatalog({
       controller.abort();
       clearTimeout(retryTimer);
     };
-  }, [query, categoryId, page, sort, selectedColorIds, selectedSizeIds, minPrice, maxPrice, productRetry, filters.types, categoryOptions, categoriesLoading, categoriesError]);
+  }, [query, categoryId, page, sort, selectedColorIds, selectedSizeIds, minPrice, maxPrice, campaignId, newProducts, productRetry, filters.types, categoryOptions, categoriesLoading, categoriesError]);
+
+  function applyFilters(next: FilterState, colors = selectedColorIds, sizes = selectedSizeIds) {
+    setFilters(next);
+    setSelectedColorIds(colors);
+    setSelectedSizeIds(sizes);
+    setPage(0);
+  }
 
   function toggleColor(colorId: number) {
-    setSelectedColorIds((previous) =>
-      previous.includes(colorId)
-        ? previous.filter((id) => id !== colorId)
-        : [...previous, colorId]
-    );
-
-    setPage(0);
+    applyFilters(filters, selectedColorIds.includes(colorId)
+      ? selectedColorIds.filter(id => id !== colorId)
+      : [...selectedColorIds, colorId]);
   }
 
   function toggleSize(sizeId: number) {
-    setSelectedSizeIds((previous) =>
-      previous.includes(sizeId)
-        ? previous.filter((id) => id !== sizeId)
-        : [...previous, sizeId]
-    );
-
-    setPage(0);
+    applyFilters(filters, selectedColorIds, selectedSizeIds.includes(sizeId)
+      ? selectedSizeIds.filter(id => id !== sizeId)
+      : [...selectedSizeIds, sizeId]);
   }
 
   function clearFilters() {
-    setFilters({ types: [], sizes: [], price: "all" });
-    setSelectedColorIds([]);
-    setSelectedSizeIds([]);
-    setPage(0);
+    applyFilters(defaultFilters, [], []);
   }
 
 
@@ -232,7 +265,7 @@ export default function ProductCatalog({
               ? `Kết quả tìm kiếm cho “${query}”`
               : categoryId !== null
                 ? `Kết quả tìm kiếm cho ${filters.types.length ? filters.types.map(id => categoryOptions.find(c => String(c.id) === id)?.name ?? initialCategoryName).filter(Boolean).join(", ") || "danh mục đã chọn" : categoryParentName || initialCategoryName || "danh mục đã chọn"}`
-                : "Tất cả sản phẩm"}
+                : campaignId !== null ? campaignName ?? "Sản phẩm theo chiến dịch" : newProducts ? "Sản phẩm mới" : "Tất cả sản phẩm"}
           </h1>
           <p>Những thiết kế dễ mặc, bảng màu trung tính và phom dáng hiện đại cho tủ đồ mỗi ngày.</p>
         </div>
@@ -255,7 +288,7 @@ export default function ProductCatalog({
             )}
           </button>
 
-          {selectedFilterCount > 0 && (
+          {canReset && (
             <button
               className="text-[13px] font-medium text-black/40 underline-offset-4 transition-colors hover:text-black hover:underline"
               onClick={clearFilters}
@@ -409,7 +442,7 @@ export default function ProductCatalog({
         <div className="empty-catalog">
           <h2>Chưa có sản phẩm phù hợp</h2>
           <p>Hãy thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác.</p>
-          <button onClick={() => { clearFilters(); setQuery(""); setCategoryId(null); router.replace("/"); }}>Về trang chủ</button>
+          <button onClick={() => router.replace("/")}>Về trang chủ</button>
         </div>
       )}
 
@@ -423,14 +456,14 @@ export default function ProductCatalog({
         categoriesError={categoriesError}
         onRetryCategories={() => setCategoryRetry(n => n + 1)}
         value={filters}
-        onChange={(f) => { setFilters(f); setPage(0); }}
+        onChange={applyFilters}
         resultCount={totalProducts}
         resultsLoading={productsLoading}
         selectedColorIds={selectedColorIds}
         selectedSizeIds={selectedSizeIds}
         onToggleColor={toggleColor}
         onToggleSize={toggleSize}
-        onReset={clearFilters}
+        onReset={canReset ? clearFilters : undefined}
       />
     </>
   );
