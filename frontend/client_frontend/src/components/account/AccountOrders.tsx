@@ -16,7 +16,18 @@ import { orderStatuses } from "@/utils/orderStatus";
 import { apiError, cancelOrder, displayDate, paymentLabel, reorder, requestReturn, saveReview, utcDate, type CustomerOrder, type PurchasedItem } from "@/service/accountService";
 import type { PageResponse } from "@/type/api";
 
-const actionClass = "border border-gray-300 rounded-md px-3 py-2 text-xs font-semibold disabled:opacity-40";
+const actionClass = [
+  "rounded-md border font-semibold",
+  "enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-40",
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-700",
+  "motion-safe:transition-[background-color,border-color,scale] motion-safe:duration-150",
+  "motion-safe:enabled:active:scale-95",
+].join(" ");
+
+const outlinedActionStyle = `${actionClass} border-gray-300 enabled:hover:border-gray-500 enabled:hover:bg-gray-100 enabled:active:bg-gray-200`;
+const outlinedActionClass = `${outlinedActionStyle} px-3 py-2 text-xs`;
+const selectedActionClass = `${actionClass} border-black bg-black px-3 py-2 text-xs text-white enabled:hover:border-gray-800 enabled:hover:bg-gray-800 enabled:active:bg-gray-700`;
+const orderActionClass = `${outlinedActionStyle} min-h-11 px-4 py-2.5 text-sm`;
 
 const canReturn = (order: CustomerOrder) => {
   if (order.status !== "DELIVERED") return false;
@@ -59,14 +70,27 @@ export default function AccountOrders() {
     <div className="flex justify-end mb-3"><button className="text-xs text-gray-500 underline disabled:opacity-40" disabled={loading} onClick={changed}>Làm mới</button></div>
     <div className="flex gap-2 overflow-x-auto pb-4 mb-3" aria-label="Lọc đơn theo trạng thái">
       {[{ value: "ALL", label: "Tất cả" }, ...orderStatuses].map(tab => <button key={tab.value} type="button" aria-pressed={status === tab.value}
-        className={`${actionClass} whitespace-nowrap ${status === tab.value ? "bg-black text-white border-black" : "text-gray-600"}`}
+        className={`whitespace-nowrap ${status === tab.value ? selectedActionClass : `${outlinedActionClass} text-gray-600`}`}
         onClick={() => { setStatus(tab.value); setPage(0); }}>{tab.label}</button>)}</div>
     {notice && <p role="status" className="text-sm mb-4">{notice}</p>}
     {loading ? <CartSkeleton /> : error ? <div role="alert" className="border rounded-lg p-5 text-sm">{error}<button className="underline ml-3" onClick={changed}>Thử lại</button></div>
-      : !response?.content.length ? <p className="py-12 text-center text-sm text-gray-500">Chưa có đơn hàng trong mục này.</p>
+      : !response?.content.length ? <div className="flex flex-col items-center gap-3 py-12 text-center text-sm text-gray-500">
+        <div className="grid size-14 place-items-center rounded-full bg-gray-100 text-gray-600">
+          <GoogleSymbol name="shopping_bag" size={28} />
+        </div>
+        <p>Chưa có đơn hàng trong mục này.</p>
+      </div>
         : <div className="space-y-5">{response.content.map(order => <article key={order.id} className="border border-gray-200 rounded-lg overflow-hidden">
-          <header className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-4 py-3 text-xs"><div><strong>{order.code}</strong><span className="ml-3 text-gray-500">{displayDate(order.createdAt)}</span></div>
-            <div className="flex flex-wrap items-center gap-3"><OrderStatusBadge status={order.status} /><span className="text-gray-500">{paymentLabel(order.paymentStatus)}</span></div></header>
+          <header className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-4 py-4 text-sm">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+              <strong className="min-w-0 break-all text-base">{order.code}</strong>
+              <span className="text-gray-500">{displayDate(order.createdAt)}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <OrderStatusBadge status={order.status} size="large" />
+              <span className="text-gray-500">{paymentLabel(order.paymentStatus)}</span>
+            </div>
+          </header>
           <div className="px-4 divide-y divide-gray-100">{order.items.map(item => <div key={item.id} className="flex gap-4 py-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="w-16 h-20 object-cover rounded shrink-0" />}
@@ -78,14 +102,14 @@ export default function AccountOrders() {
             </div><strong className="text-sm shrink-0">{money(item.unitPrice * item.quantity)}</strong>
           </div>)}</div>
           <footer className="border-t px-4 py-3 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-gray-500">Tổng <strong className="text-base text-black ml-2">{money(order.totalAmount)}</strong></p>
-            <div className="flex flex-wrap gap-2"><button className={actionClass} onClick={() => setDetail(order)}>Chi tiết</button>
-              {order.status === "PENDING" && order.paymentStatus === "PENDING" && <button className={actionClass} onClick={() => setCancel(order)}>Hủy đơn</button>}
-              {canReturn(order) && <button className={actionClass} onClick={() => setReturnOrder(order)}>Yêu cầu trả hàng</button>}
-              <button className={actionClass} disabled={busy} onClick={() => void buyAgain(order)}>Mua lại</button></div></footer>
+            <div className="flex flex-wrap gap-2"><button className={orderActionClass} onClick={() => setDetail(order)}>Chi tiết</button>
+              {order.status === "PENDING" && order.paymentStatus === "PENDING" && <button className={orderActionClass} onClick={() => setCancel(order)}>Hủy đơn</button>}
+              {canReturn(order) && <button className={orderActionClass} onClick={() => setReturnOrder(order)}>Yêu cầu trả hàng</button>}
+              <button className={orderActionClass} disabled={busy} onClick={() => void buyAgain(order)}>Mua lại</button></div></footer>
         </article>)}</div>}
     {response && response.totalPages > 1 && <nav aria-label="Phân trang đơn hàng" className="flex justify-end items-center gap-4 mt-5 text-sm">
-      <button className={actionClass} disabled={loading || page === 0} onClick={() => setPage(value => value - 1)}>Trước</button>
-      <span>{page + 1} / {response.totalPages}</span><button className={actionClass} disabled={loading || page + 1 >= response.totalPages} onClick={() => setPage(value => value + 1)}>Sau</button></nav>}
+      <button className={outlinedActionClass} disabled={loading || page === 0} onClick={() => setPage(value => value - 1)}>Trước</button>
+      <span>{page + 1} / {response.totalPages}</span><button className={outlinedActionClass} disabled={loading || page + 1 >= response.totalPages} onClick={() => setPage(value => value + 1)}>Sau</button></nav>}
     <Notification open={!!cancel} title="Hủy đơn hàng" message={`Hủy đơn ${cancel?.code ?? ""}?`} onClose={() => setCancel(null)} onConfirm={async () => { if (cancel) { await cancelOrder(cancel.id); changed(); } }} />
     {detail && <AccountDialog title={detail.code} onClose={() => setDetail(null)}>
       <div className="mb-5"><OrderStatusBadge status={detail.status} /></div>

@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 // Temporary test helper. Delete this file when a real payment gateway is integrated.
 // Disable without deleting code: app.order.payment-simulation.enabled=false.
 @Service
-@Profile("local")
+@Profile({"local", "test"})
 @ConditionalOnProperty(name = "app.order.payment-simulation.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class OrderPaymentSimulationService {

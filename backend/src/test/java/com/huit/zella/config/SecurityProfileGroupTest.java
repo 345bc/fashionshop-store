@@ -9,8 +9,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SecurityProfileGroupTest {
-    @Test void localAndProductProfilesActivateJwtSecurity() {
-        for (String profile : List.of("local", "product")) {
+    @Test void applicationProfilesActivateJwtSecurity() {
+        for (String profile : List.of("local", "product", "test")) {
             var environment = new StandardEnvironment();
             environment.getPropertySources().addFirst(new MapPropertySource("test", Map.of(
                     "spring.profiles.active", profile,

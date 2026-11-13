@@ -71,7 +71,8 @@ class ReturnManagementWorkflowTest extends WarehouseFixture {
         var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         mvc.perform(get("/api/v1/order-return/management")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/order-return/management").with(user("customer").roles("USER"))).andExpect(status().isForbidden());
-        mvc.perform(get("/api/v1/order-return/management").with(user("admin").roles("ADMIN"))).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/order-return/management").with(user("admin").roles("ADMIN"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/order-return/management").with(user("superadmin").roles("SUPERADMIN"))).andExpect(status().isOk());
         mvc.perform(get("/api/v1/order-return/management").with(user("employee").roles("CUSTOMER_SUPPORT"))).andExpect(status().isOk());
     }
 

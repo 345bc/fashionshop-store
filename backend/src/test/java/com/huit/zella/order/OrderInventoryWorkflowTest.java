@@ -20,6 +20,11 @@ class OrderInventoryWorkflowTest extends WarehouseFixture {
     @Autowired GoodsReceiptService receipts;
     @Autowired InventoryService inventory;
 
+    @org.junit.jupiter.api.BeforeEach
+    void useEstablishedProduct() {
+        variant.getProduct().setCreatedAt(java.time.Instant.EPOCH);
+    }
+
     private OrderResponse create(int quantity) {
         return orders.create(new CreateOrderRequest(actor.getId(), "Khách test", "0900000000", "Địa chỉ test", null,
             BigDecimal.ZERO, "ONLINE", List.of(new CreateOrderRequest.Item(variant.getId(), quantity))), actor.getId());

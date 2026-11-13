@@ -10,9 +10,10 @@ const colors: Record<string, string> = {
   RETURNED: "bg-zinc-100 text-zinc-700 border-zinc-200",
 };
 
-export default function OrderStatusBadge({ status }: { status: string }) {
+export default function OrderStatusBadge({ status, size = "small" }: { status: string; size?: "small" | "large" }) {
   const icon = orderStatuses.find(item => item.value === status)?.icon ?? "schedule";
-  return <span className={`inline-flex items-center gap-1.5 border rounded-md px-2.5 py-1.5 text-xs font-bold whitespace-nowrap ${colors[status] ?? colors.RETURNED}`}>
-    <GoogleSymbol name={icon} size={17} />{orderStatusLabel(status)}
+  const spacing = size === "large" ? "px-3 py-2 text-sm" : "px-2.5 py-1.5 text-xs";
+  return <span className={`inline-flex items-center gap-1.5 border rounded-md font-bold whitespace-nowrap ${spacing} ${colors[status] ?? colors.RETURNED}`}>
+    <GoogleSymbol name={icon} size={size === "large" ? 20 : 17} />{orderStatusLabel(status)}
   </span>;
 }

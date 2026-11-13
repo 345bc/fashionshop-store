@@ -88,7 +88,7 @@ class CampaignWorkflowTest extends WarehouseFixture {
             .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("customer").roles("USER")))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/campaigns/voucher")
-            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("marketing").roles("MARKETING")))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
     }
     @Test void pausedRewardCannotBeRedeemedAndPersonalVoucherIsNotAnAdminTemplate() {

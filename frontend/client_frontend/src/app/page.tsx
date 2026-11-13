@@ -1,6 +1,5 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import FeaturedProducts from "@/components/FeaturedProducts";
 import HomeJournal from "@/components/HomeJournal";
 import CampaignDisplays from "@/components/CampaignDisplays";
 import HomeScrollReveal from "@/components/HomeScrollReveal";
@@ -27,8 +26,6 @@ export default function Home() {
           </section>
           <HomeScrollReveal defer><HomeProductShowcase /></HomeScrollReveal>
         </div>
-
-        <HomeScrollReveal defer><FeaturedProducts /></HomeScrollReveal>
 
         <HomeScrollReveal defer><CampaignDisplays /></HomeScrollReveal>
 
