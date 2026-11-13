@@ -40,6 +40,8 @@ target/
 uploads/
 src/main/resources/application-local.properties
 src/main/resources/application-product.properties
+src/main/resources/application-test.properties
+/.sonar/
 
 
 # Local database trust store
