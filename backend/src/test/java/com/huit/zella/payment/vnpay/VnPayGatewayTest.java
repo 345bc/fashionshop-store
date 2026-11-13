@@ -119,10 +119,15 @@ class VnPayGatewayTest {
         assertEquals("RESPONSE_TRANSACTION_MISMATCH", error.getMessage());
     }
     @Test void unsignedQueryResponseReportsOnlySanitizedCodeAndRemainsUnverified() throws Exception {
-        respond("{\"vnp_ResponseCode\":\"91\"}", 200);
+        respond("{\"vnp_ResponseCode\":\"99\",\"vnp_SecureHash\":null}", 200);
+        var unsignedError = assertThrows(VnPayGateway.GatewayFailure.class, () -> gateway.query(refund, now));
+        assertEquals("UNSIGNED_QUERY_ERROR", unsignedError.getMessage());
+        assertEquals("99", unsignedError.responseCode());
+
+        respond("{\"vnp_ResponseCode\":\"00\"}", 200);
         var missing = assertThrows(VnPayGateway.GatewayFailure.class, () -> gateway.query(refund, now));
         assertEquals("MISSING_RESPONSE_SIGNATURE", missing.getMessage());
-        assertEquals("91", missing.responseCode());
+        assertEquals("00", missing.responseCode());
 
         respond("{\"vnp_ResponseCode\":\"unexpected\",\"vnp_SecureHash\":\"bad\"}", 200);
         var malformed = assertThrows(VnPayGateway.GatewayFailure.class, () -> gateway.query(refund, now));
