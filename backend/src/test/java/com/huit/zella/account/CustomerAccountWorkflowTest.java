@@ -28,6 +28,7 @@ class CustomerAccountWorkflowTest extends WarehouseFixture {
     @Autowired ReturnService returns;
 
     @Test void deliveryReviewRedemptionAndCheckoutUseRealOwnedData() {
+        variant.getProduct().setCreatedAt(java.time.Instant.EPOCH);
         variant.setPrice(new BigDecimal("500000")); actor.getCustomer().setRewardPoints(200);
         OrderResponse order=orders.create(new CreateOrderRequest(actor.getId(),"Test","0900000000","Test",null,BigDecimal.ZERO,"ONLINE",
                 List.of(new CreateOrderRequest.Item(variant.getId(),1))),actor.getId());
@@ -40,8 +41,9 @@ class CustomerAccountWorkflowTest extends WarehouseFixture {
                 "Missing catalog offer; UTC="+java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)+"; templates="+vouchers.findAll().stream().filter(v -> v.isRedeemable()).map(v -> v.getCode()+":"+v.getStartDate()+":"+v.getEndDate()+":"+v.isActive()).toList()));
         String key=UUID.randomUUID().toString();var issued=loyalty.redeem(actor.getId(),offer.id(),key);
         loyalty.redeem(actor.getId(),offer.id(),key);assertEquals(50,loyalty.summary(actor.getId()).balance());
+        actor.getCustomer().setMembershipTier("SILVER");
         var quoted=voucherService.quote(List.of(new CartItemRequest(variant.getId(),1)),actor.getId(),issued.code(),cart);
-        assertEquals(0,new BigDecimal("455000").compareTo(quoted.totalAmount()));
+        assertEquals(0,new BigDecimal("485000").compareTo(quoted.totalAmount()));
         var checkout=orders.createCheckout(new CreateCheckoutOrderRequest("Test","0900000000","Test",null,"STANDARD",List.of(new CreateOrderRequest.Item(variant.getId(),1)),UUID.randomUUID().toString(),issued.code()),actor.getId());
         assertEquals(0,quoted.totalAmount().compareTo(checkout.totalAmount()));assertEquals(0,new BigDecimal("45000").compareTo(checkout.discountAmount()));
         assertEquals(0,new BigDecimal("25000").compareTo(checkout.pricing().membershipDiscountAmount()));

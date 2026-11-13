@@ -223,15 +223,15 @@ class RefreshTokenWorkflowTest {
             boolean admin = role.equals("ADMIN");
             mvc.perform(get("/api/v1/user").cookie(active)).andExpect(status().is(admin ? 200 : 403));
             mvc.perform(get("/api/v1/inventory").cookie(active))
-                    .andExpect(status().is(admin || role.equals("WAREHOUSE") ? 200 : 403));
+                    .andExpect(status().is(role.equals("WAREHOUSE") ? 200 : 403));
             mvc.perform(get("/api/v1/campaigns/voucher").cookie(active))
-                    .andExpect(status().is(admin || role.equals("MARKETING") ? 200 : 403));
+                    .andExpect(status().is(role.equals("MARKETING") ? 200 : 403));
             mvc.perform(get("/api/v1/customers").cookie(active))
                     .andExpect(status().is(admin || role.equals("SALES") || role.equals("CUSTOMER_SUPPORT") ? 200 : 403));
+            mvc.perform(post("/api/v1/inventory/adjustments").with(csrf()).cookie(active)
+                    .contentType("application/json").content("{}"))
+                    .andExpect(status().is(role.equals("WAREHOUSE") ? 400 : 403));
             if (!admin) {
-                mvc.perform(post("/api/v1/inventory/adjustments").with(csrf()).cookie(active)
-                        .contentType("application/json").content("{\"reason\":\"test\",\"items\":[{\"variantId\":1,\"expectedQuantity\":0,\"countedQuantity\":0}]}"))
-                        .andExpect(status().isForbidden());
                 mvc.perform(post("/api/v1/order/1/refunded").with(csrf()).cookie(active)
                         .contentType("application/json").content("{\"note\":\"test\"}"))
                         .andExpect(status().isForbidden());
