@@ -42,7 +42,7 @@ public class SecurityConfig {
     private static final String[] STOREFRONT_GET = {
             "/api/v1/product/**", "/api/v1/product-image/files/*",
             "/api/v1/category/**", "/api/v1/checkout/orders/*", "/api/v1/payment/vnpay/ipn",
-            "/api/v1/size/**","/api/v1/color/**", "/api/v1/posts/**",
+            "/api/v1/size/**", "/api/v1/color/**", "/api/v1/posts/**",
     };
 
 
@@ -72,7 +72,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/checkout/orders", "/api/v1/checkout/orders/lookup", "/api/v1/checkout/orders/voucher", "/api/v1/checkout/orders/quote", "/api/v1/checkout/orders/*/cancel", "/api/v1/cart/quote",
                                 "/api/v1/checkout/orders/*/payment", "/api/v1/checkout/orders/*/payment/verify", "/api/v1/posts/*/view-session", "/api/v1/posts/*/views").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/supplier/**", "/api/v1/sizeguide/**", "/api/v1/product-variant/**", "/api/v1/product-image/**", "/api/v1/variant-image/**")
-                            .hasAnyRole("SALES", "WAREHOUSE", "MARKETING")
+                        .hasAnyRole("SALES", "WAREHOUSE", "MARKETING")
                         .requestMatchers("/api/v1/settings/**").denyAll()
                         .requestMatchers("/api/v1/inventory/**", "/api/v1/goods-receipt/**", "/api/v1/supplier/**").hasRole("WAREHOUSE")
                         .requestMatchers("/api/v1/admin/home/**", "/api/v1/admin/bought-together/**", "/api/v1/admin/posts/**", "/api/v1/campaigns/**").hasRole("MARKETING")
@@ -127,7 +127,8 @@ public class SecurityConfig {
                                 return filter;
                             }
                         }))
-                .cors(cors -> {})
+                .cors(cors -> {
+                })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
     }
 
