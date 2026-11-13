@@ -99,11 +99,6 @@ class _CampaignManagementScreenState extends State<CampaignManagementScreen> {
                       ? 'Mã khách nhập ở bước đặt hàng; kiểm tra điều kiện và giới hạn lượt dùng.'
                       : 'Giảm giá tự động cho sản phẩm được chọn; áp dụng cho các biến thể của sản phẩm.',
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Chương trình được lưu trên hệ thống và áp dụng vào giá bán.',
-                  style: TextStyle(color: AppTheme.textSecondary),
-                ),
                 const SizedBox(height: 24),
                 if (voucher) ...[
                   SegmentedButton<bool>(
