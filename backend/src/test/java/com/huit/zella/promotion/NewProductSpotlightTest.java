@@ -12,8 +12,7 @@ class NewProductSpotlightTest {
     final Instant now=Instant.parse("2026-10-16T00:00:00Z");
     final PromotionRepository promotions=mock(PromotionRepository.class);
     final ProductService products=mock(ProductService.class);
-    final AutomaticNewProductShowcaseService automatic=mock(AutomaticNewProductShowcaseService.class);
-    final NewProductSpotlightService service=new NewProductSpotlightService(promotions,Clock.fixed(now,ZoneOffset.UTC),products,automatic);
+    final NewProductSpotlightService service=new NewProductSpotlightService(promotions,Clock.fixed(now,ZoneOffset.UTC),products);
     Promotion campaign(long id) {
         var c=new Promotion();c.setId(id);c.setName("Campaign "+id);c.setTargetMode("SELECTED");
         c.setDiscountPercent(BigDecimal.TEN);c.setDisplay(true);c.setActive(true);c.setImageUrl("https://cloud.example/campaign.jpg");
@@ -23,7 +22,7 @@ class NewProductSpotlightTest {
     @Test void legacyNewProgramNeverAppearsAsManagedCampaign() {
         var c=campaign(1);c.setTargetMode("NEW_PRODUCTS");
         when(promotions.effective(now)).thenReturn(List.of(c));
-        assertTrue(service.list().isEmpty());verifyNoInteractions(products);verify(automatic).get();
+        assertTrue(service.list().isEmpty());verifyNoInteractions(products);
     }
     @Test void everySelectedProgramHasItsOwnProducts() {
         var card=new ProductCardResponse(7L,"Product","product",BigDecimal.TEN,null,null,"https://cloud.example/p.jpg",List.of(),null,null,0L);
@@ -33,12 +32,10 @@ class NewProductSpotlightTest {
         verify(products).listSelectedCampaignProducts(eq(List.of(1L)),any());
         verify(products).listSelectedCampaignProducts(eq(List.of(2L)),any());
     }
-    @Test void emptySelectedDoesNotHideAutomaticShowcase() {
-        var automaticBlock=new NewProductSpotlightService.Spotlight("New","New",null,"image",null,null,List.of(),-1L,"NEW_PRODUCTS");
-        when(automatic.get()).thenReturn(automaticBlock);
+    @Test void selectedCampaignWithoutVisibleProductsIsOmitted() {
         when(promotions.effective(now)).thenReturn(List.of(campaign(1)));
         when(products.listSelectedCampaignProducts(anyList(),any())).thenReturn(Page.empty());
-        assertEquals(List.of(automaticBlock),service.list());assertSame(automaticBlock,service.get());
+        assertTrue(service.list().isEmpty());
     }
     @Test void disabledHiddenExpiredFutureMissingCoverNeverExposeSelectedProgram() {
         var disabled=campaign(1);disabled.setActive(false);

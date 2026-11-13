@@ -65,6 +65,14 @@ class ProductVariantRepository {
     }
   }
 
+  Future<void> delete(int id) async {
+    try {
+      await _apiClient.delete('${ApiEndpoints.productVariants}/$id');
+    } on DioException catch (error) {
+      _throwMessage(error);
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getSizes() async {
     final response = await _apiClient.get(ApiEndpoints.sizes);
     return (response.data['data'] as List<dynamic>)

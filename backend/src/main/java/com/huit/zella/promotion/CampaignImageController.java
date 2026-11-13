@@ -16,7 +16,7 @@ public class CampaignImageController {
     public record ImageResponse(String url) {}
     @PostMapping(consumes="multipart/form-data")
     public ApiResponse<ImageResponse> upload(@RequestParam(value="file",required=false) MultipartFile file) {
-        if(file==null) throw new BusinessException(HttpStatus.BAD_REQUEST,"IMAGE_REQUIRED","Vui lòng chọn ảnh chương trình");
+        if(file==null) throw new BusinessException(HttpStatus.BAD_REQUEST,"IMAGE_REQUIRED","Vui lòng chọn ảnh hoặc video chương trình");
         return ApiResponse.success(new ImageResponse(storage.storeCampaign(file).url()));
     }
 }

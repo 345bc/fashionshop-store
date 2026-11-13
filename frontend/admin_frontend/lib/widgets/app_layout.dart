@@ -53,7 +53,6 @@ final List<NavGroup> navGroups = [
     NavItem('Danh mục bài viết', Symbols.folder_open, '/post-categories'),
   ]),
   NavGroup('CÀI ĐẶT', [
-    NavItem('Giao diện trang chủ', Symbols.web, '/home-appearance'),
     NavItem('Gợi ý mua kèm', Symbols.shopping_bag, '/bought-together'),
   ]),
 ];
@@ -79,6 +78,7 @@ class _AppLayoutState extends State<AppLayout> {
 
   bool _isActive(NavItem item) =>
       widget.currentRoute == item.route ||
+      (item.route == '/orders' && widget.currentRoute == '/orders/detail') ||
       (item.route == '/products' &&
           (widget.currentRoute.startsWith('/products/') ||
               widget.currentRoute == '/product-variants')) ||

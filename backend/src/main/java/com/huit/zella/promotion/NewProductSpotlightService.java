@@ -16,11 +16,19 @@ public class NewProductSpotlightService {
     private final PromotionRepository promotions;
     private final Clock orderClock;
     private final ProductService products;
-    private final AutomaticNewProductShowcaseService automatic;
 
     public record Spotlight(String campaignName, String title, String description,
                             String imageUrl, Instant startsAt, Instant endsAt, List<ProductCardResponse> products,
                             Long id, String targetMode) {}
+
+    public record CampaignOption(Long id, String name) {}
+
+    @Transactional(readOnly = true)
+    public List<CampaignOption> catalogCampaigns() {
+        return promotions.catalogCampaigns(orderClock.instant()).stream()
+                .map(campaign -> new CampaignOption(campaign.getId(), campaign.getName()))
+                .toList();
+    }
 
     @Transactional(readOnly=true)
     public List<Spotlight> list() {
@@ -43,13 +51,6 @@ public class NewProductSpotlightService {
             result.add(new Spotlight(c.getName(),c.getName(),c.getDescription(),c.getImageUrl(),
                     c.getStartsAt(),c.getEndsAt(),items,c.getId(),c.getTargetMode()));
         }
-        var newProducts=automatic.get();
-        if(newProducts!=null) result.add(newProducts);
         return result;
-    }
-
-    @Transactional(readOnly=true)
-    public Spotlight get() {
-        return automatic.get();
     }
 }

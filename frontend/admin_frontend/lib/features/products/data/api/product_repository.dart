@@ -80,17 +80,14 @@ class ProductRepository {
     }
   }
 
-  // Future<void> delete(int id) async {
-  //   try {
-  //     final response = await _apiClient.delete('${ApiEndpoints.products}/$id');
-  //     if (response.statusCode != 200 && response.statusCode != 204) {
-  //       throw Exception('Delete failed');
-  //     }
-  //   } catch (e) {
-  //     _handleError(e);
-  //     rethrow;
-  //   }
-  // }
+  Future<void> delete(int id) async {
+    try {
+      await _apiClient.delete('${ApiEndpoints.products}/$id');
+    } catch (e) {
+      _handleError(e);
+      rethrow;
+    }
+  }
 
   void _handleError(dynamic e) {
     if (e is DioException) {

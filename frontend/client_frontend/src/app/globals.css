@@ -3753,7 +3753,6 @@
   }
   .campaign-panel-full {
     position: relative;
-    min-height: 700px;
     display: block;
     overflow: hidden;
     color: white;
@@ -3839,18 +3838,22 @@
   .modern-product-card:hover .product-card-image {
     transform: scale(1.018);
   }
+  .modern-product-media:has(.modern-badge) {
+    border-top-left-radius: 0;
+  }
   .modern-badge {
     position: absolute;
-    top: 11px;
-    left: 11px;
-    background: rgba(250, 249, 246, 0.92);
-    color: #272a25;
-    padding: 5px 8px;
-    border-radius: 999px;
-    font-size: 9px;
+    top: 0;
+    left: 0;
+    background: #050505;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 0;
+    font-size: clamp(10px, 0.85vw, 12px);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 650;
+    letter-spacing: 0;
+    font-weight: 700;
+    line-height: 1.2;
   }
   .sale-badge-bookmark {
     position: absolute;
@@ -3927,6 +3930,7 @@
     font-size: 14.5px;
     font-weight: 500;
     line-height: 1.42;
+    text-transform: uppercase;
   }
   .modern-product-bottom {
     display: flex;
@@ -5712,9 +5716,6 @@
     .product-detail-grid {
       gap: 32px;
     }
-    .campaign-panel-full {
-      min-height: 700px;
-    }
     .gallery-main-modern {
       min-height: 650px;
     }
@@ -5863,9 +5864,6 @@
       margin-top: 48px;
       margin-bottom: 0;
     }
-    .campaign-panel-full {
-      min-height: 700px;
-    }
     .editorial-banner {
       grid-template-columns: 1fr;
       margin: 48px 16px 0;
@@ -5991,9 +5989,6 @@
     }
     .product-rail-all {
       justify-self: center;
-    }
-    .campaign-panel-full {
-      min-height: 700px;
     }
     .modern-category-grid {
       grid-template-columns: 1fr;

@@ -64,4 +64,11 @@ public class ProductVariantController {
     ) {
         return ApiResponse.success(productVariantService.update(id, request));
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        productVariantService.delete(id);
+    }
 }

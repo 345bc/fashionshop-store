@@ -7,9 +7,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
+import 'package:zella_admin_flutter/features/auth/presentation/provider/auth_provider.dart';
 import 'package:zella_admin_flutter/features/products/presentation/providers/product_variants_provider.dart';
 import 'package:zella_admin_flutter/features/products/presentation/screens/product_variants_screen.dart';
 import 'package:zella_admin_flutter/features/products/presentation/screens/variant_form_screen.dart';
+import 'package:zella_admin_flutter/widgets/common/zella_checkbox.dart';
+
+import 'support/fake_auth.dart';
 
 class _Variants extends ProductVariantsProvider {
   final created = <int, Map<String, dynamic>>{};
@@ -70,14 +74,17 @@ class _Variants extends ProductVariantsProvider {
 }
 
 class _ListedVariants extends ProductVariantsProvider {
+  Set<int>? requestedDeletes;
+
   @override
-  List<Map<String, dynamic>> get items => [
+  final List<Map<String, dynamic>> items = [
     {
       'id': 1,
       'sku': 'SKU-BLK-S',
       'colorId': 10,
       'colorName': 'Đen',
       'sizeName': 'S',
+      'hasOrders': true,
     },
     {
       'id': 2,
@@ -101,6 +108,21 @@ class _ListedVariants extends ProductVariantsProvider {
     int page = 0,
     String? query,
   }) async {}
+
+  @override
+  Future<({Set<int> deleted, Map<int, String> errors})> deleteItems(
+    int productId,
+    Set<int> ids,
+  ) async {
+    expect(productId, 42);
+    requestedDeletes = ids;
+    items.removeWhere((item) => item['id'] != 1 && ids.contains(item['id']));
+    notifyListeners();
+    return (
+      deleted: {2, 3},
+      errors: {1: 'Biến thể đã có đơn hàng, không thể xóa.'},
+    );
+  }
 }
 
 class _ImagePicker extends FilePicker {
@@ -135,24 +157,46 @@ void main() {
     dotenv.loadFromString(envString: 'API_BASE_URL=http://localhost/api/v1');
   });
 
-  testWidgets('variant rows are grouped by color', (tester) async {
-    await tester.pumpWidget(
-      ChangeNotifierProvider<ProductVariantsProvider>(
-        create: (_) => _ListedVariants(),
-        child: const MaterialApp(
-          home: Scaffold(
-            body: ProductVariantsScreen(product: {'id': 42, 'name': 'Áo'}),
+  testWidgets(
+    'groups variant rows and keeps sold variants during bulk deletion',
+    (tester) async {
+      final variants = _ListedVariants();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuth()),
+            ChangeNotifierProvider<ProductVariantsProvider>(
+              create: (_) => variants,
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: ProductVariantsScreen(product: {'id': 42, 'name': 'Áo'}),
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Đen'), findsOneWidget);
-    expect(find.text('Trắng'), findsOneWidget);
-    final blackMedium = tester.getTopLeft(find.text('SKU-BLK-M')).dy;
-    final whiteHeader = tester.getTopLeft(find.text('Trắng')).dy;
-    expect(blackMedium, lessThan(whiteHeader));
-  });
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Đen'), findsOneWidget);
+      expect(find.text('Trắng'), findsOneWidget);
+      final blackMedium = tester.getTopLeft(find.text('SKU-BLK-M')).dy;
+      final whiteHeader = tester.getTopLeft(find.text('Trắng')).dy;
+      expect(blackMedium, lessThan(whiteHeader));
+      await tester.tap(find.byType(ZellaCheckbox).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Xóa biến thể đã chọn'));
+      await tester.pumpAndSettle();
+      expect(variants.requestedDeletes, isNull);
+      await tester.tap(find.text('Xóa'));
+      await tester.pumpAndSettle();
+      expect(variants.requestedDeletes, {1, 2, 3});
+      expect(find.text('SKU-BLK-S'), findsOneWidget);
+      expect(find.text('SKU-BLK-M'), findsNothing);
+      expect(find.textContaining('Đã xóa 2/3 biến thể'), findsOneWidget);
+      FToast().removeQueuedCustomToasts();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   testWidgets('edit shows color swatches and selects one color immediately', (
     tester,

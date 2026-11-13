@@ -391,8 +391,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                               'Tên sản phẩm *',
                               TextFormField(
                                 controller: _nameController,
-                                decoration: const InputDecoration(
+                                readOnly: widget.product?['hasOrders'] == true,
+                                decoration: InputDecoration(
                                   hintText: 'Nhập tên sản phẩm',
+                                  helperText:
+                                      widget.product?['hasOrders'] == true
+                                      ? 'Sản phẩm đã có đơn hàng, không thể đổi tên.'
+                                      : null,
                                 ),
                                 validator: (value) => value?.isEmpty ?? true
                                     ? 'Vui lòng nhập tên'

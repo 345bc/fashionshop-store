@@ -13,6 +13,8 @@ import { apiRequest } from "../api/apiClient";
  * @param {number[]} [params.sizeIds]
  * @param {number|null} [params.minPrice]
  * @param {number|null} [params.maxPrice]
+ * @param {number|null} [params.campaignId]
+ * @param {boolean} [params.newProducts]
  */
 export function getProductCards({
   q = "",
@@ -26,6 +28,8 @@ export function getProductCards({
   sizeIds = [],
   minPrice = null,
   maxPrice = null,
+  campaignId = null,
+  newProducts = false,
 } = {}) {
   const params = new URLSearchParams({
     q,
@@ -51,6 +55,9 @@ export function getProductCards({
   if (maxPrice != null) {
     params.set("maxPrice", String(maxPrice));
   }
+
+  if (campaignId != null) params.set("campaignId", String(campaignId));
+  if (newProducts) params.set("new", "true");
 
   return apiRequest(`/product/cards?${params}`, { signal });
 }

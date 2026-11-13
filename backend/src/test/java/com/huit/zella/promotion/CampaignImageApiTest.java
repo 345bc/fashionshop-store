@@ -1,6 +1,7 @@
 package com.huit.zella.promotion;
 
 import com.huit.zella.common.exception.GlobalExceptionHandler;
+import com.huit.zella.common.exception.BusinessException;
 import com.huit.zella.productimage.ProductImageFileStorage;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.*;
@@ -11,6 +12,9 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -18,6 +22,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class CampaignImageApiTest {
+    @Test void campaignUploadStoresMp4WithVideoContentType() {
+        var s3 = mock(S3Client.class);
+        var storage = new ProductImageFileStorage(s3, "banners", 1024, "https://cloud.example");
+        var file = new MockMultipartFile("file", "banner.MP4", "application/octet-stream",
+                new byte[]{0, 0, 0, 16, 'f', 't', 'y', 'p', 'm', 'p', '4', '2', 0, 0, 0, 0});
+
+        var uploaded = storage.storeCampaign(file);
+
+        assertTrue(uploaded.url().endsWith(".mp4"));
+        verify(s3).putObject(argThat((PutObjectRequest request) ->
+                request.key().equals("campaign-images/" + uploaded.fileName())
+                        && request.contentType().equals("video/mp4")), any(RequestBody.class));
+        assertThrows(BusinessException.class, () -> storage.store(file));
+    }
+
     @Test void multipartCoverUploadReturnsPublicCloudUrl() throws Exception {
         var storage = mock(ProductImageFileStorage.class);
         var file = new MockMultipartFile("file", "cover.png", "image/png", new byte[]{1,2,3});

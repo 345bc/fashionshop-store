@@ -5,9 +5,9 @@ import type { ApiResponse } from "../type/api";
 import { getColorOptions, type ColorOption } from "../service/colorService";
 import { getSize } from "@/service/sizeServive";
 
-type FilterState = {
+
+export type FilterState = {
   types: string[];
-  sizes: string[];
   price: string;
 };
 
@@ -20,7 +20,7 @@ interface FilterSidebarProps {
   onRetryCategories?: () => void;
   isOpen: boolean;
   onClose: () => void;
-  value?: FilterState;
+  value: FilterState;
   onChange?: (value: FilterState) => void;
   resultCount?: number;
   resultsLoading?: boolean;
@@ -61,14 +61,9 @@ function FilterGroup({ title, count = 0, children }: { title: string; count?: nu
 
 export default function FilterSidebar({
   showCategoryTypes = true, categoryOptions = [], categoryParentName = "", categoriesLoading = false, categoriesError = "", onRetryCategories,
-  isOpen, onClose, value, onChange, resultCount = 0, resultsLoading = false,
+  isOpen, onClose, value: current, onChange, resultCount = 0, resultsLoading = false,
   selectedColorIds = [], selectedSizeIds = [], onToggleColor, onToggleSize, onReset,
 }: FilterSidebarProps) {
-  const current: FilterState = {
-    types: value?.types || [],
-    sizes: value?.sizes || [],
-    price: value?.price || "all",
-  };
   const emit = (next: FilterState) => onChange?.(next);
 
   const [sizesResponse, setSizesResponse] = useState<ApiResponse<sizeProps[]> | null>(null);
@@ -172,7 +167,7 @@ export default function FilterSidebar({
                 ...selectedColorIds.map(id => ({ key: `color-${id}`, label: colorOptions.find(c => c.id === id)?.name ?? `Màu ${id}`, remove: () => onToggleColor?.(id) })),
                 ...(current.price === "all" ? [] : [{ key: "price", label: priceOptions.find(([id]) => id === current.price)?.[1] ?? current.price, remove: () => emit({ ...current, price: "all" }) }]),
               ].map(chip => <button key={chip.key} type="button" onClick={chip.remove} aria-label={`Bỏ bộ lọc ${chip.label}`} className="flex items-center gap-3 rounded-full border border-black/15 px-3 py-2 text-sm hover:bg-black/5">{chip.label}<span aria-hidden="true">×</span></button>)}
-              <button type="button" className="px-2 py-2 text-sm text-blue-600 hover:underline" onClick={onReset}>Xóa tất cả</button>
+              {onReset && <button type="button" className="px-2 py-2 text-sm text-blue-600 hover:underline" onClick={onReset}>Đặt lại</button>}
             </div>
           </FilterGroup>}
           {showCategoryTypes && <FilterGroup title="Loại sản phẩm" count={current.types.length}>
@@ -282,12 +277,12 @@ export default function FilterSidebar({
         {/* Footer */}
         <div className="border-t border-black/10 bg-white px-6 py-5">
           <div className="flex items-center gap-4">
-            <button
+            {onReset && <button
               className="flex-1 rounded-lg bg-neutral-100 py-3.5 text-[14px] font-medium text-black transition-colors hover:bg-[#d4d4d4] active:scale-[0.98]"
-              onClick={() => onReset ? onReset() : emit({ types: [], sizes: [], price: "all" })}
+              onClick={onReset}
             >
               Đặt lại
-            </button>
+            </button>}
             <button
               className="flex-2 rounded-lg bg-neutral-900 py-3.5 text-[14px] font-semibold text-white transition-all hover:bg-[#1a1a1a] active:scale-[0.98] disabled:opacity-70"
               onClick={onClose}

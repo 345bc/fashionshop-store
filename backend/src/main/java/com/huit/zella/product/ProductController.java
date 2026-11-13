@@ -14,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.util.List;
 
 @RestController
@@ -28,6 +29,7 @@ public class ProductController {
         return ApiResponse.success(productService.updateContent(id, request));
     }
     ProductService productService;
+    Clock orderClock;
 
     @GetMapping("/{id}/reviews")
     public ApiResponse<PageResponse<ProductDetailResponse.ReviewItem>> reviews(@PathVariable Long id,
@@ -47,7 +49,9 @@ public class ProductController {
             @RequestParam(defaultValue = "featured") String sort,
             @RequestParam(required = false) List<Integer> colorIds,
             @RequestParam(required = false) List<Integer> sizeIds,
-            @RequestParam(required = false) List<Long> categoryIds
+            @RequestParam(required = false) List<Long> categoryIds,
+            @RequestParam(required = false) Long campaignId,
+            @RequestParam(name = "new", defaultValue = "false") boolean newProducts
     ) {
         int safeSize = Math.max(1, Math.min(size, 100));
         Sort cardSort = switch (sort) {
@@ -59,7 +63,9 @@ public class ProductController {
                     Sort.Order.desc("basePrice"),
                     Sort.Order.desc("id")
             );
-            default -> Sort.by(Sort.Direction.DESC, "id");
+            default -> newProducts
+                    ? Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
+                    : Sort.by(Sort.Direction.DESC, "id");
         };
 
         if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
@@ -68,22 +74,13 @@ public class ProductController {
             maxPrice = temp;
         }
 
-        return ApiResponse.success(PageResponse.from(
-                productService.listCardsByCategories(
-                        q,
-                        categoryId,
-                        categoryIds,
-                        colorIds,
-                        sizeIds,
-                        minPrice,
-                        maxPrice,
-                        PageRequest.of(
-                                Math.max(page, 0),
-                                safeSize,
-                                cardSort
-                        )
-                )
-        ));
+        var pageable = PageRequest.of(Math.max(page, 0), safeSize, cardSort);
+        var cards = campaignId != null || newProducts
+                ? productService.listCatalogSelection(q, categoryId, categoryIds, colorIds, sizeIds,
+                        minPrice, maxPrice, campaignId, newProducts, orderClock.instant(), pageable)
+                : productService.listCardsByCategories(q, categoryId, categoryIds, colorIds, sizeIds,
+                        minPrice, maxPrice, pageable);
+        return ApiResponse.success(PageResponse.from(cards));
     }
 
     @GetMapping("/similars")
@@ -159,5 +156,12 @@ public class ProductController {
             @Valid @RequestBody CreateProductRequest request
     ) {
         return ApiResponse.success(productService.update(id, request));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        productService.delete(id);
     }
 }

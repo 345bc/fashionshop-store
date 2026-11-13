@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -14,6 +15,16 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Long> {
+    @Query("select distinct item.variant.id from OrderItem item where item.variant.id in :ids")
+    List<Long> findVariantIdsWithOrders(@Param("ids") List<Long> ids);
+
+    @Modifying
+    @Query(value = """
+            DELETE FROM product_variants WHERE id = :id
+              AND NOT EXISTS (SELECT 1 FROM order_items WHERE variant_id = :id)
+            """, nativeQuery = true)
+    int deleteWithoutOrders(@Param("id") Long id);
+
     @Query("select v from ProductVariant v join fetch v.product p join fetch p.category join fetch v.size join fetch v.color where v.id in :ids")
     List<ProductVariant> findCartVariants(@Param("ids") List<Long> ids);
     @Lock(LockModeType.PESSIMISTIC_WRITE)

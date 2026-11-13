@@ -1,0 +1,67 @@
+.bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.track {
+  display: flex;
+  width: max-content;
+  animation: scroll-announcement 22s linear infinite;
+}
+
+.track[data-paused="true"] {
+  animation-play-state: paused;
+}
+
+.message {
+  display: flex;
+  min-width: 100vw;
+  min-height: 36px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding-inline: 44px;
+  white-space: nowrap;
+}
+
+.toggle {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  display: grid;
+  width: 36px;
+  place-items: center;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+}
+
+.toggle:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: -4px;
+}
+
+@keyframes scroll-announcement {
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    width: 100%;
+    animation: none;
+  }
+
+  .message {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding: 6px 16px;
+    white-space: normal;
+  }
+
+  .message[aria-hidden="true"], .toggle {
+    display: none;
+  }
+}

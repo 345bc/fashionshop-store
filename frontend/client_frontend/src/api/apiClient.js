@@ -18,7 +18,8 @@ async function backendFetch(url, options = {}) {
   const signal = options.signal ? AbortSignal.any([options.signal, timeout.signal]) : timeout.signal;
   try {
     const response = await fetch(url, { ...options, signal });
-    if (!options.localErrorHandling && [502, 503, 504].includes(response.status)) reportConnectionFailure();
+    const proxyFailure = response.status === 500 && !response.headers.get("content-type")?.includes("application/json");
+    if (!options.localErrorHandling && (proxyFailure || [502, 503, 504].includes(response.status))) reportConnectionFailure();
     return response;
   } catch (error) {
     if (!options.localErrorHandling && !options.signal?.aborted && (error instanceof TypeError || timeout.signal.aborted)) reportConnectionFailure();

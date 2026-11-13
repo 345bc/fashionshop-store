@@ -1,5 +1,9 @@
 import 'package:intl/intl.dart';
 
+bool isCampaignBannerVideo(String? source) =>
+    source != null &&
+    (Uri.tryParse(source)?.path ?? source).toLowerCase().endsWith('.mp4');
+
 enum CampaignKind {
   voucher('Voucher'),
   promotion('Khuyến mãi');
