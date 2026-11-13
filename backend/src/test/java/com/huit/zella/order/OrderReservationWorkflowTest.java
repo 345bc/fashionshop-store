@@ -191,7 +191,7 @@ class OrderReservationWorkflowTest extends WarehouseFixture {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(roles = "SUPERADMIN")
     void temporaryConfirmationApiUsesOnlineWorkflowAndIsIdempotent() throws Exception {
         OrderResponse order = create();
         mockMvc.perform(get("/api/v1/order-test/enabled")).andExpect(status().isOk())

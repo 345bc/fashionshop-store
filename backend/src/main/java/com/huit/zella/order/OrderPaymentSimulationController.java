@@ -9,10 +9,10 @@ import org.springframework.web.bind.annotation.*;
 
 // BEGIN TEMP_ORDER_PAYMENT_SIMULATION
 // Temporary local-only API. Delete alongside OrderPaymentSimulationService after testing.
-// This is not a gateway callback and is never available on a non-local profile.
+// Available in local development and integration tests.
 @RestController
 @RequestMapping("/api/v1/order-test")
-@Profile("local")
+@Profile({"local", "test"})
 @ConditionalOnProperty(name = "app.order.payment-simulation.enabled", havingValue = "true", matchIfMissing = true)
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huit.zella.common.exception.BusinessException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,8 @@ import java.util.*;
 /** JSON API uses pipe-separated HMAC data, unlike the payment URL signature. */
 @Component
 public class VnPayGateway {
+    private static final Logger log = LoggerFactory.getLogger(VnPayGateway.class);
+
     static final class GatewayFailure extends IllegalStateException {
         private final String responseCode;
 
@@ -127,6 +131,17 @@ public class VnPayGateway {
             if (response.statusCode() != 200) throw new GatewayFailure("HTTP_" + response.statusCode());
             if (bytes.length > 65536) throw new GatewayFailure("RESPONSE_TOO_LARGE");
             Map<String, Object> raw = json.readValue(bytes, new TypeReference<>() {});
+            if (raw == null) throw new GatewayFailure("INVALID_JSON");
+            if (query && raw.get("vnp_ResponseCode") instanceof String code
+                    && code.matches("[0-9]{2}") && !"00".equals(code)
+                    && (raw.get("vnp_SecureHash") == null
+                        || raw.get("vnp_SecureHash") instanceof String hash && hash.isBlank())) {
+                log.warn("VNPay unsigned querydr error: requestId={} txnRef={} transactionDate={} createDate={} apiHost={} loopbackServerIp={} responseCode={}",
+                    fields.get("vnp_RequestId"), fields.get("vnp_TxnRef"), fields.get("vnp_TransactionDate"),
+                    fields.get("vnp_CreateDate"), request.uri().getHost(),
+                    java.net.InetAddress.getByName(fields.get("vnp_IpAddr")).isLoopbackAddress(), code);
+                throw new GatewayFailure("UNSIGNED_QUERY_ERROR", null, code);
+            }
             Map<String, String> result = new LinkedHashMap<>();
             for (var field : raw.entrySet()) {
                 Object scalar = field.getValue();

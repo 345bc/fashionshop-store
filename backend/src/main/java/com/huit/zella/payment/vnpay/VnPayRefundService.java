@@ -99,6 +99,8 @@ public class VnPayRefundService {
             return switch (reason) {
                 case "MERCHANT_CHANGED" -> "Mã merchant của lần hoàn khác mã đang cấu hình.";
                 case "TRANSPORT_ERROR", "REQUEST_INTERRUPTED" -> "Backend chưa hoàn tất kết nối hoặc truy vấn VNPay.";
+                case "UNSIGNED_QUERY_ERROR" -> "Truy vấn thất bại. Phản hồi không có chữ ký báo mã lỗi "
+                    + failure.responseCode() + ". Trạng thái hoàn tiền chưa được xác nhận.";
                 case "MISSING_RESPONSE_SIGNATURE" -> "Phản hồi VNPay không có chữ ký." + unverifiedCode(failure);
                 case "INVALID_RESPONSE_SIGNATURE_FORMAT" -> "Chữ ký phản hồi VNPay sai định dạng." + unverifiedCode(failure);
                 case "RESPONSE_SIGNATURE_MISMATCH" -> "Chữ ký phản hồi VNPay không khớp.";
